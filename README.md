@@ -1,5 +1,11 @@
 # lavasec-doc
 
+[![Build check](https://github.com/lavasecurity/lavasec-doc/actions/workflows/ci.yml/badge.svg)](https://github.com/lavasecurity/lavasec-doc/actions/workflows/ci.yml)
+[![Security](https://github.com/lavasecurity/lavasec-doc/actions/workflows/security.yml/badge.svg)](https://github.com/lavasecurity/lavasec-doc/actions/workflows/security.yml)
+[![Built with MkDocs Material](https://img.shields.io/badge/built%20with-MkDocs%20Material-526CFE?logo=materialformkdocs&logoColor=white)](https://squidfunk.github.io/mkdocs-material/)
+[![Docs](https://img.shields.io/badge/docs-docs.lavasecurity.app-F38020?logo=cloudflare&logoColor=white)](https://docs.lavasecurity.app)
+[![License: CC BY 4.0](https://img.shields.io/badge/license-CC%20BY%204.0-lightgrey?logo=creativecommons&logoColor=white)](LICENSE)
+
 The public documentation site for **Lava Security** — the "manual" for how the
 product works: architecture, behavior, design system, and the decisions behind
 it. Built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
