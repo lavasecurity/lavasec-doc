@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Python dependencies for the MkDocs build (requirements.txt at repo root).
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  # GitHub Actions used by the CI and Security workflows.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
