@@ -64,6 +64,19 @@ dashboard. Alternatively, Pages' native Git integration can build the repo
 directly with build command `pip install -r requirements.txt && mkdocs build`
 and output directory `site`.
 
+## Feedback
+
+Each content page has a privacy-respecting **"Was this page helpful?"** widget
+(no analytics, no cookies). 👎 opens a pre-filled issue labelled `docs-feedback`.
+
+Treat these as a **qualitative docs bug backlog, not a metric**: the signal is
+biased toward dissatisfaction and technical users (silence ≠ good docs), so act
+on *repetition*, not single clicks. The label needs an owner and a light triage
+cadence; if no one will read it, hide the widget (`hide_feedback: true` in a
+page's front matter, or remove the include in `overrides/main.html`) rather than
+collect into a void. For aggregate "worst pages" metrics, add Cloudflare Web
+Analytics later — don't add Google Analytics.
+
 ## License
 
 Documentation content is licensed [CC BY 4.0](LICENSE). Code samples are under
