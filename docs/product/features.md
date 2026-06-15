@@ -4,7 +4,7 @@ This is the catalog of features that ship today in Lava Security, grouped by are
 
 The canonical privacy promise governs everything below: DNS filtering happens locally on your device; Lava never receives your routine DNS queries, browsing history, or per-domain telemetry, and any optional account backup is end-to-end encrypted so Lava can only ever store ciphertext.
 
-**Scope.** This page documents the **current, implemented** feature set only. A handful of entries are tagged **(In progress)** or **(Dropped)** where that status is load-bearing for understanding what does or doesn't ship. Anything not yet built — Android, URL-level protection, a centralized upsell page, the `LavaTier` design-depth model, scheduled catalog sync with threat-intel validation — lives in roadmap-and-directions.md, not here.
+**Scope.** This page documents the **current, implemented** feature set only. A handful of entries are tagged **(In progress)** or **(Dropped)** where that status is load-bearing for understanding what does or doesn't ship. Anything not yet built — Android, URL-level protection, a centralized upsell page, the `LavaTier` design-depth model, scheduled catalog sync with threat-intel validation — lives in the private roadmap. Cross-platform product contracts and Android/iOS status live in [Platform Parity](platform-parity.md).
 
 **Status legend.** **Implemented** = production call sites exist and ship. **(In progress)** = code present but not fully wired / pending QA. **(Dropped)** = built-then-reverted or cancelled. Default unmarked entries describe shipped behavior. Where this page marks Free vs Plus, **Plus** means Lava Security Plus, the optional paid customization tier; **Free** is the default tier that everyone gets without an account.
 
@@ -128,7 +128,7 @@ A multi-page first-run flow explains local protection, installs the VPN config a
 
 ## See also
 
-- roadmap-and-directions.md — planned and in-progress directions (Android, URL-level protection, centralized upsell page, `LavaTier` design-depth model, scheduled catalog sync + threat-intel validation, i18n, and the legal/IP launch gates).
+- [Platform Parity](platform-parity.md) — stable feature ids, Android/iOS status, and the behavioral contract that platform tests should enforce.
 - [../architecture/ios-client.md](../architecture/ios-client.md) — app / packet-tunnel / widget targets and shared `LavaSecCore` state.
 - [../architecture/dns-transports.md](../architecture/dns-filtering-and-blocklists.md) — DoH / DoT / DoQ transport internals.
 - [../architecture/blocklist-catalog.md](../architecture/dns-filtering-and-blocklists.md) — catalog, parser, snapshot, and the filter-rules budget.
