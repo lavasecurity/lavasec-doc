@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{#-
+  Append a privacy-respecting "Was this page helpful?" widget after the article.
+  No third-party analytics or tracking — negative feedback opens a pre-filled
+  GitHub issue. Behavior: assets/js/feedback.js. Styling: assets/css/feedback.css.
+  A page can opt out with `hide_feedback: true` in its YAML front matter.
+-#}
+{% block content %}
+  {{ super() }}
+  {% if not page.meta or not page.meta.hide_feedback %}
+  <div class="lava-feedback" id="lava-feedback"
+       data-issue-url="https://github.com/lavasecurity/lavasec-doc/issues/new">
+    <hr class="lava-feedback__sep">
+    <p class="lava-feedback__q">Was this page helpful?</p>
+    <div class="lava-feedback__btns">
+      <button type="button" class="md-button lava-feedback__btn" data-lava-feedback="yes">👍&nbsp;Yes</button>
+      <button type="button" class="md-button lava-feedback__btn" data-lava-feedback="no">👎&nbsp;Could be better</button>
+    </div>
+    <p class="lava-feedback__note" role="status" hidden></p>
+  </div>
+  {% endif %}
+{% endblock %}

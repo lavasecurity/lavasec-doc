@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so git-revision-date "last updated" is accurate
 
       - uses: actions/setup-python@v5
         with:

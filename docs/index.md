@@ -1,3 +1,7 @@
+---
+hide_feedback: true
+---
+
 # Lava Security Documentation
 
 Lava Security is a **privacy-first iOS app** that filters DNS locally on the

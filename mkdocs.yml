@@ -9,6 +9,7 @@ copyright: >-
 
 theme:
   name: material
+  custom_dir: overrides
   language: en
   icon:
     logo: material/shield-lock
@@ -53,6 +54,13 @@ plugins:
           default: true
           name: English
           build: true
+  # "Last update" shown on each page, from git history. MUST be listed after the
+  # i18n plugin (it consumes the locale i18n adds). CI checks out full history
+  # (fetch-depth: 0) for accurate dates; otherwise falls back to the build date.
+  - git-revision-date-localized:
+      type: date
+      enable_creation_date: false
+      fallback_to_build_date: true
 
 markdown_extensions:
   - admonition
@@ -72,6 +80,13 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
+# Privacy-respecting "Was this page helpful?" widget (no third-party tracking).
+# Behavior in assets/js/feedback.js; markup injected via overrides/main.html.
+extra_css:
+  - assets/css/feedback.css
+extra_javascript:
+  - assets/js/feedback.js
+
 nav:
   - Home: index.md
   - Product:
@@ -85,6 +100,7 @@ nav:
       - Accounts & Zero-Knowledge Backup: architecture/accounts-and-backup.md
   - Design System: design-system/overview.md
   - Decisions (ADRs): decisions/key-decisions.md
+  - Support: support.md
   - Legal & Compliance:
       - Third-Party Notices: legal/third-party-notices.md
       - Source-URL-Only / GPL Compliance: legal/gpl-source-url-only-compliance-decision.md

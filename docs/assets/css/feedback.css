@@ -1,0 +1,31 @@
+/* "Was this page helpful?" widget — appended after each article. */
+.lava-feedback {
+  margin-top: 2.5rem;
+}
+.lava-feedback__sep {
+  margin-bottom: 1rem;
+}
+.lava-feedback__q {
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+.lava-feedback__btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.lava-feedback__btn {
+  cursor: pointer;
+}
+.lava-feedback__btn[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+.lava-feedback__btn--chosen {
+  border-color: var(--md-accent-fg-color);
+  color: var(--md-accent-fg-color);
+}
+.lava-feedback__note {
+  margin-top: 0.8rem;
+  color: var(--md-default-fg-color--light);
+}
