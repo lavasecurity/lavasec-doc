@@ -53,16 +53,21 @@ This mirrors the app's localization targets (de, fr, ja, zh-Hans, zh-Hant).
 
 ## Deploy
 
-CI (`.github/workflows/deploy.yml`) builds the site and deploys it to Cloudflare
-Pages on every push to `main`. It needs two repo secrets:
+Deployed to **Cloudflare Workers (static assets)** via Cloudflare's git-connected
+**Workers Builds** — Cloudflare builds and deploys on every push to `main`, and
+**no GitHub Actions secrets are needed** (Cloudflare authenticates the deploy).
 
-- `CLOUDFLARE_API_TOKEN` — a token with the **Cloudflare Pages: Edit** permission.
-- `CLOUDFLARE_ACCOUNT_ID` — the account that owns the `lavasec-doc` Pages project.
+In the Cloudflare dashboard, the `lavasec-doc` project's build settings are:
 
-The custom domain (`docs.lavasecurity.app`) is attached in the Cloudflare Pages
-dashboard. Alternatively, Pages' native Git integration can build the repo
-directly with build command `pip install -r requirements.txt && mkdocs build`
-and output directory `site`.
+- **Build command:** `pip install -r requirements.txt && mkdocs build`
+- **Deploy command:** `npx wrangler deploy`  (reads [`wrangler.toml`](wrangler.toml), which serves `./site` as an assets-only Worker with a custom 404)
+- If the build can't find Python, add a build variable `PYTHON_VERSION=3.12`.
+
+Attach **docs.lavasecurity.app** under the project's **Custom Domains**.
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) only runs
+`mkdocs build --strict` as a PR quality gate — it does **not** deploy. To deploy
+manually: `npx wrangler deploy` after a local `mkdocs build`.
 
 ## Feedback
 

@@ -1,24 +1,28 @@
-name: Deploy docs
+name: Build check
 
+# Quality gate only — Cloudflare Workers Builds handles the actual deploy on
+# push to main. This just fails the PR if the docs don't build cleanly.
 on:
+  pull_request:
   push:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'overrides/**'
       - 'mkdocs.yml'
       - 'requirements.txt'
-      - '.github/workflows/deploy.yml'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-docs
+  group: docs-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -36,10 +40,3 @@ jobs:
 
       - name: Build (strict — fails on broken links)
         run: mkdocs build --strict
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site --project-name=lavasec-doc

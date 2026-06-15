@@ -1,0 +1,12 @@
+# Cloudflare Workers (static assets) config for the docs site.
+#
+# `mkdocs build` produces ./site; this serves it as an assets-only Worker
+# (no server code). Deployed by Cloudflare Workers Builds (git-connected) or
+# locally with `npx wrangler deploy`.
+name = "lavasec-doc"
+compatibility_date = "2025-06-01"
+
+[assets]
+directory = "./site"
+# MkDocs emits a top-level 404.html — serve it for unknown paths.
+not_found_handling = "404-page"
