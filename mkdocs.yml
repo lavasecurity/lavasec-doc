@@ -1,0 +1,91 @@
+site_name: Lava Security Docs
+site_description: >-
+  How Lava Security works — the privacy-first, on-device DNS filtering client,
+  its architecture, and the decisions behind it.
+site_url: https://docs.lavasecurity.app
+copyright: >-
+  Documentation licensed under
+  <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/shield-lock
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: red
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: red
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  # i18n-ready: English is the default today. To add a language, drop in
+  # `<page>.<locale>.md` siblings (e.g. overview.fr.md) and add a `languages`
+  # entry below — a language switcher appears automatically. See README.
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Product:
+      - Overview: product/overview.md
+      - Feature Catalog: product/features.md
+  - Architecture:
+      - System Overview: architecture/system-overview.md
+      - iOS Client: architecture/ios-client.md
+      - DNS Filtering & Blocklists: architecture/dns-filtering-and-blocklists.md
+      - Backend & Data: architecture/backend-and-data.md
+      - Accounts & Zero-Knowledge Backup: architecture/accounts-and-backup.md
+  - Design System: design-system/overview.md
+  - Decisions (ADRs): decisions/key-decisions.md
+  - Legal & Compliance:
+      - Third-Party Notices: legal/third-party-notices.md
+      - Source-URL-Only / GPL Compliance: legal/gpl-source-url-only-compliance-decision.md
+      - Open-Source List Data Terms: legal/open-source-list-data-terms-carveout.md

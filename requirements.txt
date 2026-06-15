@@ -1,0 +1,5 @@
+# Static documentation site for Lava Security (MkDocs Material).
+# Build:  pip install -r requirements.txt && mkdocs build --strict
+# Serve:  mkdocs serve
+mkdocs-material>=9.5
+mkdocs-static-i18n>=1.2

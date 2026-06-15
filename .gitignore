@@ -1,0 +1,17 @@
+# ---- MkDocs build output ----
+/site/
+
+# ---- Python ----
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ---- macOS ----
+.DS_Store
+**/.DS_Store
+
+# ---- Editors ----
+.idea/
+*.swp
+*~
