@@ -23,12 +23,31 @@ mkdocs build --strict   # production build into ./site (CI gate)
 
 `--strict` fails the build on broken internal links, so keep cross-links valid.
 
+## Feature tracking and platform parity
+
+`docs/product/platform-parity.md` is the public source of truth for
+cross-platform feature contracts. It records stable feature ids, the user-facing
+promise, per-platform status, and the test or fixture family that should enforce
+behavior.
+
+Use it when a change affects:
+
+- a privacy promise;
+- local DNS filtering behavior;
+- Free vs Plus boundaries;
+- Android/iOS parity expectations;
+- platform-native differences that should be intentional.
+
+Keep delivery state, private risk, pricing strategy, and operational work in
+`lavasec-infra/plans`. The docs define the contract; plans track the work; tests
+prove the behavior.
+
 ## Layout
 
 ```
 docs/
   index.md                      # home / landing
-  product/                      # overview, feature catalog
+  product/                      # overview, feature catalog, platform parity
   architecture/                 # system, iOS client, DNS filtering, backend, accounts
   design-system/                # calm core, earned depth
   decisions/                    # ADR-style key decisions

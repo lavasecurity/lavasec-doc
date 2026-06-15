@@ -26,7 +26,8 @@ behavior, and the decisions behind it. It tracks the open-source
 
     What Lava does and who it's for.
 
-    [Overview](product/overview.md) · [Feature Catalog](product/features.md)
+    [Overview](product/overview.md) · [Feature Catalog](product/features.md) ·
+    [Platform Parity](product/platform-parity.md)
 
 -   :material-sitemap: **Architecture**
 
@@ -65,3 +66,7 @@ Every claim here is grounded in the source. Status is marked throughout:
 
 When the docs and the code disagree, the code wins. These docs are a snapshot,
 regenerated from the source as the product evolves.
+
+Cross-platform behavior is tracked in [Platform Parity](product/platform-parity.md):
+it names stable feature ids, platform status, and the tests or fixtures that
+should keep iOS and Android aligned.

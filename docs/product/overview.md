@@ -34,4 +34,7 @@ Lava is built for anyone who wants safer browsing without managing it. The audie
 ## Platforms
 
 - **iOS — shipped.** Lava is an iOS app today: the app, the packet-tunnel extension, and a widget share `LavaSecCore` and the `group.com.lavasec` App Group.
-- **Android — Planned.** A native Kotlin / Jetpack Compose port on Android's `VpnService` is planned (backlog), carrying the same privacy promise, with the core filtering logic extracted into a shared Kotlin module. No Android code exists yet — see the Android plan.
+- **Android — Planned.** A native Kotlin / Jetpack Compose port on Android's `VpnService` is planned (backlog), carrying the same privacy promise and parity-tested core filtering behavior. No Android app code ships yet.
+
+See [Platform Parity](platform-parity.md) for the stable feature ids and the
+iOS/Android contract.

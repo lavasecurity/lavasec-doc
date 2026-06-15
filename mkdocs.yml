@@ -92,6 +92,7 @@ nav:
   - Product:
       - Overview: product/overview.md
       - Feature Catalog: product/features.md
+      - Platform Parity: product/platform-parity.md
   - Architecture:
       - System Overview: architecture/system-overview.md
       - iOS Client: architecture/ios-client.md
