@@ -128,7 +128,7 @@ The Soft Shield Guardian mascot has exactly **seven** emotional states — `Guar
 
 The Live Activity's `LavaActivityAttributes.ProtectionState` (`apps/ios/Shared/LavaActivityAttributes.swift`) bridges the assessment to a mascot state via `guardianState`: `on → awake`, `paused → paused`, `reconnecting`/`networkUnavailable → retrying`, `needsReconnect → concerned` (`LavaActivityAttributes.swift:95-106`). `AppViewModel` chooses the protection state for the Dynamic Island from the same `protectionConnectivityAssessment` (`AppViewModel.swift:3076-3092`): a `networkUnavailable` severity becomes `.networkUnavailable`, `recovering` becomes `.reconnecting`, a `reconnect` primary action becomes `.needsReconnect`, and otherwise `.on`.
 
-> Note: `LavaTier` (the calm → **Floor** / celebratory → **Window** / technical → **Workshop** design-system depth enum) is **(Planned)** and not yet in code; it does not appear in the iOS client today.
+> Note: `LavaTier` (the calm → **Floor** / celebratory → **Window** / technical → **Workshop** design-system depth enum) ships in the design-system layer (`apps/ios/LavaSecApp/LavaDesignSystem/LavaTokens.swift`), wired into representative surfaces — see [the design system](../design-system/overview.md). It governs design-system depth, not the protection/tunnel client path described here.
 
 ---
 
