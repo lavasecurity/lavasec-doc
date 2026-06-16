@@ -150,7 +150,7 @@ The one explicit exception is **passkey recovery**, which is **server-gated, not
 |---|---|
 | **Implemented** | Production call sites exist and ship. |
 | **(In progress)** | Some code present but not fully wired, not on `main`, or pending QA/review. |
-| **(Planned)** | Plan only, little or no code (e.g. `LavaTier`, URL-level protection). |
+| **(Planned)** | Plan only, little or no code (e.g. URL-level protection, the Android app). |
 | **(Dropped)** | Built-then-reverted or cancelled (e.g. R2 raw-mirror, email sign-in, the backup password slot). |
 
 ## Per-component docs
