@@ -1,8 +1,8 @@
 ---
 last_reviewed: 2026-06-19
 owner: product
-source_repos: [lavasec-ios, lavasec-infra]
-grounded_at: {lavasec-ios: "1fbab70", lavasec-infra: "5f425af"}
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
 ---
 
 # Product Overview

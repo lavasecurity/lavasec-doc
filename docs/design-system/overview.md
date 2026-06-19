@@ -177,7 +177,7 @@ Design decisions baked into the flow:
 
 The first-run defaults the flow installs: **Device DNS** resolver (`DNSResolverPreset.device`), **Device DNS fallback ON**, logging on (counts + history + activity), and "Continue without account."
 
-> **Default-blocklist divergence (code wins).** The onboarding plan copy lists HaGeZi Multi Light as the default blocklist, but the shipped code default is **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. Tracked as lavasec-infra#13. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
+> **Default-blocklist divergence (code wins).** The onboarding plan copy lists HaGeZi Multi Light as the default blocklist, but the shipped code default is **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. Tracked internally. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
 
 ---
 

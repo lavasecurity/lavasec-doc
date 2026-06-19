@@ -1,8 +1,8 @@
 ---
 last_reviewed: 2026-06-19
 owner: engineering
-source_repos: [lavasec-ios, lavasec-infra]
-grounded_at: {lavasec-ios: "1fbab70", lavasec-infra: "5f425af"}
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
 ---
 
 # System Overview
@@ -53,15 +53,15 @@ Everything below is in service of keeping that sentence true. The architecture i
 - **ZeroKnowledgeBackupEnvelope / BackupConfigurationPayload / BackupRecoveryPhrase** — backup crypto + payload.
 - **SupabaseIDTokenAuth** — raw-URLRequest `id_token` auth (no SDK).
 
-### Backend (lavasec-infra: `backend/` + `supabase/`)
+### Backend
 
 | Component | Role | Status |
 |---|---|---|
 | **lavasec-api Worker** | Cloudflare Worker (`api.lavasecurity.app`): catalog reads, admin/cron blocklist sync + publish, anonymous bug reports, account deletion, App Store entitlement mirroring, QA probes. | Implemented |
 | **lavasec-email Worker** | Receive-only Cloudflare Email Routing forwarder for `@lavasecurity.app`; rejects unknown/oversized mail. | Implemented |
-| **Supabase Postgres** (project `lava-sec`) | Accounts, `user_backups`, catalog metadata, service-role-only tables; **RLS on every public table**. | Implemented |
-| **Cloudflare R2** (`lavasec-prod`) | Catalog snapshots + bug-report attachments. **Never** third-party blocklist bytes. | Implemented |
-| **Cloudflare D1** (`lavasec-help-feedback`) | Append-only anonymous help-article feedback votes. | Implemented |
+| **Supabase Postgres** | Accounts, `user_backups`, catalog metadata, service-role-only tables; **RLS on every public table**. | Implemented |
+| **Cloudflare R2** (the production R2 bucket, a separate preview bucket for staging) | Catalog snapshots + bug-report attachments. **Never** third-party blocklist bytes. | Implemented |
+| **Cloudflare D1** (the help-feedback database) | Append-only anonymous help-article feedback votes. | Implemented |
 
 ## 4. Data-flow diagram
 
@@ -150,7 +150,7 @@ The Worker side mirrors this: its admin/cron sync fetches each upstream, hashes/
 - **Device guardrail (everyone, never a paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 rules** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — a 32 MB target under the ~50 MiB NE ceiling. Over-budget configs are rejected deterministically rather than letting the tunnel jetsam.
 - **Tier ceiling (`FeatureLimits`):** **Free 500K rules / Plus 2M rules**, which binds below the device guardrail. This replaced the old enabled-list **count** cap (free 3 / paid 10) — list-count caps are obsolete.
 
-> **Default-enabled caveat (code wins):** the shipped free defaults are **Block List Project Phishing + Scam** (`OnboardingDefaults.lavaRecommendedDefaults`). They are derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which is the on-device source of truth and mirrors the backend catalog `default_enabled` column. Plan/catalog copy that says "Block List Basic is the only default" is wrong for the device (tracked as lavasec-infra#13).
+> **Default-enabled caveat (code wins):** the shipped free defaults are **Block List Project Phishing + Scam** (`OnboardingDefaults.lavaRecommendedDefaults`). They are derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which is the on-device source of truth and mirrors the backend catalog `default_enabled` column. Plan/catalog copy that says "Block List Basic is the only default" is wrong for the device (tracked internally).
 
 ### C. Backup (zero-knowledge, opt-in) — Implemented
 
@@ -189,7 +189,7 @@ See [iOS Client](./ios-client.md).
 
 - **Local-first filtering.** The decision engine and resolver run inside the NE extension on the device. The backend is metadata-only by construction — there are no tables for routine DNS queries or per-domain telemetry.
 - **No account required for protection.** Core protection is free forever; auth and backup are strictly opt-in.
-- **Source-url-only distribution.** Decouples Lava from third-party list bytes (GPL/IP-compliance + App Review safety) and keeps a CI guardrail (`lavasec-infra: scripts/check-gpl-blocklist-distribution.sh`) enforcing "no mirror code, no Lava artifact URLs, no R2 byte writes."
+- **Source-url-only distribution.** Decouples Lava from third-party list bytes (GPL/IP-compliance + App Review safety) and keeps a CI guardrail enforcing "no mirror code, no Lava artifact URLs, no R2 byte writes."
 - **Zero-knowledge backup at rest.** Client-side AES-256-GCM; the server holds ciphertext + KDF metadata + a recovery share, never the plaintext, the recovery phrase, or the unwrapped key. The optional passkey slot is wrapped with a client-side WebAuthn PRF / `hmac-secret` output, so it too is zero-knowledge — no server-held value unwraps it.
 - **Device-local secrets.** Backup unlock material uses `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — not iCloud-synced, not in device backups.
 - **Service-role isolation.** `bug_reports`, `mirror_events`, and `qa_developers` are revoked from anon/authenticated PostgREST roles; only the Worker (service role) touches them.

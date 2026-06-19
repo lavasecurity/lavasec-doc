@@ -1,8 +1,8 @@
 ---
 last_reviewed: 2026-06-19
 owner: engineering
-source_repos: [lavasec-infra, lavasec-ios]
-grounded_at: {lavasec-infra: "5f425af", lavasec-ios: "1fbab70"}
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
 ---
 
 # Accounts & Zero-Knowledge Backup
@@ -139,9 +139,9 @@ The optional `passkey` slot adds a hardware-backed factor, and it is **zero-know
 - **Registration/assertion:** `BackupPasskeyCoordinator` (`LavaSecApp`) runs WebAuthn via `ASAuthorizationPlatformPublicKeyCredentialProvider`, relying party **`lavasecurity.app`**, requesting the PRF extension on a per-credential salt and requiring user verification.
 - **Key derivation (zero-knowledge):** the authenticator returns a PRF output that **never leaves the device**. `ZeroKnowledgeBackupEnvelope.makeWithPRF` (`lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`) HKDF-SHA256-derives the slot's wrapping key from that PRF output (info `"LavaSec passkey backup PRF v1"`) and AES-GCM-wraps the payload key; only the non-secret PRF salt and credential ID are persisted in the slot. On restore, `passkeyPRFOutputForRestore` → `BackupPasskeyCoordinator.assertPasskeyPRFOutput` re-asserts the credential to reproduce the same PRF output, and `decryptWithPasskeyPRFOutput` unwraps the slot locally. The server holds **no** passkey secret, so no service-role path can recover a passkey-protected backup.
 
-The earlier escrow design (a service-role `backup_passkey_recovery` table holding a server-side `recovery_secret`, plus a `backup_passkey_challenges` table and `/v1/backup/passkeys/*` Worker endpoints) was **Dropped**: the tables were removed in `lavasec-infra: supabase/migrations/20260616000000_drop_backup_passkey_recovery.sql` (LAV-64), the Worker carries no passkey routes, and `lavasec-ios: Tests/LavaSecCoreTests/BackupSetupSourceTests.swift` affirmatively asserts that `BackupPasskeyRecoveryService` and any server-escrow path are absent. **(Implemented)**
+The earlier escrow design (a service-role `backup_passkey_recovery` table holding a server-side `recovery_secret`, plus a `backup_passkey_challenges` table and `/v1/backup/passkeys/*` Worker endpoints) was **Dropped**: the tables were removed in a backend migration, the Worker carries no passkey routes, and `lavasec-ios: Tests/LavaSecCoreTests/BackupSetupSourceTests.swift` affirmatively asserts that `BackupPasskeyRecoveryService` and any server-escrow path are absent. **(Implemented)**
 
-> **Production-readiness caveat:** treating saved passkeys as a fully production-ready recoverable factor on physical devices still depends on the webcredentials association for `lavasecurity.app`. The iOS half is declared — `lavasec-ios: LavaSecApp/LavaSecApp.entitlements` carries `webcredentials:lavasecurity.app` — and the server half (the `apple-app-site-association` file and headers) is now hosted in the marketing site (`lavasec-web`, validated in that repo). Until that association resolves on a given device, the webcredentials-association path can fail and surfaces `BackupPasskeyError.webCredentialsAssociationUnavailable`. The passkey factor itself is implemented; its end-to-end readiness on real hardware is **Planned**.
+> **Production-readiness caveat:** treating saved passkeys as a fully production-ready recoverable factor on physical devices still depends on the webcredentials association for `lavasecurity.app`. The iOS half is declared — `lavasec-ios: LavaSecApp/LavaSecApp.entitlements` carries `webcredentials:lavasecurity.app` — and the server half (the `apple-app-site-association` file and headers) is now hosted in the marketing site. Until that association resolves on a given device, the webcredentials-association path can fail and surfaces `BackupPasskeyError.webCredentialsAssociationUnavailable`. The passkey factor itself is implemented; its end-to-end readiness on real hardware is **Planned**.
 
 ---
 
@@ -174,7 +174,7 @@ Deletion is **Implemented** and runs through an authenticated Worker endpoint, n
 | Recovery phrase (8-word CVCV, ~105 bits) | Off-device factor | Implemented |
 | Assisted recovery (server share + phrase via SHA256, NUL-delimited) | Two-factor; neither half alone | Implemented |
 | Passkey recovery (zero-knowledge, WebAuthn PRF/`hmac-secret`, RP `lavasecurity.app`) | PRF output HKDF-derived slot, no server secret | Implemented |
-| Passkey as production-ready factor on hardware | Needs webcredentials association (AASA hosted in lavasec-web) | Planned |
+| Passkey as production-ready factor on hardware | Needs webcredentials association (AASA hosted in the marketing site) | Planned |
 | Account deletion (authenticated Worker, service role) | Removes backups/settings/entitlements/profile/attachments + Auth user | Implemented |
 | Biometric/user-presence gate on unlock material | Release-gate review item | Planned |
 | `EncryptedBackupCoordinator` extraction from `AppViewModel` | Modularization only; no security-model change | In progress |

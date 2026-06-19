@@ -1,8 +1,8 @@
 ---
 last_reviewed: 2026-06-19
 owner: engineering
-source_repos: [lavasec-ios, lavasec-infra]
-grounded_at: {lavasec-ios: "1fbab70", lavasec-infra: "5f425af"}
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
 ---
 
 # Key Design Decisions
@@ -90,7 +90,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Context.** Optional account login (Apple + Google only) enables cross-device settings restore. The server must never be able to read a user's blocklists, allowlists, resolver choice, or other settings.
 
-**Rationale.** Plaintext and decrypting secrets exist only on the device; the server holds one opaque envelope per user. Assisted recovery is deliberately two-factor — `SHA256("LavaSec assisted recovery v1" + serverRecoveryShare + normalizedPhrase)` requires **both** the server-held share and the user's 8-word recovery phrase (~105 bits), so neither half alone decrypts. Unlock material is stored device-local (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **not** in synchronizable iCloud Keychain — a privacy hardening that reversed the original plan's synchronizable design. The **passkey slot is also genuinely zero-knowledge**: it is wrapped with a WebAuthn **PRF / `hmac-secret`** authenticator output (HKDF-SHA256 derived) that never leaves the client, so no server-held value can unwrap it. There is no service-role passkey table and no Worker WebAuthn-assertion gate — the earlier server-gated passkey design was dropped, removing all server-side passkey state (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`; lavasec-infra: `supabase/migrations/20260616000000_drop_backup_passkey_recovery.sql`, `backend/worker/test/backup-passkeys-source.test.mjs`).
+**Rationale.** Plaintext and decrypting secrets exist only on the device; the server holds one opaque envelope per user. Assisted recovery is deliberately two-factor — `SHA256("LavaSec assisted recovery v1" + serverRecoveryShare + normalizedPhrase)` requires **both** the server-held share and the user's 8-word recovery phrase (~105 bits), so neither half alone decrypts. Unlock material is stored device-local (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **not** in synchronizable iCloud Keychain — a privacy hardening that reversed the original plan's synchronizable design. The **passkey slot is also genuinely zero-knowledge**: it is wrapped with a WebAuthn **PRF / `hmac-secret`** authenticator output (HKDF-SHA256 derived) that never leaves the client, so no server-held value can unwrap it. There is no service-role passkey table and no Worker WebAuthn-assertion gate — the earlier server-gated passkey design was dropped, removing all server-side passkey state (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`).
 
 **Status.** **Adopted** (passwordless model, assisted recovery, and a zero-knowledge PRF-derived passkey slot, all in code). Making the passkey a fully production-ready recoverable factor on physical devices (Associated Domains / AASA hosting for the PRF model) is **Proposed** (backlog).
 
@@ -152,7 +152,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Rationale.** Copyleft forces derivatives to stay open, preventing a closed fork of the client — a "public client, private backend/ops" posture, with backend, legal, and ops kept private. AGPL-3.0 (rather than plain GPL-3.0) was chosen to close the network-use gap. The known GPL-vs-App-Store distribution tension is handled by Lava itself being the distributor of the App Store binary under its own copyright.
 
-**Status.** **Adopted.** The repo split is **complete**: each component lives in its own repository (`lavasec-ios` at tag v0.4.0, plus `lavasec-android`, `lavasec-web`, `lavasec-infra`, `lavasec-doc`, `lavasec-runner`), and `lavasec-ios`'s `README.md` "Repository layout" section lists only that repo's per-component contents (`LavaSecApp/`, `LavaSecTunnel/`, `LavaSecWidget/`, `Shared/`, `Sources/`, `Tests/`) with infrastructure noted as living in separate private repositories. The client is open-sourced under **AGPL-3.0**: the `lavasec-ios` `LICENSE` is the GNU Affero General Public License v3 and `README.md` carries the AGPL-3.0 badge.
+**Status.** **Adopted.** The repo split is **complete**: each component lives in its own repository — the public `lavasec-ios` client at tag v0.4.0, plus separate repositories for Android, the marketing site, backend/infrastructure, docs, and the CI/release pipeline — and `lavasec-ios`'s `README.md` "Repository layout" section lists only that repo's per-component contents (`LavaSecApp/`, `LavaSecTunnel/`, `LavaSecWidget/`, `Shared/`, `Sources/`, `Tests/`) with infrastructure noted as living in separate private repositories. The client is open-sourced under **AGPL-3.0**: the `lavasec-ios` `LICENSE` is the GNU Affero General Public License v3 and `README.md` carries the AGPL-3.0 badge.
 
 ---
 
