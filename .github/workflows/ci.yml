@@ -56,5 +56,8 @@ jobs:
             exit 1
           fi
 
+      - name: Guard — translation completeness (locales not silently drifting)
+        run: bash scripts/check-translations.sh
+
       - name: Build (strict — fails on broken links)
         run: mkdocs build --strict
