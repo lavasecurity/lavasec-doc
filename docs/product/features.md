@@ -78,7 +78,7 @@ Resolver transports and routing for unblocked queries.
 | **Five resolver transports** | Free | `device-dns, plain-dns (IP), dns-over-https, dns-over-tls, dns-over-quic` (`DNSResolverTransport`). |
 | **DoH / DoH3** | Free | URLSession-based DoH that prefers HTTP/3. The UI annotates **`DoH3` (no slash)**, e.g. "Quad9 (DoH3)", **only when an h3 negotiation is actually observed** — preferred, never promised (`DoHTransport`). |
 | **DoT** | Free | Pooled `NWConnection`s (up to 4/endpoint) with idle-staleness refresh and one fresh-connection retry. |
-| **DoQ** | Free | Opens a **fresh QUIC connection per query** (no reuse); the 4-lane pool gives concurrency, not handshake reuse. |
+| **DoQ** (custom only) | Plus | DNS-over-QUIC has **no built-in preset** — it's reachable only via a **custom `doq://` resolver**, and custom DNS is Plus. Opens a **fresh QUIC connection per query** (the 4-lane pool gives concurrency, not handshake reuse); connection reuse is deferred to an iOS-26 deployment floor. |
 | **Preset resolvers** | Free | Device DNS (default), Google Public DNS, Cloudflare 1.1.1.1, Quad9 Secure, Mullvad — in IP / DoH / DoT variants where offered (`DNSResolverPreset.allPresets`). |
 | **Resolver routing & failover** | Free | `ResolverOrchestrator` routes by transport, degrades to plain DNS when an encrypted plan has no endpoints, does per-endpoint failover with a backoff gate, then device-DNS fallback. |
 | **Device-DNS fallback** | Free | Falls back to the current network's resolver when the selected resolver is unavailable; **on by default**. Surfaced as the `usingDeviceDNSFallback` severity. |

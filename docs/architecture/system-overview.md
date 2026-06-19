@@ -101,7 +101,7 @@ The single most important property: **the encrypted DNS resolver path (right sid
  ┌──────────────┐   ┌──────────────────────┐    ┌───────────────────────────────┐
  │ lavasec-api  │   │  Upstream blocklists  │   │  Public DNS resolver           │
  │ Worker       │   │  (HaGeZi, OISD,       │   │  (Quad9 / Cloudflare / Google  │
- │ GET /v1/     │   │   Block List Project) │   │   / DNS.SB; user-chosen)        │
+ │ GET /v1/     │   │   Block List Project) │   │   / Mullvad; user-chosen)       │
  │  catalog     │   └──────────────────────┘    └───────────────────────────────┘
  └──────┬───────┘
         │ reads/writes (metadata only)
