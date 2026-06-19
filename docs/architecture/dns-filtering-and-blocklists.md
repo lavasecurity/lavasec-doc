@@ -196,7 +196,7 @@ The actual free default config is `OnboardingDefaults.lavaRecommendedDefaults` (
 
 That free default is **produced by `defaultEnabled`**, not hardcoded. `blockListProjectPhishing` (`BlocklistModels.swift:139`) and `blockListProjectScam` (`BlocklistModels.swift:148`) both set `defaultEnabled: true`, and `DefaultCatalog.recommendedDefaultSourceIDs` (`BlocklistModels.swift:250-252`) is derived from `curatedSources.filter(\.defaultEnabled)`. The source comment (`BlocklistModels.swift:246-249`) calls `defaultEnabled` "the single source of truth for the fresh-install default," mirroring the backend catalog's `default_enabled` column. Flowing through `recommendedDefaultSourceIDs` into `OnboardingDefaults`, `defaultEnabled` is the live mechanism — flip the flag on a source to change the default.
 
-> **Discrepancy (code wins).** Any plan/catalog copy that says "Block List Basic is the only default" is wrong for the device; the device ships Phishing + Scam off `defaultEnabled: true`. The discrepancy is scoped to the **backend** catalog's `default_enabled` column drifting from the iOS source of truth, tracked internally — the iOS `BlocklistSource.defaultEnabled` flag is the authoritative live mechanism. The public site's "Enabled blocklists 3 → 10" copy is also **stale** — the real gate is the 500K/2M filter-rules budget, not a list count.
+> **Default source-of-truth (code wins).** Any plan/catalog copy that says "Block List Basic is the only default" is wrong for the device; the device ships Phishing + Scam off `defaultEnabled: true`, and the iOS `BlocklistSource.defaultEnabled` flag is the authoritative live mechanism. The backend catalog's `default_enabled` column was realigned to the same Phishing + Scam set by a migration, so the served `/v1/catalog` metadata now matches the client. The public site's "Enabled blocklists 3 → 10" copy is still **stale** — the real gate is the 500K/2M filter-rules budget, not a list count.
 
 ### 5.4 Source-url-only GPL distribution model (Implemented)
 
@@ -225,7 +225,7 @@ On the Worker side, `syncOneBlocklist` fetches each upstream source and normaliz
 | Zero-copy mmap of compact snapshot | Implemented |
 | Source-url-only catalog + direct upstream fetch + hash validation | Implemented |
 | Protected-domain filter | Implemented |
-| Free default = Phishing + Scam (not Basic) | Implemented (known discrepancy) |
+| Free default = Phishing + Scam (not Basic) | Implemented (catalog realigned to match) |
 | First-party Lava code license | AGPL-3.0 (`LICENSE`); third-party lists stay GPL-3.0 upstream |
 
 ---

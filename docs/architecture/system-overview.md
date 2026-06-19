@@ -60,7 +60,7 @@ Everything below is in service of keeping that sentence true. The architecture i
 | **lavasec-api Worker** | Cloudflare Worker (`api.lavasecurity.app`): catalog reads, admin/cron blocklist sync + publish, anonymous bug reports, account deletion, App Store entitlement mirroring, QA probes. | Implemented |
 | **lavasec-email Worker** | Receive-only Cloudflare Email Routing forwarder for `@lavasecurity.app`; rejects unknown/oversized mail. | Implemented |
 | **Supabase Postgres** | Accounts, `user_backups`, catalog metadata, service-role-only tables; **RLS on every public table**. | Implemented |
-| **Cloudflare R2** (the production R2 bucket, a separate preview bucket for staging) | Catalog snapshots + bug-report attachments. **Never** third-party blocklist bytes. | Implemented |
+| **Cloudflare R2** (the production R2 bucket, a separate preview bucket for staging) | Catalog snapshots + the round-robin sync cursor. **Never** third-party blocklist bytes; the bug-report attachment upload route was removed (legacy objects are only deleted on account deletion). | Implemented |
 | **Cloudflare D1** (the help-feedback database) | Append-only anonymous help-article feedback votes. | Implemented |
 
 ## 4. Data-flow diagram
