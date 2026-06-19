@@ -1,163 +1,223 @@
+---
+last_reviewed: 2026-06-19
+owner: engineering
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
+---
+
 # System Overview
 
-Lava Security is a privacy-first iOS app that filters DNS locally on the device through an on-device NetworkExtension packet tunnel, blocking known risky and unwanted domains without routing your browsing through Lava's servers.
+> **Audience:** engineers. This is the whole of Lava Security on one page — what the parts are, how data moves between them, and where the trust boundaries sit. Per-component docs go deeper; this one exists so you can hold the system in your head before reading them.
+>
+> **Authority:** where this doc and a plan disagree, **code wins**. Status reflects the code-confirmed reality, not plan aspiration. See the [Status legend](#8-status-legend) at the bottom.
 
-This page is the whole system on one screen, written for engineers. It names every component, shows how they connect, traces the three data flows that matter, and states the trust boundaries that make the privacy promise true. Each component links to its own deeper doc.
+## 1. Product one-liner
 
-> **The privacy promise:** DNS filtering happens locally on your device; Lava never receives your routine DNS queries, browsing history, or per-domain telemetry, and any optional account backup is end-to-end encrypted so Lava can only ever store ciphertext.
+Lava Security is a privacy-first iOS app that filters DNS **locally on the device** through a NetworkExtension packet tunnel, blocking malicious and unwanted domains for non-technical users (parents, older adults) — with core protection free forever and no account required.
 
-Status is marked throughout as **Implemented**, **(In progress)**, **(Planned)**, or **(Dropped)** per the [status legend](#status-legend). Default unmarked statements describe shipped behavior.
+## 2. The privacy promise (canonical)
 
----
+> All DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit — the backend holds only catalog metadata, an opaque per-user encrypted backup, and anonymized diagnostics you choose to send.
 
-## Components
+Everything below is in service of keeping that sentence true. The architecture is deliberately small on the server side: the device does the work, and the backend never sees a query.
 
-### On device (iOS)
+## 3. Components
 
-Three app targets share `LavaSecCore` and the **App Group** `group.com.lavasec`, which is how the app, the packet-tunnel extension, and the widget read the same compiled snapshot and config.
+### iOS client (three executable targets + shared code, one App Group `group.com.lavasec`)
 
-| Component | Role | Doc |
+| Component | Bundle / location | Role | Status |
+|---|---|---|---|
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI app shell; entry point, two-tab Guard + Settings nav (Filters/Activity are Guard detail screens). | Implemented |
+| **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`; the on-device DNS filter/resolve engine. Subject to the iOS **~50 MiB per-extension memory ceiling**. | Implemented |
+| **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit Live Activity (lock screen + Dynamic Island). | Implemented |
+| **Shared/** | `Shared/` | Cross-target sources: App Group, command service, mascot, Live Activity attributes/intents. | Implemented |
+
+**App-side controllers (in LavaSecApp):**
+
+- **AppViewModel** — the app-side controller (god-object): owns the `NETunnelProviderManager` lifecycle, shared-state persistence, provider messaging, Live Activity reconcile, catalog sync, backup, StoreKit, and auth.
+- **RootView** — two-tab `TabView` (Guard + Settings), with Filters and Activity reached as detail screens under Guard; gates onboarding, hosts security-lock / privacy-mask overlays.
+- **SecurityController** — passcode (salted SHA256 in Keychain) + biometrics + per-surface protection.
+- **LavaLiveActivityController** — single-Activity reconciler, deduped and revision-gated.
+- **OnboardingFlowView** — multi-page first-run flow (6 pages: `lava → guardIntro → features → vpn → notifications → done`).
+
+**LavaSecCore (platform-agnostic SwiftPM package, `Sources/LavaSecCore/`):**
+
+- **FilterSnapshot / CompactFilterSnapshot** — compiled filter + decision precedence; the compact form is the mmap-friendly on-disk artifact the tunnel reads.
+- **DNSQueryDispatcher** — query precedence: bootstrap > pause > filter.
+- **ResolverOrchestrator** — transport routing, plain-DNS degradation, per-endpoint failover, device-DNS fallback.
+- **DoHTransport / DoTTransport / DoQTransport** — encrypted transport executors.
+- **FeatureLimits** (in `SubscriptionPolicy.swift`) — tier ceilings (source of truth), via the static `.free` / `.paid` members.
+- **FilterSnapshotMemoryBudget / FilterSnapshotPreparationService** — device-guardrail math + authoritative post-union budget enforcement.
+- **BlocklistCatalogSync / BlocklistParser** — catalog fetch, direct upstream download, local parse/normalize/dedup, protected-domain filter.
+- **GuardianMascotAnimation** — 7-state mascot state graph (rendered by `Shared/SoftShieldGuardian`).
+- **ZeroKnowledgeBackupEnvelope / BackupConfigurationPayload / BackupRecoveryPhrase** — backup crypto + payload.
+- **SupabaseIDTokenAuth** — raw-URLRequest `id_token` auth (no SDK).
+
+### Backend
+
+| Component | Role | Status |
 |---|---|---|
-| **iOS app** (`AppViewModel`) | VPN lifecycle source of truth; orchestrates turn-on, onboarding, and backup. Controls the tunnel via `NETunnelProviderManager` + `sendProviderMessage` (a **command / provider message**), not Darwin `CFNotification` observers. | [iOS client](./ios-client.md) |
-| **Packet-tunnel extension** (`PacketTunnelProvider` / `LavaSecTunnel`) | The `NEPacketTunnelProvider` that parses DNS packets, extracts the queried domain, evaluates it against the memory-mapped compiled snapshot, and forwards allowed queries upstream. Bounded by the ~50 MiB per-process jetsam memory ceiling. `VPNLifecycleController` handles turn-on/pause/resume, on-demand, and snapshot reload. | [DNS filtering engine](./dns-filtering-and-blocklists.md) |
-| **Widget** | Shares `LavaSecCore` state and config through the same App Group. | [iOS client](./ios-client.md) |
+| **lavasec-api Worker** | Cloudflare Worker (`api.lavasecurity.app`): catalog reads, admin/cron blocklist sync + publish, anonymous bug reports, account deletion, App Store entitlement mirroring, QA probes. | Implemented |
+| **lavasec-email Worker** | Receive-only Cloudflare Email Routing forwarder for `@lavasecurity.app`; rejects unknown/oversized mail. | Implemented |
+| **Supabase Postgres** | Accounts, `user_backups`, catalog metadata, service-role-only tables; **RLS on every public table**. | Implemented |
+| **Cloudflare R2** (the production R2 bucket, a separate preview bucket for staging) | Catalog snapshots + the round-robin sync cursor. **Never** third-party blocklist bytes; the bug-report attachment upload route was removed (legacy objects are only deleted on account deletion). | Implemented |
+| **Cloudflare D1** (the help-feedback database) | Append-only anonymous help-article feedback votes. | Implemented |
 
-The encrypted upstream transports live in `LavaSecCore`: `DoHTransport` (**DoH**, with observational **DoH3** annotation), `DoTTransport` (**DoT**, pooled/reused connections), `DoQTransport` (**DoQ**, fresh QUIC connection per query). See [DNS transports](./dns-filtering-and-blocklists.md).
+## 4. Data-flow diagram
 
-### Backend (Cloudflare + Supabase)
-
-A deliberately minimal, privacy-preserving edge layer.
-
-| Component | Role | Doc |
-|---|---|---|
-| **`lavasec-api`** (API Worker) | Cloudflare Worker at `api.lavasecurity.app`: serves the public blocklist catalog, runs source sync/publish (admin + cron), accepts anonymous bug reports and help-article feedback, handles authenticated account deletion and App Store entitlement sync, gates passkey recovery, and serves QA probe pixels. `fetch()` router + `scheduled()` cron. | [backend](./backend-and-data.md) |
-| **`lavasec-email`** (Email Worker) | Receive-and-forward email worker for `support@`/`hello@`/`jimmy@`/`legal@`. Stores no bodies or attachments; outbound auto-replies are **(In progress)** (code present, gated behind paid Email Sending). | [backend](./backend-and-data.md) |
-| **Supabase Postgres** | Account profiles, entitlements, blocklist catalog metadata, encrypted backup envelopes, and service-role-only passkey-recovery / QA-allowlist tables — **all RLS-enabled**. Project `lava-sec`, region `ap-southeast-1`. | [backend](./backend-and-data.md) |
-| **Cloudflare R2** (`LAVASEC_R2`) | Object storage for `catalog/latest.json` + `catalog/{version}.json`, the scheduled-sync cursor, and bug-report attachments. Does **not** store third-party blocklist bytes. | [backend](./backend-and-data.md) |
-| **Cloudflare D1** (`HELP_FEEDBACK_DB`) | SQLite-at-edge store for anonymous help-article feedback votes. | [backend](./backend-and-data.md) |
-
-### Third-party blocklist sources
-
-Lava does not host blocklist data. The catalog publishes only metadata plus the upstream `source_url` for each list (**source-url-only**); the app fetches each list directly from its origin (e.g. HaGeZi, OISD, Block List Project, Phishing.Database) and parses it on-device. See [blocklist catalog](./dns-filtering-and-blocklists.md).
-
----
-
-## Component & data-flow diagram
+The single most important property: **the encrypted DNS resolver path (right side) never touches Lava's backend (bottom).** The device fetches catalog *metadata* from the Worker, but list *bytes* and the actual query stream go directly to third parties.
 
 ```
-                            THIRD-PARTY BLOCKLIST ORIGINS
-                     (HaGeZi, OISD, Block List Project, Phishing.Database …)
-                                          │
-                    direct upstream fetch │ (metadata says where; bytes come from origin)
-                    + SHA-256 verify      │           ▲
-                    + on-device parse     │           │ admin sync / 6h cron
-                                          ▼           │ normalize → hash → metadata only
-┌───────────────────────────── iOS DEVICE ──────────┼─────┐     ┌──── CLOUDFLARE ─────────────┐
-│                                                    │     │     │                              │
-│  ┌────────────┐   provider msg    ┌─────────────┐  │     │     │  lavasec-api (API Worker)    │
-│  │  iOS app   │◄────────────────► │ packet-tunnel│ │     │     │  api.lavasecurity.app        │
-│  │ AppViewModel│  pause/resume/    │  extension   │─┼─────┼────►│  GET /v1/catalog ───────┐    │
-│  │            │   reload          │ LavaSec      │  │catalog    │  (R2 JSON, metadata)    │    │
-│  │  widget ───┼── App Group ──────┤  Tunnel      │  │fetch│     │  POST /v1/bug-reports   │    │
-│  └─────┬──────┘  group.com.lavasec└──────┬───────┘  │     │     │  /v1/account/* , passkey│    │
-│        │                                 │          │     │     └──────┬─────────┬────────┘    │
-│        │ sign-in (id_token grant)        │ allowed  │     │            │ R2      │ service-role │
-│        │ encrypted backup (ciphertext)   │ DNS only │     │     ┌──────▼──┐  ┌───▼──────────┐  │
-│        │                                 ▼ DoH/DoT/ │     │     │   R2    │  │  Supabase    │  │
-│        │                         ┌───────────────┐  │ DoQ │     │ catalog │  │  Postgres    │  │
-│        │                         │ upstream DNS  │  │     │     │  + sync │  │  (RLS on all │  │
-│        │                         │  resolver     │  │     │     │  cursor │  │   tables)    │  │
-│        │                         └───────────────┘  │     │     │ + attach│  │ user_backups │  │
-│        │                                            │     │     └─────────┘  │ entitlements │  │
-│        └───────────────── HTTPS ────────────────────┼─────┼─────────────────►│ profiles …   │  │
-│                                                     │     │     ┌─────────┐  └──────────────┘  │
-│  ✗ routine DNS queries  ✗ browsing history          │     │     │   D1    │  (help feedback)   │
-│  ✗ per-domain telemetry  ✗ plaintext settings       │     │     └─────────┘                    │
-└─────────────────────────────────────────────────────┘     └──────────────────────────────────┘
-
-   Local-only, never leaves device ──────┘          Server-stored (metadata / ciphertext only) ─┘
+                                  YOUR iPHONE
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                                                                             │
+ │   ┌──────────────┐   provider messages    ┌───────────────────────────┐    │
+ │   │  LavaSecApp  │ ─────────────────────►  │      LavaSecTunnel        │    │
+ │   │ (AppViewModel│   (reload-snapshot /    │  (NEPacketTunnelProvider) │    │
+ │   │  controller) │    pause / config)      │                           │    │
+ │   └──────┬───────┘                         │   DNSQueryDispatcher       │   │
+ │          │                                 │   bootstrap > pause >      │   │
+ │          │ writes / reads                  │   ┌──────────────────────┐ │   │
+ │          ▼                                 │   │  CompactFilterSnapshot│ │   │
+ │   ┌──────────────────────────┐  mmap       │   │  guardrail > allow >  │ │   │
+ │   │  App Group container      │ ◄──(read)── │   │  block > default-allow│ │   │
+ │   │  group.com.lavasec        │            │   └──────────┬───────────┘ │   │
+ │   │  • filter-snapshot.compact│            │              │ allowed     │   │
+ │   │  • app-configuration.json │            │              ▼             │   │
+ │   │  • tunnel-health.json      │           │   ┌──────────────────────┐ │   │
+ │   │  • pause/session UserDefs  │           │   │  ResolverOrchestrator│ │   │
+ │   └──────────────────────────┘             │   │  DoH3/DoT/DoQ/IP +   │ │   │
+ │          ▲                                 │   │  device-DNS fallback │ │   │
+ │          │ reads (Live Activity)           │   └──────────┬───────────┘ │   │
+ │   ┌──────┴───────┐                         └──────────────│─────────────┘   │
+ │   │ LavaSecWidget│                                        │                 │
+ │   │ (Dynamic Isl.│                                        │ encrypted DNS   │
+ │   │  + lock scr.)│                                        │ (query stream)  │
+ │   └──────────────┘                                        │                 │
+ └──────────────────────────────────────────────────────────│─────────────────┘
+        │ (a) catalog          │ (b) list bytes              │ (c) blocked → NXDOMAIN
+        │  metadata            │  (direct from upstream)     │     allowed → forwarded
+        ▼                      ▼                             ▼
+ ┌──────────────┐   ┌──────────────────────┐    ┌───────────────────────────────┐
+ │ lavasec-api  │   │  Upstream blocklists  │   │  Public DNS resolver           │
+ │ Worker       │   │  (HaGeZi, OISD,       │   │  (Quad9 / Cloudflare / Google  │
+ │ GET /v1/     │   │   Block List Project) │   │   / Mullvad; user-chosen)       │
+ │  catalog     │   └──────────────────────┘    └───────────────────────────────┘
+ └──────┬───────┘
+        │ reads/writes (metadata only)
+        ▼
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │  LAVA BACKEND (sees no DNS queries, no browsing history)                   │
+ │  • Supabase Postgres: accounts, user_backups (opaque ciphertext), catalog │
+ │  • Cloudflare R2: catalog/latest.json, the round-robin cursor             │
+ │  • lavasec-email Worker: receive-only @lavasecurity.app forwarding         │
+ └──────────────────────────────────────────────────────────────────────────┘
+       ▲
+       │ (d) optional: encrypted backup envelope (PostgREST, RLS) — ciphertext only
+       │     entitlement mirror, anonymous bug reports, account deletion
+       └──── from LavaSecApp, only when the user opts in
 ```
 
-The dotted line down the middle of the device box is the trust boundary: everything to its left stays on the device. The only things that cross to Cloudflare/Supabase are catalog reads, account auth tokens, and opaque backup ciphertext — never the DNS queries themselves.
+## 5. Data flows
 
----
+### A. The DNS path (per query, all on-device) — Implemented
 
-## Data flows
+This is the hot path and the privacy core. It runs entirely inside `LavaSecTunnel`; nothing here reaches Lava's servers.
 
-### 1. DNS query path (local, hot path)
+1. The packet tunnel intercepts a DNS query (tunnel DNS server `10.255.0.1`).
+2. **`DNSQueryDispatcher`** applies query precedence: **bootstrap > pause > filter**. Bootstrap-first is a hard invariant — the resolver's own hostname is resolved before any filtering so the resolver can never block itself.
+3. If not bootstrap and not paused, the domain is evaluated against **`CompactFilterSnapshot`** (loaded from the App Group via `Data(contentsOf:options:[.mappedIfSafe])` zero-copy mmap). Decision precedence is **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow**; invalid domains are blocked.
+4. **Blocked** → the tunnel answers locally (no upstream contact). **Allowed** → the query is handed to **`ResolverOrchestrator`**.
+5. `ResolverOrchestrator` routes to the configured transport — **`DoH3` / `DoT` / `DoQ` / plain DNS (`IP`)** — with per-endpoint failover behind a backoff gate, plain-DNS degradation when an encrypted plan has no endpoints, and **device-DNS fallback** when the primary returns no response and the plan allows it.
+6. The resolver reply is returned to the OS. The user's query stream goes only to the **user-chosen public resolver**, never to Lava.
 
-This is the path that runs for every DNS lookup on the device. It never touches Lava's servers.
+Transport notes (verbatim conventions): `DoH3` (no slash) is annotated **only when an h3 negotiation is actually observed** — preferred, never promised. **`DoT`** pools up to 4 NWConnections per endpoint with idle-staleness refresh + one fresh-connection retry. **`DoQ`** opens a **fresh QUIC connection per query** (no reuse); the 4-lane pool gives concurrency, not handshake reuse — connection reuse was built, device-tested, and **reverted** (deferred until the iOS-26 deployment floor). See [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md).
 
-1. The OS routes the device's DNS through the **packet tunnel** (`PacketTunnelProvider` / `LavaSecTunnel`).
-2. The tunnel parses the DNS packet and extracts the queried domain.
-3. It evaluates the domain against the memory-mapped `CompactFilterSnapshot` using fixed precedence — **guardrail (block) > allowlist (allow) > blocklist (block) > default-allow**. Guardrails cannot be overridden by the user allowlist.
-4. **Blocked:** the tunnel answers locally; nothing is forwarded.
-5. **Allowed:** the tunnel forwards the query to the selected upstream resolver over the configured transport — plain DNS (default: Google), **DoH** (with **DoH3** preference), **DoT** (pooled connections), or **DoQ** (custom stamp/URL only, fresh QUIC connection per query). An in-memory response cache, in-flight query coalescing, and a reused UDP socket per upstream keep the path fast.
+### B. Catalog fetch + blocklist load (source-url-only) — Implemented
 
-Lava's backend is not in this loop. Routine DNS queries, browsing history, and per-domain telemetry never leave the device. See the [DNS filtering engine](./dns-filtering-and-blocklists.md) and [DNS transports](./dns-filtering-and-blocklists.md).
+How the filter rules get onto the device. Lava is a **source-url-only** distributor: it publishes only the upstream URL + accepted hashes and **never stores, mirrors, transforms, or serves third-party blocklist bytes.**
 
-### 2. Catalog fetch (list distribution)
+1. The device fetches catalog **metadata** from the Worker: `GET https://api.lavasecurity.app/v1/catalog` → JSON served straight from R2 (`catalog/latest.json`), split into `sources[]` + `guardrails[]`, each entry carrying `source_url` + `accepted_source_hashes`.
+2. For each enabled source, the device downloads the list **bytes directly from `source_url`** (the upstream — HaGeZi, OISD, Block List Project, etc.), **not** from Lava.
+3. The device computes SHA256 and only accepts bytes whose checksum is in `accepted_source_hashes`; on mismatch it falls back to last-good cache or fails closed (`checksumMismatch`).
+4. **`BlocklistParser`** parses/normalizes/dedups locally (auto / plain / hosts / adblock / dnsmasq formats), then **`DomainRuleSet.lavaSecProtectedDomains`** strips protected domains (apple.com, icloud.com, lavasecurity.com/.app, google.com, accounts.google.com, …) so an upstream list can never block Lava/Apple/identity-provider domains.
+5. **`FilterSnapshotPreparationService`** merges the deduped union and runs **authoritative budget enforcement** (device cap first, then tier), then writes `filter-snapshot.compact` into the App Group.
+6. `AppViewModel` sends a `reload-snapshot` provider message; the tunnel reloads.
 
-How the device learns which blocklists exist and gets their contents — without Lava ever serving list bytes.
+The Worker side mirrors this: its admin/cron sync fetches each upstream, hashes/counts it, writes `raw_r2_key = null` / `normalized_r2_key = null`, and republishes metadata only. The blocklist-catalog model and the backend sync path are covered in [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md) and [Backend & Data](./backend-and-data.md).
 
-1. The app calls `GET /v1/catalog` on the API Worker, which returns `catalog/latest.json` from R2 (`schema_version` 2). The document lists `sources[]` and always-on `guardrails[]`, each entry carrying `id`, `source_url`, `accepted_source_hashes`, `parse_format`, `license_name`, and `entry_count` — **metadata only**.
-2. For each enabled source, the app fetches the list **directly from its upstream `source_url`** (`BlocklistCatalogSync`), not from Lava.
-3. The app verifies the downloaded bytes against the catalog's non-empty accepted-hash allowlist and **fails closed** (cached last-good, or reject) on mismatch.
-4. `BlocklistParser` normalizes the list (hosts/adblock/plain/dnsmasq), drops invalid/comment/IP lines and protected domains (Apple, iCloud, Lava, Supabase, Google, GitHub, …), and dedups, capped at 1M rules per list.
-5. `FilterSnapshotPreparationService` merges/dedups the union and enforces the budget at compile time — device cap first (~3.26M rules), then tier cap (Free 500K / Plus 2M).
+**Budget model (two layers):**
+- **Device guardrail (everyone, never a paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 rules** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — a 32 MB target under the ~50 MiB NE ceiling. Over-budget configs are rejected deterministically rather than letting the tunnel jetsam.
+- **Tier ceiling (`FeatureLimits`):** **Free 500K rules / Plus 2M rules**, which binds below the device guardrail. This replaced the old enabled-list **count** cap (free 3 / paid 10) — list-count caps are obsolete.
 
-On the server side, the catalog is refreshed by an admin `POST /v1/admin/blocklists/sync` or a 6-hour cron that fetches each `source_url`, normalizes it only to compute `entry_count`/hashes, records a `blocklist_versions` row, and republishes the catalog JSON to R2 — **never storing the list bytes** (`raw_r2_key`/`normalized_r2_key` are forced NULL). See the [blocklist catalog](./dns-filtering-and-blocklists.md) and [backend](./backend-and-data.md).
+> **Default-enabled caveat (code wins):** the shipped free defaults are **Block List Project Phishing + Scam** (`OnboardingDefaults.lavaRecommendedDefaults`). They are derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which is the on-device source of truth and mirrors the backend catalog `default_enabled` column. Plan/catalog copy that says "Block List Basic is the only default" is wrong for the device (tracked internally).
 
-### 3. Account / backup sync (optional, zero-knowledge)
+### C. Backup (zero-knowledge, opt-in) — Implemented
 
-Protection works with no login. An account exists only to authenticate **zero-knowledge backup** of your settings.
+Optional, account-gated, and the only user data that lands in the backend — as **opaque ciphertext**.
 
-1. **Sign-in:** the user signs in with Apple or Google. `AccountAuthService` obtains a provider ID token + a SHA-256-hashed nonce, and `SupabaseIDTokenAuth` exchanges it via Supabase Auth's native id_token grant (`grant_type=id_token`). Only the resulting Supabase session is persisted, in a device-only Keychain (`GenericKeychainStore`, `AfterFirstUnlockThisDeviceOnly`). Email/password sign-in is **(Dropped)**.
-2. **Encrypt on device:** `BackupConfigurationPayload` (the only plaintext — blocklist IDs, allow/block domains, resolver settings, prefs) is sealed by `ZeroKnowledgeBackupEnvelope` with AES-256-GCM under a random payload key, which is wrapped into PBKDF2-HMAC-SHA256 key slots (device secret, assisted-recovery phrase, optional passkey).
-3. **Upload ciphertext:** `SupabaseBackupSyncService` upserts the `user_backups` row over PostgREST. The server receives only ciphertext, envelope metadata, the server recovery share, and timestamps — never plaintext, the recovery phrase, or any key. RLS scopes the row to `auth.uid()`.
-4. **Restore:** on a new device the envelope is fetched and decrypted **locally** via one of three unlock modes — This Device (device secret), Recovery phrase (8 CSPRNG tokens combined with the server recovery share via SHA-256), or Passkey.
+1. The user optionally signs in (Apple or Google only; **email/password is Dropped**) via native `id_token` exchanged at Supabase Auth (`grant_type=id_token`, hashed nonce). Only the resulting Supabase session is stored, device-local, in the Keychain.
+2. **`BackupConfigurationPayload`** assembles a minimized plaintext (enabled blocklist IDs, allowed/blocked domains, resolver prefs, local-log prefs, LavaGuard ledger). It **excludes** `isPaid`, QA, diagnostics, and full blocklists.
+3. **`ZeroKnowledgeBackupEnvelope`** seals it with **AES-256-GCM** under a random 32-byte payload key; that key is wrapped into per-secret **key slots** via **PBKDF2-HMAC-SHA256 (210k iters)** — device-secret slot, assisted-recovery slot, optional passkey slot. The optional passkey slot is wrapped with an authenticator **WebAuthn PRF / `hmac-secret`** output (HKDF-derived); that output never leaves the client, so the passkey slot is genuinely zero-knowledge — no server-held value unwraps it (`ZeroKnowledgeBackupEnvelope.makeWithPRF`).
+4. **`BackupSyncService`** uploads **only ciphertext + non-secret metadata** to Supabase `user_backups` directly via PostgREST, scoped by per-user **RLS**. (There is no Worker upload route; the Worker touches `user_backups` only to delete it during account deletion.)
+5. **Recovery:** seamless same-device restore via the device-secret slot; off-device via the **8-word CVCV recovery phrase** (~105 bits) combined with a server-held recovery share via SHA256 (two-factor — neither half alone decrypts); or, when a passkey slot was sealed, via the client-side WebAuthn PRF / `hmac-secret` output (no server-held value involved). The server never registers passkeys, issues WebAuthn challenges, or stores any recovery secret.
 
-**Passkey recovery is server-gated, not zero-knowledge:** the API Worker releases a stored `recovery_secret` after a successful WebAuthn assertion (RP id `lavasecurity.app`). See [accounts & backup](./accounts-and-backup.md).
+See [Accounts & Backup](./accounts-and-backup.md).
 
----
+### D. App ↔ extension control plane — Implemented
 
-## Trust boundaries & privacy-preserving design
+Three processes (app, tunnel, widget) coordinate through the App Group `group.com.lavasec`:
 
-The device is the trust boundary. Filtering is local; the backend is designed so it cannot receive the sensitive data even if it wanted to.
+- **Control = NETunnelProviderSession provider messages**, **not** Darwin notifications. `AppViewModel` encodes a `LavaSecProviderMessage {kind, operationID}` and calls `session.sendProviderMessage`; the tunnel's `handleAppMessage` switches on the kind (`reload-snapshot` / `reload-protection-pause` / `reload-configuration` / `clear-*` / `flush-tunnel-health`).
+- **Shared files** carry rules/config/health (`filter-snapshot.compact`, `app-configuration.json`, `tunnel-health.json`); **shared UserDefaults stores** (`ProtectionSessionStore` / `ProtectionPauseStore`) carry session + pause state.
+- **`LavaProtectionCommandService`** executes Live-Activity / AppIntent pause/resume commands under a `flock` file lock with revision dedup and auth-required denial; **reconnect bypasses it** to restart the tunnel directly (`startVPNTunnel`).
+- **Connect-On-Demand** is enabled only *after* the tunnel confirms connected, never at profile install — so a freshly installed onboarding profile can't bring up an un-turn-off-able tunnel.
 
-### What never leaves the device
+See [iOS Client](./ios-client.md).
 
-- **Routine DNS queries, browsing history, and per-domain telemetry.** Filtering happens entirely in the packet tunnel; there are no passive telemetry tables. Bug reports are anonymous, user-triggered, and field-allowlisted (`has_account_info:false`).
-- **Plaintext settings.** The backup payload is encrypted on-device before any upload; the server sees only ciphertext.
-- **Backup decryption material.** The device secret, passkey credential ID, and recovery code live in a device-only Keychain (`AfterFirstUnlockThisDeviceOnly`), not synchronizable iCloud Keychain. The recovery phrase is never sent to the server.
-- **Custom Plus blocklist URLs.** Custom Pi-hole HTTPS list URLs are fetched directly on-device, never proxied through or logged to Lava, and are excluded from bug-report payloads.
+## 6. Trust boundaries & privacy-preserving design
 
-### Source-url-only
+| # | Boundary | What crosses it | What deliberately does NOT |
+|---|---|---|---|
+| 1 | **Device ↔ public DNS resolver** | Allowed DNS queries (encrypted: DoH3/DoT/DoQ, or plain IP) go to the user-chosen resolver. | Lava never sees the query stream; it is not in this path at all. |
+| 2 | **Device ↔ upstream blocklist hosts** | The device downloads list bytes directly from `source_url`. | Lava never proxies, mirrors, or stores third-party blocklist bytes. |
+| 3 | **Device ↔ lavasec-api Worker** | Catalog **metadata** reads; opt-in anonymous bug reports; entitlement mirror; account deletion. | No DNS queries, no browsing history, no plaintext settings. |
+| 4 | **Device ↔ Supabase** | Opt-in **encrypted backup envelope** (ciphertext only, PostgREST under RLS); account rows. | The server cannot decrypt the backup without a user-held secret. |
+| 5 | **App ↔ tunnel extension** (on-device) | Provider messages + App Group files/defaults. | The tunnel fails **closed** on cold start with no reusable snapshot. |
 
-Lava publishes only catalog **metadata plus the upstream `source_url`**; the app fetches each list directly from its origin and parses it on-device. Lava never hosts, mirrors, or serves third-party blocklist bytes from R2 — `source_url_only` is the only allowed `redistribution_mode`, enforced by a DB CHECK constraint and a CI guardrail (`scripts/check-gpl-blocklist-distribution.sh`). The earlier R2 raw-mirror approach was built then **(Dropped)** in favor of this model. This keeps Lava a local filtering engine rather than a redistributor, and means the backend never sees which lists a given device actually uses.
+**Privacy-preserving design principles, grounded in the above:**
 
-### Zero-knowledge backup
+- **Local-first filtering.** The decision engine and resolver run inside the NE extension on the device. The backend is metadata-only by construction — there are no tables for routine DNS queries or per-domain telemetry.
+- **No account required for protection.** Core protection is free forever; auth and backup are strictly opt-in.
+- **Source-url-only distribution.** Decouples Lava from third-party list bytes (GPL/IP-compliance + App Review safety) and keeps a CI guardrail enforcing "no mirror code, no Lava artifact URLs, no R2 byte writes."
+- **Zero-knowledge backup at rest.** Client-side AES-256-GCM; the server holds ciphertext + KDF metadata + a recovery share, never the plaintext, the recovery phrase, or the unwrapped key. The optional passkey slot is wrapped with a client-side WebAuthn PRF / `hmac-secret` output, so it too is zero-knowledge — no server-held value unwraps it.
+- **Device-local secrets.** Backup unlock material uses `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — not iCloud-synced, not in device backups.
+- **Service-role isolation.** `bug_reports`, `mirror_events`, and `qa_developers` are revoked from anon/authenticated PostgREST roles; only the Worker (service role) touches them.
+- **Safety is never for sale.** Payment unlocks **customization only**. It never bypasses the non-allowable **threat guardrail**, whose integrity is enforced by accepted SHA256 source hashes (not a server signature). Precedence is consistent everywhere: **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.**
 
-Optional account backup is encrypted entirely on-device (AES-256-GCM under a random payload key, wrapped into PBKDF2-HMAC-SHA256 key slots). Supabase stores only opaque ciphertext + non-secret envelope metadata (KDF params, salts, nonces), capped at ~256 KiB — never plaintext, the recovery phrase, or any decryption key. **Defense in depth at the DB layer:** RLS is enabled on every public table; `profiles`/`user_settings`/`entitlements`/`user_backups` allow only `auth.uid()=owner`, and sensitive tables (`bug_reports`, `mirror_events`, `backup_passkey_recovery`, `backup_passkey_challenges`, `qa_developers`) `REVOKE ALL` from anon/authenticated and are reachable only by the Worker's service role.
+## 7. Per-component docs
 
-The one explicit exception is **passkey recovery**, which is **server-gated, not zero-knowledge**: a system with service-role access to both `user_backups` and `backup_passkey_recovery` could recover a passkey-protected backup. This is called out deliberately rather than advertised as zero-knowledge. See [accounts & backup](./accounts-and-backup.md).
+> These are the sibling documents in the architecture doc-set. The DNS filtering engine and the blocklist catalog are documented together in one file.
 
----
+- [iOS Client](./ios-client.md) — targets, App Group, control plane, protection state model, onboarding, Live Activity.
+- [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md) — filter snapshot, decision precedence, resolver transports (DoH3/DoT/DoQ), memory budget, mmap; plus the source-url-only catalog model, catalog fetch, local parse/normalize, protected-domain filter, and tier budget.
+- [Accounts & Backup](./accounts-and-backup.md) — Apple/Google auth, zero-knowledge envelope, key slots, recovery phrase, client-side WebAuthn-PRF passkey recovery.
+- [Backend & Data](./backend-and-data.md) — lavasec-api + lavasec-email Workers, Supabase schema + RLS, R2/D1, deployment.
 
-## Status legend
+## 8. Status legend
 
-| Status | Meaning |
-|---|---|
-| **Implemented** | Production call sites exist and ship. |
-| **(In progress)** | Some code present but not fully wired, not on `main`, or pending QA/review. |
-| **(Planned)** | Plan only, little or no code (e.g. URL-level protection, the Android app). |
-| **(Dropped)** | Built-then-reverted or cancelled (e.g. R2 raw-mirror, email sign-in, the backup password slot). |
+This doc-set uses one status vocabulary. The **lane folder is the authoritative status**; stale frontmatter inside a plan is a doc bug, not a status. **Code overrides plans.**
 
-## Per-component docs
+| Status | Meaning | Plan lane | Code |
+|---|---|---|---|
+| **Implemented** | Shipped and confirmed in code | `plans/implemented/` | present & wired |
+| **In progress** | Actively being built; partially landed | `plans/inflight/`, `plans/under_review/` | partially present |
+| **Planned** | Designed, not built | `plans/backlog/` | absent |
+| **Dropped** | Rejected or reverted | `plans/dropped/` (or reverted commit) | absent / removed |
 
-- [iOS client](./ios-client.md) — app, packet-tunnel extension, widget, App Group, VPN lifecycle.
-- [DNS filtering engine](./dns-filtering-and-blocklists.md) — packet parsing, compiled snapshot, decision precedence, memory budget.
-- [DNS transports](./dns-filtering-and-blocklists.md) — DoH/DoH3, DoT, DoQ, resolver presets and DNS stamps.
-- [Blocklist catalog](./dns-filtering-and-blocklists.md) — source-url-only model, hashes, parsing, filter-rules budget.
-- [Backend](./backend-and-data.md) — `lavasec-api`, `lavasec-email`, Supabase, R2, D1.
-- [Accounts & backup](./accounts-and-backup.md) — sign-in, zero-knowledge envelope, passkey recovery, account deletion.
+**Status of things mentioned on this page:**
+
+- **Implemented:** the four iOS targets + App Group; provider-message control plane; on-device DNS filtering with DoH3/DoT/DoQ/IP transports; source-url-only catalog fetch + local parse; filter-rules budget (Free 500K / Plus 2M) + ~3.26M device guardrail; multi-page onboarding; passcode/biometric security; single deduped Live Activity; zero-knowledge backup; Apple + Google auth; account deletion; entitlement mirroring; QA probes; the `LavaDesignSystem` token layer (`LavaTokens`/`LavaComponents`/`LavaConfirmationDialog`/`LavaIcon`/`LavaScaffold`), including the `LavaTier` depth model (Floor/Window/Workshop = `calm`/`celebratory`/`technical`), the `.lavaTier(_:)` / `.lavaTierMetadata()` modifiers wired into representative surfaces (e.g. `SettingsView`), and the `dangerRed` and `LavaSpacing` tokens — locked by `Tests/LavaSecCoreTests/LavaDesignTokensSourceTests.swift`.
+- **In progress:** continued rollout of the design-system token layer across more surfaces (the `LavaTier` depth model and the token layer ship — see below — but a dedicated `LavaColorRole` is not yet present, so accents still resolve to raw colors).
+- **Planned:** the Lava Guard easter-egg mini-game; extra mascot expressions (the mascot has exactly **7** states); fully production-ready passkey recovery on physical devices (Associated Domains / AASA); server-side App Store JWS re-verification (`verification_status` is `client_verified_storekit`); a dedicated `LavaColorRole` token so design-system accents resolve through a semantic role rather than raw colors.
+- **Dropped:** DoQ connection reuse (per-query fresh connections); email/password sign-in (Apple + Google only); the GPL raw-R2 mirror design (superseded by source-url-only).

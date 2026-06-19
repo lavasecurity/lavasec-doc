@@ -1,233 +1,205 @@
+---
+last_reviewed: 2026-06-19
+owner: engineering
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
+---
+
 # Design System
 
-Audience: design and engineering.
+> **Audience:** design + engineering working on the Lava Security iOS app.
+> **Authority:** Where this doc and a plan disagree, **code wins** — divergences are called out inline. Status reflects the code-confirmed reality, not plan aspiration. Status legend: **Implemented** (shipped and confirmed in code), **In progress** (partially landed), **Planned** (designed, not built), **Dropped** (rejected or reverted).
 
-This document is the reference for how Lava Security looks, behaves, and speaks. It covers the governing philosophy, the **LavaTier** depth model, the Soft Shield Guardian mascot, copy and naming conventions, onboarding UX principles, and localization. Where a behavior is shipped versus planned, it is tagged with the [status legend](../architecture/system-overview.md#status-legend) — **Implemented**, **(In progress)**, **(Planned)**, or **(Dropped)** — and grounded in code or a plan.
-
-The product this design system dresses is a privacy-first iOS app: DNS filtering happens locally on your device through an on-device NetworkExtension packet tunnel; Lava never receives your routine DNS queries, browsing history, or per-domain telemetry, and any optional account backup is end-to-end encrypted so Lava can only ever store ciphertext. The design system's job is to make that promise feel calm and obvious without ever raising the user's pulse.
-
-Related docs: [Product overview](../product/overview.md) · [System overview](../architecture/system-overview.md) · [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md) · i18n glossary · Localization file schema · Translation review checklist.
+This doc covers the design philosophy, the LavaTier depth vocabulary, the Guardian mascot, copy & naming conventions, onboarding UX, and internationalization. For the architectural plumbing behind these surfaces (targets, VPN lifecycle, the Guardian/protection state model wiring), see [the iOS client](../architecture/ios-client.md); for the product framing, see [the product overview](../product/overview.md).
 
 ---
 
 ## 1. Philosophy: calm core, earned depth
 
-The governing philosophy is **calm core, earned depth**:
+Lava's audience is non-technical everyday users — parents, older adults — and the design follows from that. The everyday surface "just works" calmly for everyone; additional detail, delight, and control are revealed (**earned**) only as the user goes looking for them. Nothing nags, nothing alarms, and the technical machinery stays invisible until sought.
 
-- **Calm core** — the default experience just works and stays quiet for everyone, including the non-technical audience (parents, older adults). Nothing nags, alarms, or demands attention.
-- **Earned depth** — richer celebratory and technical surfaces exist, but they are revealed only when the user seeks them. Delight and diagnostics are opt-in, never pushed.
+This **"calm core, earned depth"** model resolves into three product depths:
 
-Every design decision is measured against this: would a first-time, non-technical user feel reassured rather than warned? Would an enthusiast still be able to dig into transport details, Nerd Stats, and diagnostics without that complexity leaking into the default surfaces? The copy, the mascot's trouble expressions, and the tier model below all exist to keep those two answers "yes."
+- **Calm** — the default, just-works protection that everyone sees first.
+- **Celebratory** — opt-in awareness and delight (streaks, unlocks, success moments). Never nags.
+- **Technical** — DNS, diagnostics, and stats. Invisible until the user seeks them out.
 
-This philosophy is encoded both conceptually (in copy and mascot behavior) and now in code as the **`LavaTier`** enum described next.
+Two cross-cutting palette/tone rules support the calm posture:
 
----
+- **red = danger only.** Red is reserved exclusively for danger and error; the calm palette is green/orange. This keeps red trustworthy as a genuine alarm signal. Danger-red is tokenized as `LavaStyle.dangerRed`, with `LavaStyle.errorText` aliased to it (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:81/86) and consumed by error text in the views. The protection tint is resolved through the semantic `ProtectionTintRole` role table (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7) rather than raw `.green`/`.orange`. A few raw `.red` call sites genuinely persist (e.g. lavasec-ios: LavaSecApp/SettingsView.swift:697, LavaSecApp/SecurityController.swift:600, LavaSecApp/FiltersView.swift) — migrating those to `LavaStyle.dangerRed` is the remaining cleanup.
+- **No fear-heavy security language.** Copy is plain, calm, and practical. See [§4 Copy & naming](#4-copy-naming).
 
-## 2. The LavaTier model (Floor / Window / Workshop)
+### The tokenized layer that exists today **(Implemented)**
 
-**Status: Implemented.** `LavaTier` ships in `apps/ios/LavaSecApp/LavaDesignSystem/LavaTokens.swift:198-216` as a `calm` / `celebratory` / `technical` enum, with an `accent` color, an `allowsDelightMotion` flag, and a `usesMonospacedMetadata` flag, plus a `lavaTier(_:)` environment modifier and a `lavaTierMetadata()` read-through modifier. It is a deliberately lightweight *vocabulary + defaults*, not a full re-theme — wired into representative surfaces only (e.g. the Nerd Stats / DNS-resolver containers as `.technical` and the Settings customization surface as `.celebratory` in `SettingsView.swift`), with Guard and the four tab roots left at the default `.calm`. (Landed in the design-system foundation work — `plans/inflight/2026-06-14-design-system-portability-foundation-plan.md`, Phase 1, PR #7.)
+The design system is a real, tokenized SwiftUI layer, alongside the `LavaTier` depth vocabulary (§2):
 
-LavaTier maps the three emotional registers of the philosophy to three named surface tiers:
+- **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5) — the adaptive color source of truth: ~18 semantic colors (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), each produced by a single `adaptiveColor(light:dark:)` factory so light/dark are defined together. Danger-red is tokenized here as `dangerRed`/`errorText` (lines 81/86).
+- **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101) — card/panel/selection surface roles and corner radii: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
+- **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183) — the spacing scale: `xs`/`sm`/`md`/`lg`/`xl` plus `screenHorizontal`/`screenTop`/`screenBottom`.
 
-| Emotional register | Tier | Surfaces | Intent | Accent (iOS) |
-|---|---|---|---|---|
-| Calm | **Floor** | Guard panel + the four tab roots | Default, just-works surfaces seen by everyone | `safeGreen` |
-| Celebratory | **Window** | Streaks, unlocks, delight-motion | Opt-in awareness and delight; never nags | `lavaOrange` |
-| Technical | **Workshop** | DNS settings, Nerd Stats, diagnostics, monospaced metadata | Advanced, inspectable surfaces; invisible until sought | `ink` |
-
-Design rules the tier encodes:
-
-- **Delight-motion lives only in the Window tier.** The calm Floor stays still; celebratory motion is reserved for the opt-in awareness layer.
-- **Monospaced metadata lives only in the Workshop tier.** Technical detail (transport annotations, diagnostics) is presented in its own register and does not bleed into Floor surfaces.
-- The tier model exists primarily so the three depths stay legible in code and **portable to Android** without a full re-theme.
-
-One open thread remains (per the inflight plan): `LavaTier.accent` ships pointing at the raw `LavaStyle` colors (`safeGreen`/`lavaOrange`/`ink`), and the planned repoint through a `LavaColorRole` was deferred — `LavaColorRole` does not yet exist. The button corner-radius disagreement is **resolved**: both styles now use `LavaSurface.controlCornerRadius = 12`.
-
-### Token layer today (LavaStyle / LavaSurface)
-
-**Status: Implemented.** The color and surface foundation the tier model builds on now lives in its own module at `apps/ios/LavaSecApp/LavaDesignSystem/LavaTokens.swift` (extracted out of `RootView.swift` in Phase 0a):
-
-- `LavaStyle` centralizes roughly 18 adaptive light/dark semantic colors through one `adaptiveColor(light:dark:)` factory (including `safeGreen`, `lavaOrange`, `ink`, `cream`), plus the reserved **`dangerRed`** danger/error token and its `errorText` alias.
-- `LavaSurface` defines surface roles with radius tokens — card `20`, compact `16`, selection `12`, plus the named `controlCornerRadius` `12`, `pillCornerRadius` `14`, and `iconBadgeCornerRadius` `10`.
-- `LavaSpacing` provides the shared spacing scale (`xs`…`xl` plus screen insets), replacing the ~17 ad-hoc padding values that used to coexist.
-
-The previously-missing pieces have all landed: spacing, named radii, the `dangerRed` token (raw `.red` no longer marks error text), and the neutral cross-platform token source — `apps/ios/design/lava-design-tokens.json` (v1.0.0), the versioned, hand-synced contract for the Android port. The JSON→Swift/Compose **codegen and CI drift-guard are intentionally deferred** until Android is a second consumer of the spec.
+The remaining residual gap is the handful of raw `.red` call sites not yet migrated to `LavaStyle.dangerRed` (see §1).
 
 ---
 
-## 3. The Guardian mascot
+## 2. LavaTier — Floor / Window / Workshop **(Implemented)**
 
-The **Soft Shield Guardian** is Lava's mascot: a procedurally drawn shield with a face that animates to communicate protection status. The animation is built from SwiftUI `Shape`s with interpolated frames, a constrained `allowedNextStates` state machine, and privacy-redaction face masking. Core: `apps/ios/Sources/LavaSecCore/GuardianMascotAnimation.swift`; SwiftUI rendering: `apps/ios/Shared/SoftShieldGuardian.swift`.
+`LavaTier` is the lightweight depth vocabulary that encodes "calm core, earned depth" directly in the token layer. It is a vocabulary plus a few token defaults — not a full re-theme — and ships as an enum at lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, wired into representative surfaces rather than retrofitting every view.
 
-### 3.1 The seven states
-
-**Status: Implemented.** The Guardian has exactly **seven** emotional states (do not assert "six"):
-
-| State | Register | Meaning |
+| Tier | Depth | Meaning |
 |---|---|---|
-| `sleeping` | calm | Protection off / tunnel disconnected |
-| `waking` | calm | Tunnel connecting or reasserting |
-| `awake` | calm | Protection on and healthy |
-| `paused` | calm | Protection temporarily paused by the user |
-| `retrying` | calm | **Self-healing, unworried.** The relaxed counterpart to `concerned`: relaxed lids, flat mouth, no concern tilt — motion is carried by the status badge, not the face. |
-| `concerned` | calm | **Gentle help-seeking.** Inner eye corners are raised to read as worry, never a stern glare. |
-| `grateful` | celebratory | **Success.** Happy closed eyes, big smile (`mouthCurve 1.18`), reached via a custom awake-to-grateful interpolation. |
+| **Floor** | calm | Just-works protection for everyone — the default surface. |
+| **Window** | celebratory | Opt-in awareness & delight: streaks, unlocks, success moments. Never nags. |
+| **Workshop** | technical | DNS, Nerd Stats, diagnostics. Invisible until sought. |
 
-The two trouble states deserve emphasis because they embody the philosophy: rather than alarm a non-technical user, four problem severities collapse into just two reassuring faces. `retrying` says "I've got this," `concerned` says "I might need you." Definitions: `GuardianMascotAnimation.swift:3-30,249-282`; rendering: `SoftShieldGuardian.swift:127-147`.
+`LavaTier` is a `calm`/`celebratory`/`technical` enum carrying token defaults:
 
-### 3.2 Connectivity → expression mapping
+- an **accent color** (`accent`),
+- `allowsDelightMotion` — true only for celebratory / Window,
+- `usesMonospacedMetadata` — true only for technical / Workshop,
 
-**Status: Implemented.** The Guard panel derives the mascot's expression from VPN status plus the `ProtectionConnectivitySeverity` (six severities, defined in `apps/ios/Sources/LavaSecCore/ProtectionConnectivityPolicy.swift:3-10`). The mapping now lives in `apps/ios/LavaSecApp/GuardView.swift` (moved out of `RootView.swift` in Phase 0b):
+exposed via an `EnvironmentKey` plus a `.lavaTier(_:)` modifier and a `.lavaTierMetadata()` modifier (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:258/263). It is wired into representative surfaces — e.g. `.lavaTier(.technical)` and `.lavaTier(.celebratory)` in lavasec-ios: LavaSecApp/SettingsView.swift — rather than every view. The deliberate scoping keeps the three product depths legible in code and portable to a future Android consumer without re-deriving intent.
 
-| Condition | Severity | Expression |
+> **Caveat (accent tokenization Planned, Phase 3):** `LavaColorRole` is not yet created, so `LavaTier.accent` still resolves to raw `LavaStyle` colors (LavaTokens.swift:~230). Treat the accent-color tokenization as an open loop, not a finished surface.
+
+---
+
+## 3. The Soft Shield Guardian mascot **(Implemented)**
+
+The **Soft Shield Guardian** is Lava's mascot — a rounded shield with a simple, morphing face — that visually expresses protection state on the Guard tab, the Live Activity, the Dynamic Island, and onboarding. It is the most-visible carrier of the calm tone.
+
+The state graph is platform-agnostic, living in `LavaSecCore` (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift); the SwiftUI renderer is lavasec-ios: Shared/SoftShieldGuardian.swift.
+
+### 3.1 The 7 expression states
+
+The mascot has **exactly 7** expression states, governed by an allowed-transition state graph (`GuardianMascotState.allowedNextStates`, locked by lavasec-ios: Tests/LavaSecCoreTests/GuardianMascotAnimationTests.swift):
+
+```
+sleeping, waking, awake, paused, retrying, concerned, grateful
+```
+
+Graph constraints worth knowing: `sleeping`'s only exit is `waking`, and `grateful` only returns to `awake`. The `awake ↔ grateful` transitions have bespoke interpolation frames — this is the system's one bit of **delight motion** (Window-tier).
+
+> **`retrying` vs `concerned` — the most important tone distinction.** Both signal "not perfectly healthy," but they read very differently and must not be conflated:
+> - **`retrying`** is the *unworried, self-healing* face: relaxed (~0.80) lids, level eyes, a flat mouth, and **no concern tilt**. The motion is carried by the **status badge, not the face** — transient self-recovery should never alarm. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
+> - **`concerned`** is *gentle, help-seeking* worry: raised inner brows (`concernAmount` 1, `mouthCurve` -0.22) reading as "I could use a hand," **never a stern glare**. Genuine problems should invite help, not scold. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
+
+### 3.2 Connectivity → expression mapping (6 → 4)
+
+Protection health is assessed in `LavaSecCore` as **6 connectivity severities** + 2 actions (lavasec-ios: Sources/LavaSecCore/ProtectionConnectivityPolicy.swift):
+
+- **Severities:** `healthy`, `recovering`, `usingDeviceDNSFallback`, `dnsSlow`, `networkUnavailable`, `needsReconnect`
+- **Actions:** `turnOff`, `reconnect`
+
+The Guard tab collapses those 6 severities onto **4 faces** (`guardianState` in lavasec-ios: LavaSecApp/GuardView.swift:122). The face is intentionally a *coarser, calmer* signal than the status badge — the badge carries the detail, the face stays simple:
+
+| Condition | Mascot state |
+|---|---|
+| Temporarily paused | `paused` |
+| connected + `healthy` / `usingDeviceDNSFallback` | `awake` |
+| connected + `recovering` / `networkUnavailable` | `retrying` |
+| connected + `dnsSlow` / `needsReconnect` | `concerned` |
+| `connecting` / `reasserting` | `waking` |
+| otherwise | `sleeping` |
+
+> **Tint reconciliation.** The protection tint color granularity stays reconciled with this expression split so tint and face never disagree. The expression mapping and the semantic `ProtectionTintRole` role table both ship today (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7, consumed by `AppViewModel.protectionTintRole`). Only the `LavaColorRole` color-role tokenization that would map roles to fully tokenized colors remains **Planned** (Phase 3 of the DS plan).
+
+### 3.3 Skins (looks) **(Implemented)**
+
+The mascot ships in **7 selectable shield "looks"**, persisted as `GuardianShieldStyle` (lavasec-ios: Shared/LavaActivityAttributes.swift:5). Each has its own colorway and a paired Dynamic Island glyph color:
+
+`original`, `fireOpal` (raw value `emberObsidian`), `purpleObsidian`, `obsidian`, `cherryQuartz` (raw value `strawberryObsidian`), `emerald`, `kiwiCreme`.
+
+The two legacy raw values are intentional — do not "fix" them; they would break persisted user selections.
+
+### 3.4 Privacy redaction **(Implemented)**
+
+The Guardian honors privacy redaction: the expression can be masked when the surface is privacy-redacted while the **shield itself stays visible** (`maskExpressionWhenPrivacyRedacted` / `keepsShieldVisibleWhenRedacted`, lavasec-ios: Shared/SoftShieldGuardian.swift:11). Protection presence is reassuring; the specific emotional state is the part that hides.
+
+### 3.5 Not in this tree **(Planned)**
+
+A Guard easter-egg mini-game (tap = gratitude animation; 10s long-press = a catch-bad-domains game) is **P3 / backlog**. It would add extra mascot expressions (`confused` / `dazed` / `inZone` / `powerSurge`) seen on a feature branch — these are **not** in the app target. Per the canonical facts, the mascot has exactly **7** states; do not document the game expressions as shipped.
+
+---
+
+## 4. Copy & naming
+
+### 4.1 Voice & tone
+
+Plain, calm, practical. Avoid fear-heavy security language. Be honest about scope: Lava is **local DNS/blocklist filtering**, not a guarantee that every malicious domain or URL is blocked, and protection is **never** described as auto-on the moment onboarding completes — the **Guard tab is authoritative** for whether protection is currently active.
+
+### 4.2 DNS transport labels
+
+Transport annotations follow a strict compact convention (lavasec-ios: Sources/LavaSecCore/DoHTransport.swift:16 and lavasec-ios: Sources/LavaSecCore/DNSResolverPreset.swift:270, locked by `DNSResolverPresetTests.swift`):
+
+| Transport | Label | Notes |
 |---|---|---|
-| Protection temporarily paused | — | `paused` |
-| VPN connecting / reasserting | — | `waking` |
-| VPN disconnected | — | `sleeping` |
-| VPN connected | `healthy` | `awake` |
-| VPN connected | `usingDeviceDNSFallback` | `awake` |
-| VPN connected | `recovering` | `retrying` |
-| VPN connected | `networkUnavailable` | `retrying` |
-| VPN connected | `dnsSlow` | `concerned` |
-| VPN connected | `needsReconnect` | `concerned` |
+| DNS-over-HTTPS | `DoH` | URLSession-based. |
+| DNS-over-HTTP/3 | **`DoH3` (no slash)** | e.g. "Quad9 (DoH3)". Annotated **only when an h3 negotiation is actually observed** — preferred, never promised; otherwise falls back to `DoH`. |
+| DNS-over-TLS | `DoT` | |
+| DNS-over-QUIC | `DoQ` | |
+| plain DNS | `IP` | |
+| device resolver | *(no annotation)* | |
 
-Note the deliberate collapse: six severities map onto two trouble expressions. `recovering` + `networkUnavailable` → `retrying`; `dnsSlow` + `needsReconnect` → `concerned`.
+The single most-broken rule here is the **no-slash `DoH3`** — write `DoH3`, never `DoH/3` or `DoH3 (h3)`, and never apply it speculatively. These transport labels are emitted from `DoHTransport`/`DNSResolverPreset`; keep them verbatim in every locale, but note they are *not* glossary Do-Not-Translate entries (see §4.3).
 
-### 3.3 `grateful` is not a connectivity state
+### 4.3 Do-Not-Translate terms
 
-**Status: Implemented.** `grateful` is the only celebratory expression and is **never** reached through the connectivity map. It is triggered exclusively at success moments in onboarding and settings — see the ready-mascot transition in `apps/ios/LavaSecApp/OnboardingFlowView.swift:601-616` and the awake-to-grateful interpolation in `GuardianMascotAnimation.swift:271-282,353-392`. When documenting the Guard connectivity panel, do not list `grateful` among its outcomes.
+Brand and protocol terms are pinned verbatim in **all** locales. The localization glossary's Do-Not-Translate list is the authority, and it pins: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD.**
 
-### 3.4 Skins
+Of the DNS transports, only **DoH** is a glossary Do-Not-Translate entry; `DoH3`, `DoT`, and `DoQ` are transport labels (see §4.2), not glossary terms. They are still written verbatim, but do not cite the glossary as their source.
 
-**Status: Implemented.** The Guardian ships in **seven** swappable shield / app-icon skins, each paired with an alternate app icon and a Dynamic Island glyph accent color (`apps/ios/Shared/LavaActivityAttributes.swift:5-53`; `SoftShieldGuardian.swift:98-115,442-636`). The raw enum case is on the left; the user-facing `displayName` is in parentheses:
+### 4.4 Safety framing
 
-`original` (Original), `fireOpal` (Fire Opal), `purpleObsidian` (Amethyst), `obsidian` (Obsidian), `cherryQuartz` (Cherry Quartz), `emerald` (Emerald), `kiwiCreme` (Kiwi Crème).
-
-Note that several raw values differ from the display name (e.g. `fireOpal` has raw value `emberObsidian`, `cherryQuartz` has raw value `strawberryObsidian`, and `purpleObsidian` displays as **Amethyst**). Kiwi Crème carries a playful mascot voice — an example of earned-depth personality that appears only for users who choose it (`docs/mockups/kiwi-creme-lava-guard.html:108-109`).
-
-### 3.5 Known presentation debt
-
-**Status: Implemented (fixed).** This presentation boundary used to be inverted — the platform-agnostic core shipped English copy and Apple SF Symbol ids. It has since been lifted out (Phase 4, PR #15):
-
-- `ProtectionConnectivityPolicy.assessment` now returns **severity + primary action only** (`ProtectionConnectivityPolicy.swift:33-48`); the only string it exposes is `severity.diagnosticLabel`, a stable, locale-independent id for logs.
-- The user-facing connectivity titles/subtitles moved app-side to `ProtectionConnectivityPresentation` (`apps/ios/LavaSecApp/ProtectionConnectivityPresentation.swift:16-28`), the correct home for localized copy.
-- `LavaActivityAttributes.ProtectionState.statusSymbolName` is **gone from `Shared`/`LavaSecCore`**; the Live Activity glyph (`checkmark`, `pause.fill`, `arrow.triangle.2.circlepath`, `exclamationmark.triangle.fill`, `wifi.slash`) is now resolved at render time in the widget (`apps/ios/LavaSecWidget/LavaSecWidget.swift:89-101`).
-
-The **broad copy lift** of the remaining user-facing strings that still originate in the core (`DNSResolverPreset.displayName`, `SourceSyncState.userFacingStatus`, `GuardianShieldStyle.displayName`, etc.) is the one tracked follow-up — see `plans/inflight/2026-06-14-design-system-portability-foundation-plan.md`, Phase 4.
+Payment never bypasses the hash-validated, non-allowable **threat guardrail**. State the precedence consistently: **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.**
 
 ---
 
-## 4. Copy and naming conventions
+## 5. Onboarding UX **(Implemented)**
 
-### 4.1 Tone
+First-run onboarding is a multi-page flow — **6 pages** (`OnboardingPage`: `lava → guardIntro → features → vpn → notifications → done`) — implemented in lavasec-ios: LavaSecApp/OnboardingFlowView.swift. It reuses the `SoftShieldGuardian` for the guardian-emergence moment.
 
-**Status: Implemented.** Copy is **plain, calm, and practical**, and deliberately avoids fear-driven language — the audience includes non-technical users, parents, and older adults. The protection panel is reassuring rather than triumphant:
+The 6 pages:
 
-- Healthy title **"Protected"**, subtitle **"Filtering happens locally on this phone"** (`ProtectionConnectivityPresentation.swift:16-28`).
-- Trouble titles stay plain and unalarming: **"Network Lost"**, **"Reconnect Needed"**, **"DNS Slow"**, **"Reconnecting"** (`ProtectionConnectivityPresentation.swift:16-23`).
+1. **The Internet Is Lava** (`lava`) — danger framed as metaphor; primary action "Meet Lava".
+2. **Lava Stands Guard Here** (`guardIntro`) — the guardian-emergence moment.
+3. **Feature Handoff** (`features`) — what Lava does; "Set Up Protection".
+4. **Install Lava's Local VPN** (`vpn`) — explains why iOS says "VPN" for a DNS-only packet tunnel.
+5. **Enable Notifications** (`notifications`) — the opt-in prompt, presented at the right step rather than up front.
+6. **Setup Complete** (`done`) — "Open Guard", with optional additional setup.
 
-(As of Phase 4, this copy lives app-side in `ProtectionConnectivityPresentation`, not in the platform-agnostic core — see §3.5.)
+Design decisions baked into the flow:
 
-Writing rules (from the shared conventions): present tense; second person ("you") for user-facing copy; third person for components ("`AppViewModel` owns…"). Never state an aspiration as shipped — tag non-shipped features **(Planned)** / **(In progress)** / **(Dropped)**. When describing any server interaction, state what is **not** sent (routine DNS queries, browsing history, plaintext), and distinguish zero-knowledge storage from server-gated recovery.
+- **"Use Default" is the primary action, "Customize" the secondary.** A friction-free default path for non-technical users; control is earned, not forced.
+- **Danger framed as metaphor, not fear** ("The Internet Is Lava"), consistent with the calm tone.
+- **The flow explains why iOS says "VPN"** — a packet tunnel is the only way to filter DNS system-wide; it is not traffic routing.
+- **Never claims protection is auto-on at completion** — Guard stays authoritative.
+- Chevron-only Back, on a shared step-page layout.
 
-### 4.2 Transport naming
+The first-run defaults the flow installs: **Device DNS** resolver (`DNSResolverPreset.device`), **Device DNS fallback ON**, logging on (counts + history + activity), and "Continue without account."
 
-**Status: Implemented.** The encrypted upstream DNS transports have strict labels (`apps/ios/Sources/LavaSecCore/DoHTransport.swift:16-21`; `apps/ios/Sources/LavaSecCore/DNSResolverPreset.swift:270-288`; `apps/ios/LavaSecApp/SettingsView.swift:1839`):
-
-- **`DoH3`** — DNS-over-HTTP/3, **written with no slash** (never `DoH/3`). It is an annotation, e.g. `Quad9 (DoH3)`, **earned only by an observed `h3` ALPN negotiation**. HTTP/3 is preferred but never promised, so the label is purely observational; otherwise the transport shows **`DoH`**.
-- **`DoH`** — DNS-over-HTTPS.
-- **`DoT`** — DNS-over-TLS.
-- **`DoQ`** — DNS-over-QUIC.
-- **`IP`** — plain DNS.
-
-The settings explainer copy: "DNS over HTTPS (DoH), TLS (DoT), and QUIC (DoQ) encrypt allowed lookups to the resolver."
-
-**Rule for writers and engineers:** always annotate the *effective* transport truthfully — preferred, never promised. Write `DoH3` with no slash. For transport behavior and the per-query-versus-pooled distinctions, see [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md) (DoT pools connections; DoQ opens a fresh connection per query — connection reuse was built, device-failed on iOS 26.5, and is **(Dropped)**).
-
-### 4.3 Onboarding copy discipline
-
-**Status: Implemented.** Onboarding copy was tightened to avoid over-promising, because Lava is DNS/blocklist protection — not full malicious-URL coverage, and not a traffic-routing VPN (`plans/implemented/2026-05-25-multi-page-onboarding-flow-plan.md:14-70`):
-
-- "blocks **known risky domains from selected blocklists**" (not "blocks all threats")
-- "**Install Lava's Local VPN**" (frames the VPN as local)
-- "traffic **not sent through Lava servers**"
-- "**Continue without account**" (free protection never requires sign-in)
-
-### 4.4 Do-not-translate / canonical terms
-
-Use the canonical term and component names verbatim. Brand and protocol tokens (`Lava`, `DoH`, `DoH3`, `DoT`, `DoQ`, `Guardian`, skin names, etc.) are do-not-translate; see the i18n glossary and translation review checklist.
-
-### 4.5 In-panel buttons
-
-**Status: Implemented (mockup direction).** Embedded panel/list-card actions are lower-emphasis and squarer than the main control: shorter, less pill-shaped, no pre-button divider, no inner border, neutral press highlight. The adopted directions are "Soft fill, no border" (variant B) inside panels and "Compact primary" (S1) for sheet submits. The main Guard turn-on control stays a distinct special capsule so the protection toggle keeps its primacy and never competes with content (`docs/in-panel-button-options.html:705-712,758-760,841-849,873-875`). This avoids a border-within-a-border inside the green Guard panel.
+> **Default-blocklist divergence (code wins).** The onboarding plan copy lists HaGeZi Multi Light as the default blocklist, but the shipped code default is **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. Tracked internally. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
 
 ---
 
-## 5. Onboarding UX principles
+## 6. Internationalization **(In progress)**
 
-**Status: Implemented.** A multi-page onboarding flow ships in `apps/ios/LavaSecApp/OnboardingFlowView.swift`. The `OnboardingPage` enum has **eight** cases (`OnboardingFlowView.swift:560-575`), matching the eight steps numbered in `plans/implemented/2026-05-25-multi-page-onboarding-flow-plan.md:14-98`:
+Lava localizes into **6 locales**: **en** (source) + **ja, zh-Hant, zh-Hans, de, fr**, via Xcode string catalogs.
 
-1. **`lava` — The Internet Is Lava** — the metaphor and the problem.
-2. **`guardIntro` — Lava Stands Guard Here** — the Guardian reveal.
-3. **`features` — Feature Handoff** — what Lava does (and what it does not promise).
-4. **`vpn` — Install Lava's Local VPN** — the on-device VPN configuration step.
-5. **`notifications` — Enable Notifications** — framed as help for protection issues only (reconnect, network unavailable, Device DNS fallback); "Not Now" never blocks protection.
-6. **`settings` — Decide How Lava Works** — shows the safe defaults; "Use Default" is the primary action.
-7. **`customize` — Customize Lava** — *conditional*; only shown if the user chooses to customize. Lets the user choose blocklist intensity, DNS resolver, Device DNS fallback, local-logging controls, and optional account sign-in.
-8. **`done` — Setup Complete** — calm close; does not claim protection is on automatically, and sends the user to Guard where the protection state stays authoritative.
+- **The localization seam is `.lavaLocalized`** (`String.lavaLocalized` / `.lavaLocalizedFormat`, backed by `LavaStrings.localized` → `NSLocalizedString` with an English fallback; lavasec-ios: LavaSecApp/LavaStrings.swift). **All component copy** must go through it — no bare string literals in views.
+- **zh-Hant** uses Taiwan-friendly wording on the first pass.
+- App Store metadata exists for all 6 locales.
+- Priority order for translation: ja, zh-Hant, zh-Hans, de, fr.
 
-Principles the flow embodies:
+Foundations are in place but full human translation review is still pending before release, so the overall status is **In progress**.
 
-- **Promise honestly.** Copy is scoped to what Lava actually does (see §4.3): selected-blocklist filtering, local VPN, no traffic routed through Lava servers.
-- **No forced account.** "Continue without account" is first-class — free protection must not gate behind sign-in.
-- **Celebrate at the end, calmly.** Success moments use the Guardian's `grateful` expression (`OnboardingFlowView.swift:601-616`) — the one place celebratory depth surfaces by default, and even there it is gentle.
-- **Ship the safe defaults.** The shipped default config is `AppConfiguration.lavaRecommendedDefaults` (`apps/ios/Sources/LavaSecCore/OnboardingDefaults.swift:4-18`): it enables **two** blocklists — the Phishing and Scam lists (`DefaultCatalog.blockListProjectPhishing` + `blockListProjectScam`) — with **Google Public DNS (plain)** as the resolver preset (`DNSResolverPreset.google`) and **Device DNS fallback on**. So the calm core works the instant onboarding completes. (`OnboardingDefaultsSummary` is a separate display-string struct, not the config itself; "Block List Basic" is a real but separate blocklist that is **not** enabled by default.)
+> **Presentation-boundary cleanup (Planned, Phase 4).** `LavaSecCore`/`Shared` should carry *semantics* (severity/action enums, icon roles), not English strings. The severity tint presentation has already been lifted into the semantic `ProtectionTintRole`. The remaining residual is that resolver `displayName`s are still hardcoded English strings ("Google", "Cloudflare", "Quad9", "Device DNS") in lavasec-ios: Sources/LavaSecCore/DNSResolverPreset.swift. Phase 4 lifts these into a per-OS app-side presentation map — correct for both i18n and Android portability.
 
-The shipped onboarding strings live in SwiftUI; some storyboard mockups (`docs/mockups/lava-onboarding-flow.html`) may differ from live copy, so treat live SwiftUI as authoritative.
+The i18n mechanics (the localization glossary, the localization-file schema, and the translation-review checklist) live in the internal i18n docs, not this public set.
 
 ---
 
-## 6. Localization and i18n
+## 7. Reference artifacts
 
-**Status: (In progress).** The runtime hook is shipped; full multi-language coverage is not release-ready.
+HTML design references (non-shipping, internal): the onboarding flow storyboard, a kiwi-creme guardian look study, and in-panel primary-button visual options.
 
-### What ships today
-
-- A localization runtime hook: `LavaStrings` / `lavaLocalized` wrap `NSLocalizedString` with an English-source fallback (and a format-argument variant) — `apps/ios/LavaSecApp/LavaStrings.swift:1-23`.
-
-### What is in progress
-
-Full i18n is **(In progress)** with foundations started but not release-ready (`plans/backlog/2026-05-22-i18n-localization-plan.md:14-37`):
-
-- English stays the **source locale**; copy migrates into Xcode string catalogs (`.xcstrings`).
-- Target locales: **ja**, **zh-Hant** (Taiwan-friendly), **zh-Hans**, **de**, **fr** — iOS first.
-- Governance is defined in `docs/i18n/`: a glossary of do-not-translate terms and tone, a per-string lifecycle (`draft` → `translated` → `reviewed` → `locked`) with `sensitive` and `maxLength` flags, and a translation review checklist.
-
-### Hard rule
-
-**Non-English `sensitive` strings must not ship while in `draft`.** Privacy, legal, VPN, DNS, account, backup, and safety-claim copy is flagged `sensitive` and must be human-reviewed against the English source before release; machine translations stay `translated` until reviewed. This protects the privacy promise across languages.
-
-### Known boundary debt
-
-**Status: Implemented (fixed).** The presentation boundary was inverted — the platform-agnostic `LavaSecCore` / `Shared` layer shipped English copy (`ProtectionConnectivityPolicy` titles/subtitles) and Apple SF Symbol ids (`LavaActivityAttributes.statusSymbolName`). Phase 4 of the design-system plan lifted these into the app-side presentation layer (`ProtectionConnectivityPresentation`), which is also the correct home for localized copy (see §3.5). The remaining user-facing strings still in the core (`DNSResolverPreset.displayName` et al.) are the tracked copy-lift follow-up.
-
----
-
-## Quick reference
-
-| Topic | Status | Source of truth |
-|---|---|---|
-| Philosophy (calm core, earned depth) | Implemented (concept + `LavaTier` enum) | `plans/inflight/2026-06-14-design-system-portability-foundation-plan.md` |
-| LavaTier (Floor / Window / Workshop) | **Implemented** | `apps/ios/LavaSecApp/LavaDesignSystem/LavaTokens.swift:198-216` |
-| Token layer (`LavaStyle` / `LavaSurface` / `LavaSpacing`) | Implemented | `apps/ios/LavaSecApp/LavaDesignSystem/LavaTokens.swift` |
-| Neutral cross-platform token spec | Implemented (codegen deferred) | `apps/ios/design/lava-design-tokens.json` |
-| Guardian: 7 states | Implemented | `apps/ios/Sources/LavaSecCore/GuardianMascotAnimation.swift` |
-| Connectivity → expression mapping | Implemented | `apps/ios/LavaSecApp/GuardView.swift` |
-| Guardian skins (7) | Implemented | `apps/ios/Shared/LavaActivityAttributes.swift:5-53` |
-| `DoH3` no-slash naming | Implemented | `apps/ios/Sources/LavaSecCore/DNSResolverPreset.swift:270-288` |
-| Tone / calm copy | Implemented | `apps/ios/LavaSecApp/ProtectionConnectivityPresentation.swift:16-28` |
-| Onboarding flow (8 pages, 1 conditional) | Implemented | `apps/ios/LavaSecApp/OnboardingFlowView.swift:560-575` |
-| Recommended defaults (Phishing + Scam, Google plain DNS) | Implemented | `apps/ios/Sources/LavaSecCore/OnboardingDefaults.swift:4-18` |
-| Localization runtime hook | Implemented | `apps/ios/LavaSecApp/LavaStrings.swift` |
-| Full i18n (ja/zh-Hant/zh-Hans/de/fr) | **(In progress)** | `plans/backlog/2026-05-22-i18n-localization-plan.md` |
-| Presentation boundary fix (copy + glyphs out of core) | **Implemented** (broad copy-lift tail remains) | inflight plan, phase 4 |
+The DS foundation has landed: the `LavaDesignSystem/` group, the `LavaSpacing`/radius/`dangerRed` tokens, `LavaTier` depth semantics, and the `LavaIcon` role layer all ship (lavasec-ios: LavaSecApp/LavaDesignSystem/). What remains **Planned** in the portability/foundation plan is the `LavaColorRole` accent tokenization (Phase 3), the per-OS presentation map for core-side English strings (Phase 4), a neutral cross-platform token JSON, and the broader Android-portability seams.

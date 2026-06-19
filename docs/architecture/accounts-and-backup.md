@@ -1,174 +1,189 @@
+---
+last_reviewed: 2026-06-19
+owner: engineering
+source_repos: [lavasec-ios]
+grounded_at: {lavasec-ios: "1fbab70"}
+---
+
 # Accounts & Zero-Knowledge Backup
 
-A Lava account is **optional** and exists for exactly one purpose: to authenticate the sync of an encrypted settings backup. DNS filtering works with no login — the [packet-tunnel engine](./dns-filtering-and-blocklists.md) never needs an account, and turning protection on never prompts for one. This page is for engineers and explains how sign-in works, where session material lives, how the zero-knowledge backup envelope is built, and what the server can and cannot see.
+> **Audience:** engineers.
+> **Authority:** where this doc and a plan disagree, **code wins** — divergences are called out inline. Status reflects the code-confirmed reality, not plan aspiration. Status legend: **Implemented** (shipped and confirmed in code), **In progress** (partially landed), **Planned** (designed, not built), **Dropped** (rejected or reverted).
 
-> **The privacy promise:** DNS filtering happens locally on your device; Lava never receives your routine DNS queries, browsing history, or per-domain telemetry, and any optional account backup is end-to-end encrypted so Lava can only ever store ciphertext.
+Accounts are **optional**. Core protection is free forever and requires no account; sign-in exists only to back up your *settings*, encrypted, so you can restore them on a new device. This document covers the auth flow, where the session lives, the zero-knowledge backup envelope, the recovery paths, and exactly what the server can and cannot see.
 
-Status is marked **Implemented**, **(In progress)**, **(Planned)**, or **(Dropped)** per the [status legend](./system-overview.md#status-legend). Default unmarked statements describe shipped behavior. The component split here lives in `LavaSecCore` (pure crypto + request building) and `LavaSecApp` (orchestration + UI); the server side is covered in [backend & data](./backend-and-data.md).
+The canonical privacy promise this doc serves:
 
----
+> All DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit — the backend holds only catalog metadata, an opaque per-user encrypted backup, and anonymized diagnostics you choose to send.
 
-## 1. Auth providers & flow
-
-Lava supports exactly two sign-in providers: **Sign in with Apple** and **Google**. Email/password sign-in is intentionally **not** implemented — owning passwords would add reset, MFA, recovery, and lockout obligations not justified while Apple and Google cover the use case; magic-link/OTP is reserved only as a possible future path (**Dropped**; `plans/implemented/2026-05-18-defer-email-sign-in-plan.md`).
-
-Both providers funnel into Supabase Auth's native **ID-token grant** (`grant_type=id_token`) rather than a hosted web/OAuth redirect. This keeps a single Supabase auth authority while using the native Apple/Google credential UX.
-
-| Component | Role |
-|---|---|
-| `SupabaseIDTokenAuth` (`LavaSecCore`) | Pure request/response helper that builds the `auth/v1/token` `id_token` and `refresh_token` grant requests and decodes the Supabase session/user. |
-| `AccountAuthService` (`LavaSecApp`, `@MainActor`) | Auth orchestrator: Apple (`ASAuthorization`) and Google (GoogleSignIn SDK) flows, nonce generation, session refresh, multi-provider reconciliation, sign-out, and the account-deletion client. |
-
-### Flow
-
-1. **Obtain a provider ID token on-device.** For Apple, the app runs `ASAuthorization` with `requestedScopes = [.email]`, generating a raw nonce locally and setting `request.nonce = SHA256(rawNonce)` (`AccountAuthService.swift:386-401,221-232`). For Google, the GoogleSignIn SDK returns an `idToken` (and access token) with the same SHA-256-hashed nonce binding (`AccountAuthService.swift:403-461,741-755`). The hashed nonce goes to the provider; the **raw** nonce is what Supabase later verifies — this binding mitigates token replay.
-2. **Exchange for a Supabase session.** The app POSTs the provider `id_token`, the **raw** nonce, and the publishable (anon) `apikey` to `{projectURL}/auth/v1/token` (`SupabaseIDTokenAuth.swift:131-201`). Supabase verifies the token and returns a session (access + refresh tokens) plus a minimal user (`id`, optional `email`, and the provider list derived from `app_metadata` + `identities`).
-3. **Persist only the session** (see §2). No provider credential, password, or raw token beyond the Supabase session is stored.
-
-### Session refresh
-
-Sessions are refreshed via `grant_type=refresh_token` with a 90-second pre-expiry buffer (`AccountAuthService.swift:492-509,779-786`; `SupabaseIDTokenAuth.swift:150-159`). A failed refresh deletes the stored session for that provider, so a revoked or expired account fails closed rather than lingering.
+Component split: pure crypto + request building lives in `LavaSecCore`; orchestration + UI lives in `LavaSecApp`. Siblings: [System Overview](./system-overview.md), [iOS Client](./ios-client.md), [Backend & Data](./backend-and-data.md), [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md).
 
 ---
 
-## 2. Session & keychain storage
+## 1. Authentication flow
 
-The only thing persisted from sign-in is the Supabase session itself — access token, refresh token, and the minimal user — written as a **per-provider** generic-password Keychain item.
+**Providers: Apple and Google only.** **(Implemented)** `AccountAuthProvider` enumerates exactly `.apple` and `.google` (`AccountAuthService.swift`). Email/password — and any support-assisted recovery that bypasses authentication — is explicitly **Dropped**; owning passwords would add reset/MFA/lockout/breach obligations not worth the complexity while Apple/Google suffice, and bypass recovery would break the zero-knowledge guarantee.
 
-| Store | Service | What it holds |
-|---|---|---|
-| `AccountSessionKeychainStore` (`LavaSecApp`) | `com.lavasec.account-session` | One Supabase session per provider (with legacy single-session migration) (`AccountSessionKeychainStore.swift:19-27,83-94`). |
-| `BackupKeychainStore` (`LavaSecApp`) | `com.lavasec.zero-knowledge-backup` | Backup **unlock material**: device secret, passkey credential ID, recovery code (`BackupKeychainStore.swift:19-27`). |
+Both providers use the **native `id_token` grant**, not the Supabase Swift SDK and not web OAuth:
 
-Both go through `GenericKeychainStore` (`LavaSecCore`), which centralizes accessibility as `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` (`GenericKeychainStore.swift:41-43`). That `…ThisDeviceOnly` attribute is load-bearing: it means session and backup-unlock material are **device-only** and are **not** carried into iCloud Keychain or device backups. Decryption material can therefore never be silently synced to another device.
+1. **Sign in natively.** Apple via AuthenticationServices; Google via the GoogleSignIn SDK. Each yields a provider `id_token` (Google also an access token). The app generates a CSPRNG raw nonce, hashes it with SHA256, and passes the hash to the provider so the issued `id_token` is bound to it. **(Implemented)**
+2. **Exchange at Supabase.** `SupabaseIDTokenAuth` (`LavaSecCore`) builds a raw `URLRequest` to Supabase Auth `auth/v1/token?grant_type=id_token`, posting `provider` + `id_token` + optional `access_token` + the **raw** nonce (so Supabase can verify the binding and reject replays), with the `apikey` header. No SDK; `LavaSecCore` stays free of network/auth dependencies. **(Implemented)**
+3. **Receive a session.** Supabase verifies the token and returns a session: an access token, a refresh token, an expiry, and a user record (provider/providers). Refresh uses the same helper with `grant_type=refresh_token`.
 
-This was a deliberate hardening over the original 2026-05-18 design, which used synchronizable Keychain items (`plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md:18-26`).
+`AccountAuthService` (`@MainActor`, `LavaSecApp`) orchestrates all of this — it runs the native flows, performs the exchange, persists and refreshes sessions, exposes `AccountAuthState`, and drives account deletion through the Worker.
 
-**(Planned) open decision (P2-4):** backup Keychain items currently rely on app-level auth, not Keychain biometric/user-presence access control (no `SecAccessControl` `.userPresence`/`.biometryCurrentSet`). Whether to tighten this is tracked but not yet decided (`plans/backlog/2026-06-12-ios-release-gate-review.md:199-210,308`).
+```
+Apple / Google (native id_token + raw nonce)
+        │
+        ▼
+SupabaseIDTokenAuth  ──POST──▶  Supabase Auth  auth/v1/token?grant_type=id_token
+        │                              │
+        ▼                              ▼
+AccountAuthService  ◀────── session (access + refresh tokens, expiry, user)
+        │
+        ▼
+AccountSessionKeychainStore  (Keychain, device-local)
+```
 
 ---
 
-## 3. Zero-knowledge encrypted backup
+## 2. Session & Keychain storage
 
-When you turn on backup, your settings are encrypted **entirely on-device** before anything leaves the phone. The server stores only ciphertext and non-secret envelope metadata. This is what "zero-knowledge" means here — and §3.4 states the guarantee precisely, including its boundaries.
+The **only** thing persisted from sign-in is the Supabase session — access and refresh tokens as JSON. There is **no** server-side mirror of who you are beyond the Supabase Auth user and the rows you own.
 
-### 3.1 The envelope
+- **Where:** `AccountSessionKeychainStore` (`LavaSecApp`), Keychain service `com.lavasec.account-session`, stored **per provider** (`supabase-session-apple` / `supabase-session-google`, plus a legacy-account migration). **(Implemented)**
+- **Accessibility:** all stores share `GenericKeychainStore` (`LavaSecCore`), pinned to `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. That means **device-local, not iCloud-synced, and not carried in device backups**. **(Implemented)**
 
-`ZeroKnowledgeBackupEnvelope` (`LavaSecCore`) is a versioned container holding the encrypted payload plus one or more **key slots**:
+The same `GenericKeychainStore` mechanics back three stores: account session, the backup unlock material (`BackupKeychainStore`, service `com.lavasec.zero-knowledge-backup`), and the app passcode. None of them sync through iCloud Keychain.
 
-| Field | Meaning |
-|---|---|
-| `cipher` | `"AES-256-GCM"` |
-| `payloadCiphertext` | AES-256-GCM ciphertext of the settings payload (base64) |
-| `keySlots[]` | One record per unlock method, each wrapping the payload key |
-| `serverRecoveryShare` | Optional server-held share for assisted recovery (see §4) |
-| `ciphertextByteSize`, `createdAt` | Non-secret metadata |
+> **Open review item (not a claimed behavior):** the current accessibility class has no biometric/user-presence gate (no `SecAccessControl` `.userPresence`/`.biometryCurrentSet`). Whether to tighten unlock material to a presence-gated access control is tracked as a release-gate review item; the shipped value today is after-first-unlock-this-device-only. **(Planned)**
 
-### 3.2 Client-side encryption (envelope + key slots)
+---
 
-The crypto is two-layered (`ZeroKnowledgeBackupEnvelope.swift:258-311`, key derivation at `:346-377`):
+## 3. Zero-knowledge backup
 
-1. **Payload encryption.** A random 32-byte **payload key** is generated with `SecRandomCopyBytes` and used to AES-256-GCM-seal the settings payload. The app is the only place this plaintext or this key ever exists.
-2. **Key-slot wrapping.** The payload key is then independently wrapped into one slot per unlock method. Each slot derives a wrapping key from its own secret via **PBKDF2-HMAC-SHA256** (`kCCPBKDF2` / `kCCPRFHmacAlgSHA256`, `:358,363`) over a per-slot random 16-byte salt at **210,000 iterations** in production (`defaultPasswordIterations`), then AES-GCM-seals the payload key under that wrapping key.
+### 3.1 What it is, precisely
 
-Because each slot wraps the *same* payload key, any one valid secret recovers the payload — but no slot, salt, or wrapped key reveals anything about the plaintext or the other secrets.
+When you turn on encrypted backup, the **iOS client** encrypts a minimized copy of your *settings* and uploads only the ciphertext plus non-secret metadata to Supabase. The phone is the only place plaintext and the decrypting secrets ever exist.
 
-Slot kinds in code are `keychain`, `assistedRecovery`, `passkey`, `recoveryPhrase`, and `password`. The shipped passwordless flow builds three of them.
+> **Zero-knowledge backup:** Client-side AES-256-GCM envelope; the random payload key is wrapped in per-slot key slots — PBKDF2-HMAC-SHA256 (210k iters) for the password/phrase/device/assisted slots, HKDF-SHA256 for the PRF passkey slot. Only ciphertext + non-secret metadata upload to Supabase `user_backups` (RLS per user). Server cannot decrypt without a user-held secret. The passkey slot is **also** zero-knowledge: its unwrap key is derived on-device from the authenticator's WebAuthn PRF (`hmac-secret`) output, and the server holds no passkey secret (see §4.3).
 
-### 3.3 The passwordless flow (canonical)
+### 3.2 What gets backed up (the minimized payload)
 
-`makePasswordless` (`ZeroKnowledgeBackupEnvelope.swift:143-172`), wired by `AppViewModel.turnOnEncryptedBackup` (`AppViewModel.swift:4101-4161`), creates:
+`BackupConfigurationPayload` (`LavaSecCore`) is the plaintext that gets sealed. It is deliberately small and round-trips to `AppConfiguration`. **(Implemented)**
 
-- a **`.keychain`** slot, unlocked by a random base64url 32-byte **device secret** stored in the device-only Keychain ("This Device" restore);
-- an **`.assistedRecovery`** slot, unlocked by combining the recovery phrase with a server-held share (see §4);
-- an optional **`.passkey`** slot (see §4).
+**Included:** enabled blocklist **IDs** (catalog references, not list bytes), allowed/blocked domains, resolver preset / custom resolver, local-log preferences, the LavaGuard ledger, a protection hint, and custom blocklist source metadata.
 
-> **(Dropped) password support.** A `.password` key slot, `decryptWithPassword`, `makeForTesting`, and `BackupPasswordPolicy` survive in `LavaSecCore` but are **not wired into the live UI or `AppViewModel`** — they are exercised only by tests. The passwordless flow superseded them (`ZeroKnowledgeBackupEnvelope.swift:17-23,204-206`; `plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md`). Treat password backup as not shipped.
+**Excluded:** `isPaid` (entitlement is local), QA flags, diagnostics, filter snapshots, and the full blocklist contents (referenced by catalog ID only). Your browsing history and DNS queries are never part of this payload because the device never records them as a routine telemetry stream.
 
-### 3.4 Exactly what the server can vs cannot see
+### 3.3 The envelope (client-side crypto)
 
-The encrypted envelope is uploaded to Supabase `user_backups` via PostgREST by `SupabaseBackupSyncService` (`BackupSyncService.swift:170-253`), and is RLS-scoped to `auth.uid() = user_id`.
+`ZeroKnowledgeBackupEnvelope` (`LavaSecCore`) implements the crypto. **(Implemented)**
 
-**The server stores only:**
+1. **Payload encryption.** The minimized payload is sealed once with **AES-256-GCM** under a random **32-byte payload key** (generated with `SecRandomCopyBytes`).
+2. **Key wrapping (key slots).** That single payload key is independently wrapped into one or more **key slots**, one per secret, then AES-GCM-wraps a copy of the payload key. Any single slot's secret unlocks the whole backup. The wrapping-key derivation is per slot kind: the `password` / `recoveryPhrase` / `keychain` (device) / `assistedRecovery` slots use **PBKDF2-HMAC-SHA256, 210,000 iterations** (production; `defaultPasswordIterations = 210_000`) with a fresh 16-byte random salt per slot; the `passkey` slot uses **HKDF-SHA256** over the authenticator's PRF output (info `"LavaSec passkey backup PRF v1"`), with the non-secret PRF salt persisted in the slot so restore can reproduce the output.
+3. **Slot kinds.** The envelope supports five slot kinds: `password`, `recoveryPhrase`, `keychain` (device secret), `assistedRecovery`, and `passkey`.
 
-- the opaque `payloadCiphertext`;
-- non-secret envelope metadata: schema/envelope/backup version, `key_slots` metadata (KDF name, salt, iterations, wrapped-key bytes), `ciphertext_byte_size`, `created_at`;
-- the `server_recovery_share` (one half of assisted recovery — see §4).
+The shipped setup is **passwordless** (`makePasswordless`, driven by `AppViewModel.turnOnEncryptedBackup`). It creates a **`keychain` (device) slot + an `assistedRecovery` slot + an optional `passkey` slot**. The `password` / `recoveryPhrase` factories and decrypt methods still exist for legacy/back-compat envelopes (exercised only by tests) but the active UI never creates a password-only envelope — treat password backup as not shipped. **(Implemented; password slot Dropped from the live flow.)**
 
-**The server never receives, and cannot derive:**
+**Integrity / anti-downgrade:** `envelopeVersion` is hard-pinned to `1`, and each slot's KDF is pinned per kind — `PBKDF2-HMAC-SHA256` for the password/phrase/device/assisted slots, `HKDF-SHA256` for the PRF passkey slot. Unsupported versions or mismatched KDFs are rejected, so forged or downgraded metadata cannot weaken the unwrap. **(Implemented)**
 
-- the settings plaintext;
-- the random payload key or any slot's wrapping key;
-- the recovery phrase;
-- (in the passwordless flow) any password.
+### 3.4 Upload & storage
 
-This is enforced both by what the client sends and by the database itself. The `user_backups` table caps ciphertext at ~256 KiB / 349,528 chars and metadata at 32 KiB, which prevents accidental upload of diagnostics, snapshots, or full blocklists (`20260518000000_zero_knowledge_backups.sql`; `20260605000000_tighten_backup_envelope_constraints.sql`). RLS denies cross-user reads (`20260518000000_zero_knowledge_backups.sql:36-63`). A server compromise that read every byte of `user_backups` would obtain ciphertext and metadata — never plaintext.
+`BackupSyncService` (`SupabaseBackupSyncService`, `LavaSecApp`) uploads the envelope **directly** to the Supabase PostgREST table `user_backups`, upserting on `user_id`, scoped by the user's access token. **There is no Worker route for envelope upload** — the client talks straight to Supabase under RLS; the Worker only touches `user_backups` to delete it during account deletion. **(Implemented)**
 
-**Precise guarantee:** for backups created and restored through the passwordless device-secret or recovery-phrase paths, Lava's servers hold only ciphertext plus non-secret metadata and a server recovery share that is useless on its own; the decryption secrets exist only on-device or in the user's saved recovery phrase. The one documented exception is **passkey recovery**, which is **server-gated and not zero-knowledge** — see §4.3.
+What lands in `user_backups`:
 
-### 3.5 What's inside the payload (data-minimization)
+- the **ciphertext**, and
+- **non-secret metadata only:** cipher name, the key-slot records (salts, iteration counts, wrapped keys, slot labels), the `server_recovery_share`, `createdAt`, and the byte size.
 
-The single plaintext placed inside the envelope is `BackupConfigurationPayload` (`LavaSecCore`), which is deliberately data-minimized (`BackupConfigurationPayload.swift:3-40`; `plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md:43-50`). It carries only the settings needed to reconstitute a configuration: enabled blocklist IDs, allow/block domains, resolver preset + custom resolver settings, local-log preferences, custom-blocklist source metadata, the LavaGuard achievement ledger, and a `protectionEnabledHint`. It does **not** carry diagnostics, compiled snapshots, full blocklist bytes, `isPaid`/entitlement state, or QA state. See §5.
+The row is protected by **row-level security**: each row is readable/writable only by its owner (`auth.uid() = user_id`); the anonymous role has no access. Size is capped at ~256 KiB ciphertext / 32 KiB metadata at the DB level (`20260518000000_zero_knowledge_backups.sql`, tightened in `20260605000000_tighten_backup_envelope_constraints.sql`). **(Implemented)**
+
+### 3.5 The guarantee — what the server can and cannot see
+
+**The server stores:** ciphertext, KDF salts/iterations, wrapped key slots, the `server_recovery_share`, and a few non-secret fields (cipher, size, timestamp).
+
+**The server never receives or stores:** the plaintext settings/domains/DNS preferences, the recovery phrase, any backup password, or the unwrapped payload key.
+
+**Therefore:** Supabase **cannot decrypt a backup** without a user-held secret. All three restore paths — the device-key slot, the recovery phrase (combined with the server share, §4.2), and the passkey slot (the authenticator's PRF output, §4.3) — decrypt **on-device**, and the server holds no decryption secret for any of them. This is asserted in the migration comments and the privacy plan, and tested (the envelope tests confirm no plaintext domain/URL leaks into the uploaded shape).
+
+**Precise threat-model caveat — do not overclaim.** For the **assisted-recovery** slot, the server holds *both* the `server_recovery_share` *and* the wrapped `assistedRecovery` slot in `user_backups`. The only thing it lacks is the user's recovery phrase, which Lava never receives. So if the server were fully compromised, the recovery phrase's entropy (~105 bits, see §4.1) plus the 210k-iteration PBKDF2 cost is the **sole** barrier against an offline brute-force of that slot. This is intentional (assisted recovery is two-factor by design — neither half alone decrypts), but it means recovery-phrase entropy is load-bearing, not decorative. The `keychain` (device) slot's secret never leaves the device, so it is not exposed to a server compromise at all.
 
 ---
 
 ## 4. Recovery
 
-Restore offers three on-device unlock modes (`BackupRestoreView.swift:184-215`, `AppViewModel.swift:4182-4225,6419-6442`): **This Device**, **Recovery phrase**, and **Passkey**. In every mode the envelope is loaded locally (or fetched from Supabase) and then **decrypted on-device** — the server never decrypts.
+A backup is only useful if you can restore it. `restoreEncryptedBackup` (in `AppViewModel`) decrypts by trying the available slots: device key, recovery phrase, or passkey. In every mode the envelope is loaded locally (or fetched from Supabase) and then **decrypted on-device** — the server never decrypts.
 
-### 4.1 This Device (device secret)
+### 4.1 Recovery phrase
 
-The fastest path: the `.keychain` slot is unlocked by the device secret already in the device-only Keychain. This works only on the device that created the backup, since the secret never syncs.
+`BackupRecoveryPhrase` (`LavaSecCore`) generates an **8-word CVCV phrase** (consonant-vowel-consonant-vowel) from `SecRandom` with rejection sampling (~13.2 bits/token → **~105 bits total**), normalized lowercase. **(Implemented)** Restore tolerates user formatting (spacing/case) via parsing/normalization before the slot is tried.
 
-### 4.2 Recovery phrase (assisted recovery)
+This is the user's **off-device** recovery factor — saved by the user, never uploaded. Per the privacy hardening (§5), copying the phrase is **optional** and, when used, goes through a local-only / expiring (10-minute) pasteboard rather than forcing global-pasteboard exposure.
 
-For new-device restore without a passkey, Lava splits the decryption secret across two parties so neither side alone can decrypt.
+### 4.2 Assisted recovery (the two-factor combination)
 
-- The **recovery phrase** is **8 locally CSPRNG-generated** pseudo-word tokens (consonant-vowel-consonant-vowel), normalized case- and spacing-insensitively (`BackupRecoveryPhrase.swift:4-13,56-93`). The user saves it outside Lava; it is **never sent to the server**. Copy-to-clipboard is optional and uses a local-only, 10-minute-expiring pasteboard write (`BackupSetupView.swift:137-151`).
-- The **server recovery share** is a random secret stored in envelope metadata / Supabase. It is required *alongside* the phrase but useless without it.
-
-The actual secret for the `.assistedRecovery` slot is:
+The recovery phrase alone does **not** unlock the `assistedRecovery` slot. The slot secret is derived from **both** halves:
 
 ```
 assistedRecoverySecret =
-  base64url( SHA-256( "LavaSec assisted recovery v1" ‖ \0 ‖ serverRecoveryShare ‖ \0 ‖ normalizedPhrase ) )
+    base64url( SHA256( "LavaSec assisted recovery v1" ‖ serverRecoveryShare ‖ normalizedPhrase ) )
 ```
 
-(`ZeroKnowledgeBackupEnvelope.swift:25-42,216-226`). The recovery phrase alone cannot decrypt without the server's share, and the server's share alone cannot decrypt without the phrase — preserving the zero-knowledge property while still enabling account-assisted restore on a new device.
+The three segments are joined by a **NUL byte (`0x00`) separator** in the actual UTF-8 input — i.e. the hashed string is `"LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase` — so the `‖` above denotes NUL-delimited concatenation, not bare concatenation. `serverRecoveryShare` is a random value stored in the envelope metadata server-side; `normalizedPhrase` is the user's recovery phrase. **Neither half alone decrypts** — restore requires the server share (fetched with the backup) *and* the user-held phrase. **(Implemented)**
 
-### 4.3 Passkey recovery — server-gated, **not** zero-knowledge
+### 4.3 Passkey recovery — zero-knowledge, PRF-derived
 
-Passkey recovery is an explicit, documented exception to the zero-knowledge guarantee. Call it **server-gated recovery**, never zero-knowledge.
+The optional `passkey` slot adds a hardware-backed factor, and it is **zero-knowledge**: its unwrap key is derived **on-device** from the authenticator's WebAuthn PRF (`hmac-secret`) output. The server registers no passkey, issues no WebAuthn challenges, and stores no recovery secret — there is no server release step.
 
-The app registers/asserts a platform passkey (WebAuthn, RP id `lavasecurity.app`) via `BackupPasskeyCoordinator` and exchanges credentials with the `lavasec-api` Worker's `v1/backup/passkeys/*` endpoints through `BackupPasskeyRecoveryService` (`BackupPasskeyCoordinator.swift:11-14,122-206`; `BackupPasskeyRecoveryService.swift:60-126`; `AppViewModel.swift:4258-4286`). The Worker issues short-lived (5-min) challenges and, after a successful WebAuthn assertion, **releases a stored `recovery_secret`** that decrypts the `.passkey` slot.
+- **Registration/assertion:** `BackupPasskeyCoordinator` (`LavaSecApp`) runs WebAuthn via `ASAuthorizationPlatformPublicKeyCredentialProvider`, relying party **`lavasecurity.app`**, requesting the PRF extension on a per-credential salt and requiring user verification.
+- **Key derivation (zero-knowledge):** the authenticator returns a PRF output that **never leaves the device**. `ZeroKnowledgeBackupEnvelope.makeWithPRF` (`lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`) HKDF-SHA256-derives the slot's wrapping key from that PRF output (info `"LavaSec passkey backup PRF v1"`) and AES-GCM-wraps the payload key; only the non-secret PRF salt and credential ID are persisted in the slot. On restore, `passkeyPRFOutputForRestore` → `BackupPasskeyCoordinator.assertPasskeyPRFOutput` re-asserts the credential to reproduce the same PRF output, and `decryptWithPasskeyPRFOutput` unwraps the slot locally. The server holds **no** passkey secret, so no service-role path can recover a passkey-protected backup.
 
-Why this is weaker: the recovery secret is escrowed server-side (Supabase `backup_passkey_recovery`, a service-role-only table). A system holding service-role access to **both** `user_backups` and `backup_passkey_recovery` could recover a passkey-protected backup (`server/supabase/README.md:40`; `20260605010000_backup_passkey_recovery.sql:24-27`). The device-secret and recovery-phrase paths have no such server-held secret. Do not describe passkey recovery as zero-knowledge.
+The earlier escrow design (a service-role `backup_passkey_recovery` table holding a server-side `recovery_secret`, plus a `backup_passkey_challenges` table and `/v1/backup/passkeys/*` Worker endpoints) was **Dropped**: the tables were removed in a backend migration, the Worker carries no passkey routes, and `lavasec-ios: Tests/LavaSecCoreTests/BackupSetupSourceTests.swift` affirmatively asserts that `BackupPasskeyRecoveryService` and any server-escrow path are absent. **(Implemented)**
 
-| Component | Role |
-|---|---|
-| `BackupSetupView` | 3-step passwordless setup (overview, recovery-phrase save, confirm) → `turnOnEncryptedBackup`. |
-| `BackupRestoreView` | Restore UI with This Device / Passkey / Recovery modes → `restoreEncryptedBackup`. |
-| `BackupPasskeyCoordinator` | WebAuthn registration/assertion via `ASAuthorizationPlatformPublicKeyCredentialProvider`. |
-| `BackupPasskeyRecoveryService` | `lavasec-api` client that escrows/returns the passkey recovery secret. |
+> **Production-readiness caveat:** treating saved passkeys as a fully production-ready recoverable factor on physical devices still depends on the webcredentials association for `lavasecurity.app`. The iOS half is declared — `lavasec-ios: LavaSecApp/LavaSecApp.entitlements` carries `webcredentials:lavasecurity.app` — and the server half (the `apple-app-site-association` file and headers) is now hosted in the marketing site. Until that association resolves on a given device, the webcredentials-association path can fail and surfaces `BackupPasskeyError.webCredentialsAssociationUnavailable`. The passkey factor itself is implemented; its end-to-end readiness on real hardware is **Planned**.
 
 ---
 
-## 5. Data-minimization stance
+## 5. Data minimization & privacy posture
 
-Lava's account and backup surface is built to hold as little as possible.
+- **Optional account.** Protection works with no account; sign-in only enables settings backup.
+- **Local plaintext only.** The phone is the sole place plaintext settings and decrypting secrets exist; Supabase holds one opaque envelope per user.
+- **Minimized payload.** Only the settings in §3.2 are backed up; `isPaid`, QA flags, diagnostics, snapshots, and full blocklist bytes are excluded. Blocklists are referenced by catalog ID, never embedded.
+- **No browsing/DNS telemetry.** There is no server-side table for routine DNS queries or per-domain telemetry; filtering stays on the device.
+- **Unlock material is device-local.** Backup unlock material is stored with `…ThisDeviceOnly` accessibility and is **not** iCloud-synced. This **reversed** the original plan's synchronizable-Keychain design, so Lava does not silently sync unlock material through iCloud (`plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md`). **(Implemented; reverses earlier plan.)**
 
-- **Account is optional and single-purpose.** Sign-in exists only to authenticate backup sync; protection never requires it.
-- **Only a session is stored.** No password is owned (email/password is **Dropped**); only the Supabase session lives in the device-only Keychain.
-- **Server stores only ciphertext + metadata.** The payload is encrypted client-side; the database cannot read settings, domains, the recovery phrase, or keys (§3.4).
-- **The plaintext payload is minimized** to reconstitution-only fields — no diagnostics, snapshots, full blocklists, `isPaid`, or QA state (§3.5).
-- **No routine DNS queries, browsing history, or per-domain telemetry are ever sent** to any Lava service. Filtering stays local to the device; there is no passive telemetry table on the backend.
-- **Deletion is real.** Authenticated account deletion calls the `lavasec-api` Worker (`v1/account/delete`) with the Supabase access token; the Worker deletes the user's `user_backups`, bug reports (and their R2 attachments), entitlements, settings, and profile rows, then deletes the Supabase Auth user, and the app signs out and clears local sessions (`AccountAuthService.swift:357-365,616-657`; `plans/implemented/2026-05-25-account-deletion-data-rights-plan.md:40-48`).
+### Account deletion
+
+Deletion is **Implemented** and runs through an authenticated Worker endpoint, not direct client deletes. `AccountAuthService.deleteAccount` sends the user's access token to `POST /v1/account/delete`; the `lavasec-api` Worker (service role) deletes the user's `bug_reports` (and their R2 attachments), `user_backups`, `entitlements`, `user_settings`, and `profiles` rows, then deletes the Supabase Auth user via the admin API, returning only a deleted status + linked providers. The app then signs out locally and clears backup unlock material (`plans/implemented/2026-05-25-account-deletion-data-rights-plan.md`).
+
+> Note: the deletion plan's YAML frontmatter already reads `status: Done` and it lives in `plans/implemented/`. A stale **in-body** annotation reads `Status: Backlog.`, but per the lane-folder rule (the folder is authoritative) and code presence (app + Worker both exist), the feature is **Implemented**; the in-body line is a doc bug, not the frontmatter.
+
+---
+
+## 6. Status summary
+
+| Area | Detail | Status |
+|---|---|---|
+| Apple / Google `id_token` sign-in via Supabase | Native flows, hashed nonce, raw-URLRequest exchange | Implemented |
+| Email/password sign-in | Owning passwords rejected | Dropped |
+| Session in Keychain (device-local, per provider) | `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` | Implemented |
+| AES-256-GCM envelope + PBKDF2-HMAC-SHA256 (210k) key slots | Client-side; ciphertext + non-secret metadata only to `user_backups` (RLS) | Implemented |
+| Passwordless setup (device + assisted-recovery + optional passkey slots) | `makePasswordless` | Implemented |
+| Password key slot in the live flow | Survives in `LavaSecCore` for tests only | Dropped |
+| Recovery phrase (8-word CVCV, ~105 bits) | Off-device factor | Implemented |
+| Assisted recovery (server share + phrase via SHA256, NUL-delimited) | Two-factor; neither half alone | Implemented |
+| Passkey recovery (zero-knowledge, WebAuthn PRF/`hmac-secret`, RP `lavasecurity.app`) | PRF output HKDF-derived slot, no server secret | Implemented |
+| Passkey as production-ready factor on hardware | Needs webcredentials association (AASA hosted in the marketing site) | Planned |
+| Account deletion (authenticated Worker, service role) | Removes backups/settings/entitlements/profile/attachments + Auth user | Implemented |
+| Biometric/user-presence gate on unlock material | Release-gate review item | Planned |
+| `EncryptedBackupCoordinator` extraction from `AppViewModel` | Modularization only; no security-model change | In progress |
 
 ---
 
 ## Related
 
-- [System overview](./system-overview.md) — the whole system on one screen, including trust boundaries.
-- [iOS client](./ios-client.md) — `AppViewModel` and the app targets that drive backup.
-- [Backend & data](./backend-and-data.md) — the `lavasec-api` Worker, Supabase RLS, and `user_backups` storage.
-- [DNS filtering & blocklists](./dns-filtering-and-blocklists.md) — the resolver presets and transports whose settings are carried in the backup payload.
+- [System Overview](./system-overview.md) — the whole system on one screen, including trust boundaries.
+- [iOS Client](./ios-client.md) — `AppViewModel` and the app targets that drive backup.
+- [Backend & Data](./backend-and-data.md) — the `lavasec-api` Worker, Supabase RLS, and `user_backups` storage.
+- [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md) — the resolver presets and transports whose settings are carried in the backup payload.

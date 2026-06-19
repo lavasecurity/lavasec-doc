@@ -8,7 +8,7 @@ platform-native, and what is not promised yet.
 The parity docs do not replace implementation plans or tests:
 
 - `lavasec-doc` owns the product and behavior contract.
-- `lavasec-infra/plans` owns delivery state, sequencing, private risks, and
+- Internal plans own delivery state, sequencing, private risks, and
   board sync.
 - Platform repositories own code, fixtures, and tests that prove the behavior.
 
@@ -54,7 +54,7 @@ A complete feature record answers:
 4. When a platform ships the behavior, update the status here and refresh the
    relevant feature or architecture page.
 5. Keep implementation-only, private, pricing, legal-risk, and operational
-   details in `lavasec-infra`; summarize only the public contract here.
+   internal details stay private; summarize only the public contract here.
 
 ## Current parity ledger
 
