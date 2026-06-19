@@ -54,6 +54,9 @@ plugins:
           default: true
           name: English
           build: true
+        - locale: zh-Hant
+          name: 繁體中文
+          build: true
   # "Last update" shown on each page, from git history. MUST be listed after the
   # i18n plugin (it consumes the locale i18n adds). CI checks out full history
   # (fetch-depth: 0) for accurate dates; otherwise falls back to the build date.
