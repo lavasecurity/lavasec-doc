@@ -214,7 +214,7 @@ On the Worker side, `syncOneBlocklist` fetches each upstream source and normaliz
 |---|---|
 | DNS query precedence (bootstrap > pause > filter) | Implemented |
 | Filter decision precedence (guardrail > allowlist > blocklist > default-allow) | Implemented |
-| Threat-guardrail rule set populated with entries | Implemented (slot wired; ships empty) |
+| Threat-guardrail precedence slot (wired; ships with no entries yet) | Implemented |
 | DoH / DoH3 (observational h3 label) | Implemented |
 | DoT (4/endpoint pool, 8s idle refresh, one fresh retry) | Implemented |
 | DoQ (fresh connection per query, 4-lane concurrency) | Implemented |

@@ -150,7 +150,7 @@ Of the DNS transports, only **DoH** is a glossary Do-Not-Translate entry; `DoH3`
 
 ### 4.4 Safety framing
 
-Payment never bypasses the server-signed non-allowable **threat guardrail**. State the precedence consistently: **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.**
+Payment never bypasses the hash-validated, non-allowable **threat guardrail**. State the precedence consistently: **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.**
 
 ---
 
