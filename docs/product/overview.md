@@ -48,7 +48,7 @@ The voice throughout is plain, calm, and practical — danger is framed as a met
 
 ## Platforms
 
-- **iOS — shipped.** Lava is an iOS app today: four bundles share one App Group (`group.com.lavasec`) — the app (`com.lavasec.app`), the packet-tunnel extension (`.tunnel`), the widget (`.widget`), and shared sources — over a common `LavaSecCore` package.
+- **iOS — shipped.** Lava is an iOS app today: three bundles share one App Group (`group.com.lavasec`) — the app (`com.lavasec.app`), the packet-tunnel extension (`.tunnel`), and the widget (`.widget`) — plus shared sources, over a common `LavaSecCore` package.
 - **Android — Planned.** A native Kotlin / Jetpack Compose port over Android's `VpnService` is planned, carrying the same privacy promise and a parity-tested core filtering behavior. No Android app code ships yet.
 
 See [Platform Parity](platform-parity.md) for the stable feature ids and the iOS/Android contract.

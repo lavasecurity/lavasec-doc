@@ -157,7 +157,7 @@ The crucial backend fact: **the iOS client reads/writes `user_backups` directly 
 
 ### 4.4 Account deletion
 
-`POST /v1/account/delete` validates the user's access token, then deletes their `bug_reports` (and any matching legacy R2 attachment object), `user_backups`, `entitlements`, `user_settings`, and `profiles` rows, and finally deletes the Supabase Auth user via the service-role `/admin/users` endpoint. It returns only a deleted status + the linked providers. Status: **Implemented** (the plan frontmatter says "Backlog" but the file is in `plans/implemented/` and the code exists, so by the lane-folder + code-wins rule it is shipped).
+`POST /v1/account/delete` validates the user's access token, then deletes their `bug_reports` (and any matching legacy R2 attachment object), `user_backups`, `entitlements`, `user_settings`, and `profiles` rows, and finally deletes the Supabase Auth user via the service-role `/admin/users` endpoint. It returns only a deleted status + the linked providers. Status: **Implemented** (the plan's frontmatter reads `status: Done` and the file is in `plans/implemented/`; a stale **in-body** annotation still says "Backlog", but the lane folder + code presence make it shipped).
 
 ### 4.5 App Store entitlement mirroring
 
