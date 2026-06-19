@@ -14,7 +14,7 @@ and deployed to Cloudflare Pages at **https://docs.lavasecurity.app**.
 > **Scope.** This repo holds only the *public* manual (architecture, product
 > overview, design system, ADRs, compliance notices). Internal material —
 > roadmap, pricing/monetization, the IP risk register, ops runbooks, the
-> security audit — stays private in `lavasec-infra`. The docs are **distilled
+> security audit — stays in a private internal repo. The docs are **distilled
 > from the source** (plans, code, commits) and regenerated as the product
 > evolves; see [Regenerating the docs](#regenerating-the-docs).
 
@@ -45,8 +45,8 @@ Use it when a change affects:
 - platform-native differences that should be intentional.
 
 Keep delivery state, private risk, pricing strategy, and operational work in
-`lavasec-infra/plans`. The docs define the contract; plans track the work; tests
-prove the behavior.
+the private internal plans repo. The docs define the contract; plans track the
+work; tests prove the behavior.
 
 ## Layout
 
