@@ -109,7 +109,7 @@ The single most important property: **the encrypted DNS resolver path (right sid
  ┌──────────────────────────────────────────────────────────────────────────┐
  │  LAVA BACKEND (sees no DNS queries, no browsing history)                   │
  │  • Supabase Postgres: accounts, user_backups (opaque ciphertext), catalog │
- │  • Cloudflare R2: catalog/latest.json, bug-report attachments             │
+ │  • Cloudflare R2: catalog/latest.json, the round-robin cursor             │
  │  • lavasec-email Worker: receive-only @lavasecurity.app forwarding         │
  └──────────────────────────────────────────────────────────────────────────┘
        ▲
