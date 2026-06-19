@@ -21,7 +21,7 @@ The privacy promise behind every feature below:
 - **Plus** — unlocked by Lava Security Plus, the single optional paid tier. Plus unlocks **customization only**; it never gates baseline safety and never lets a paying user bypass the threat guardrail.
 - Every row is **Implemented** unless flagged inline. Status legend: **Implemented** = shipped and confirmed in code; **Planned** = designed, not built; **Dropped** = rejected or reverted. Planned/Dropped items are documented in the private roadmap, not here.
 
-Source-of-truth tier ceilings live in `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` (`FeatureLimits.free` / `FeatureLimits.paid`, aliased as `.plus`). The Plus entitlement is a local flag (`isPaid`); there is no backend entitlement sync yet.
+Source-of-truth tier ceilings live in `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` (`FeatureLimits.free` / `FeatureLimits.paid`, aliased as `.plus`). The Plus entitlement **gate** is a local flag (`isPaid`) — the source of truth. The backend **mirrors** App Store entitlements (`POST /v1/account/entitlements/app-store-sync` upserts an `entitlements` row), but that row is a mirror, not the gate; no backend sync drives gating yet.
 
 ---
 
