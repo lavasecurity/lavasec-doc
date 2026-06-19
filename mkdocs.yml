@@ -57,6 +57,18 @@ plugins:
         - locale: zh-Hant
           name: 繁體中文
           build: true
+        - locale: zh-Hans
+          name: 简体中文
+          build: true
+        - locale: de
+          name: Deutsch
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+        - locale: ja
+          name: 日本語
+          build: true
   # "Last update" shown on each page, from git history. MUST be listed after the
   # i18n plugin (it consumes the locale i18n adds). CI checks out full history
   # (fetch-depth: 0) for accurate dates; otherwise falls back to the build date.
