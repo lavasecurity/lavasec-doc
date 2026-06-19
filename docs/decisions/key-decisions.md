@@ -1,390 +1,171 @@
+---
+last_reviewed: 2026-06-19
+owner: engineering
+source_repos: [lavasec-ios, lavasec-infra]
+grounded_at: {lavasec-ios: "1fbab70", lavasec-infra: "5f425af"}
+---
+
 # Key Design Decisions
 
-This is an ADR-style log of the design decisions that shape Lava Security. Each
-entry records the **Decision**, its **Context**, the **Rationale**, and a
-**Status**. The ADR set uses its own status vocabulary, because design decisions
-need to express *reversal* and *replacement* that the project-wide
-[status legend](../architecture/system-overview.md#status-legend)
-(Implemented / In progress / Planned / Dropped) does not:
+> Audience: engineers and leadership. This is the ADR-style record of the load-bearing design decisions behind Lava Security — the ones that shaped the architecture, the privacy promise, or the product boundary, and especially the ones that were tried and reversed. Each entry gives the **Decision**, its **Context**, the **Rationale**, and a **Status** drawn from the project status legend (Adopted / Reverted / Superseded / Proposed).
+>
+> **Code wins.** Where a plan and the shipped code disagree, this record follows the code and calls out the divergence inline.
 
-- **Adopted** — decided and shipped.
-- **Reverted** — built, then pulled back out.
-- **Superseded** — replaced by a later decision.
-- **Proposed** — decided in principle but not yet shipped.
+**Status legend (mapped to the doc-set status lanes):**
 
-Where a feature is also marked against the project status legend, that mapping is
-called out in the entry (for example, a Reverted decision leaves the reverted
-path **(Dropped)**).
+| Status here | Doc-set lane meaning |
+|---|---|
+| **Adopted** | Implemented — shipped and confirmed in code |
+| **Reverted** | Dropped — built, then removed/reverted |
+| **Superseded** | An earlier decision replaced by a later one |
+| **Proposed** | Planned — designed, recommended, or recorded, but not yet applied in this tree |
 
-Decisions are grounded in commits and plan files; where code and a plan
-disagree, code wins. For deeper background see
-[DNS filtering & blocklists](../architecture/dns-filtering-and-blocklists.md)
-and the [system overview](../architecture/system-overview.md).
+Related reading: catalog distribution model in [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md) and [`../legal/open-source-list-data-terms-carveout.md`](../legal/open-source-list-data-terms-carveout.md); shipped behavior in [`../product/features.md`](../product/features.md). Forward-looking direction lives in the internal roadmap.
 
 ---
 
-## ADR-001 — On-device DNS filtering, no routine domain upload
+## 1. On-device DNS filtering via `NEPacketTunnelProvider`
 
-**Decision.** DNS filtering happens locally inside an on-device
-`NEPacketTunnelProvider`; Lava's servers never receive routine DNS queries,
-browsing history, or per-domain telemetry. The backend is minimal and
-privacy-preserving — it serves a blocklist catalog and (optionally) stores
-ciphertext backups, nothing more.
+**Decision.** Filter DNS **locally on the device** through a `NEPacketTunnelProvider` packet tunnel (`LavaSecTunnel`, `com.lavasec.app.tunnel`), rather than `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager`, or a Safari content blocker.
 
-**Context.** Lava is positioned as a privacy-first DNS filter. A naive design
-would route queries through Lava's resolvers, turning the company into a
-custodian of everyone's browsing. The packet tunnel parses each DNS packet,
-extracts the queried domain, evaluates it against the compiled snapshot, and
-forwards allowed queries upstream — all on the device.
+**Context.** The product is a privacy-first filter for non-technical users (parents, older adults) shipping through the consumer App Store, with no account required. The competing NetworkExtension providers and managed-DNS APIs are restricted to supervised/MDM-managed devices or don't cover all of an app's DNS, and a resolver-side model would route the user's domain stream off the device.
 
-**Rationale.** Keeping the client as the source of truth for filtering means a
-server compromise cannot reveal what users browse. It is the core privacy
-promise that the rest of the product is built to preserve.
+**Rationale.** The packet tunnel is the only provider that (a) works for unmanaged consumer devices and (b) lets every DNS decision happen on-device, which is the foundation of the privacy promise: *all DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit.* The trade-off accepted in exchange is the iOS **~50 MiB per-extension memory ceiling** the tunnel must live under — a constraint that shapes several later decisions below.
 
-**Status.** **Adopted.** (`plans/implemented/2026-05-16-supabase-r2-backend-plan.md`;
-tunnel in `apps/ios/LavaSecTunnel/PacketTunnelProvider.swift`.)
+**Status.** **Adopted** (foundational; in code from the initial prototype).
 
 ---
 
-## ADR-002 — Source-url-only blocklist distribution (GPL compliance)
+## 2. Source-url-only blocklist distribution
 
-**Decision.** Lava publishes only catalog **metadata** plus each upstream
-`source_url` and accepted SHA-256 hashes. The app fetches every third-party list
-directly from its upstream URL, verifies the hash, and parses it on-device. Lava
-never hosts, mirrors, transforms, merges, or serves third-party blocklist bytes
-from R2. `source_url_only` is the only allowed `redistribution_mode`. A CI
-guardrail fails the build if code mirrors list bytes, exposes Lava artifact URLs,
-enables GPL sources as production defaults, or writes blocklist bytes to R2.
+**Decision.** Lava publishes only the upstream blocklist **URL plus accepted hashes**; the device fetches the list **bytes** directly from each `source_url`, then parses, normalizes, dedups, and filters locally. Lava **never** stores, mirrors, transforms, or serves third-party blocklist bytes. The Worker writes only catalog **metadata** JSON to R2 (`raw_r2_key`/`normalized_r2_key` are null).
 
-**Context.** An earlier plan proposed mirroring raw upstream bytes in R2 with
-license notices. Several curated sources (HaGeZi, OISD) are GPL-3.0, which carries
-verbatim-copy and modified-source obligations — and Apple-distribution risk — if
-Lava redistributes them.
+**Context.** The earlier design mirrored raw blocklist bytes into R2 so counsel could review distribution. Many upstream lists (HaGeZi, OISD) are GPL-3.0, so hosting their bytes would make Lava a redistributor of GPL data.
 
-**Rationale.** By acting as a local filtering engine / user-agent rather than a
-GPL blocklist distributor, Lava sidesteps redistribution obligations entirely.
-The hash allowlist and last-good cache preserve the safety properties (fail-closed
-on unverified bytes, protected-domain filtering) the old mirror pipeline had.
+**Rationale.** Treating Lava as a local filtering engine / user agent — rather than a blocklist distributor — minimizes GPLv3 redistribution and App Review exposure. The device validates downloaded bytes against the catalog's `accepted_source_hashes` and falls back to last-good cache or fails closed on mismatch, recovering the safety property the mirror pipeline had provided. Every parsed rule set is also passed through a protected-domain filter so an upstream list cannot block Lava/Apple/identity-provider domains. The model is enforced in CI by `check-gpl-blocklist-distribution.sh` (no mirror code, no Lava-hosted artifact URLs, no GPL sources default-enabled, no R2 byte writes).
 
-**Status.** **Adopted**, **superseding** the raw-R2-mirror approach, which is
-**(Dropped)**. (`plans/implemented/2026-05-25-source-url-blocklist-safety-and-copy-plan.md`;
-superseded `plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`;
-`redistribution_mode` literal at `server/backend/worker/src/index.ts:75`;
-`scripts/check-gpl-blocklist-distribution.sh`. See
-[blocklist catalog](../architecture/dns-filtering-and-blocklists.md#4-blocklist-catalog-default-sources)
-and the IP risk register.)
+**Status.** **Adopted**, and it **Superseded** the abandoned R2 raw-mirror plan (`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`, header "Superseded by the source-url-only implementation"). See [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md).
 
 ---
 
-## ADR-003 — GPL sources opt-in and off by default
+## 3. Encrypted resolver transports (DoH / DoH3 / DoT / DoQ)
 
-**Decision.** The single shipped default config (`lavaRecommendedDefaults`)
-enables only the two permissive **Block List Project Phishing** and **Block List
-Project Scam** sources — both **Unlicense** — and Google plain DNS. No GPL source
-(HaGeZi, OISD) is default-enabled; they ship as opt-in, source-url-only options.
-AdGuard DNS Filter stays inactive pending separate legal review.
+**Decision.** Ship four encrypted upstream transports alongside plain DNS and a device-DNS fallback, extracted into LavaSecCore: **DoH** (URLSession), **DoH3** (DoH preferring HTTP/3), **DoT** (pooled `NWConnection`s, up to 4/endpoint, with idle-staleness refresh and one fresh-connection retry), and **DoQ** (DNS-over-QUIC). Routing, plain-DNS degradation, per-endpoint failover with a backoff gate, and device-DNS fallback live in `ResolverOrchestrator`.
 
-**Context.** Even under source-url-only, defaulting a GPL list on is a stronger
-posture than offering it as a user choice, and counsel review of GPL defaults was
-not complete at ship time. The originating plan
-(`plans/implemented/2026-05-26-low-risk-blocklist-source-direction-plan.md`)
-called for **Block List Basic** as the sole default; the shipped code diverged
-to Phishing + Scam (commit `37b1fafd`, "apply feedback round fixes"). Block List
-Basic still exists in the catalog (`BlocklistModels.swift:118`) but is not
-default-enabled in any shipped config. Per this document's code-wins rule, the
-shipped Phishing + Scam default is canonical.
+**Context.** Forwarding unblocked queries in cleartext to a resolver leaks the very domain stream the on-device model is meant to protect. The transports were built incrementally (DoH → DoH3 → DoT → DoQ).
 
-**Rationale.** Ship a low-legal-risk default while still offering GPL lists for
-users who opt in. Both default lists are permissively licensed (Unlicense) and
-threat-focused; nothing GPL or risky is enabled without a deliberate user action.
+**Rationale.** Encrypted upstream transport keeps unblocked queries private end-to-end. **DoH3** is labeled purely observationally — `assumesHTTP3Capable=true` is set and the negotiated protocol is observed, and the UI annotates `DoH3` (no slash) **only when an h3 negotiation is actually observed**, never promised, because h3 is best-effort per connection and a sticky claim would over-state behavior behind UDP-blocking firewalls. DoT pooling with idle refresh was a direct fix for Cloudflare silently closing idle DoT connections.
 
-**Status.** **Adopted.** (`apps/ios/Sources/LavaSecCore/OnboardingDefaults.swift`
-— `lavaRecommendedDefaults`, used by
-`apps/ios/LavaSecApp/OnboardingFlowView.swift`; licenses in
-`apps/ios/Sources/LavaSecCore/BlocklistModels.swift`;
-`plans/implemented/2026-05-26-low-risk-blocklist-source-direction-plan.md`.)
+**Status.** **Adopted** (all four transports present and wired).
 
 ---
 
-## ADR-004 — Encrypted-DNS transports: ship DoH/DoT/DoQ, default to plain DNS
+## 4. DoQ connection reuse — built, device-tested, reverted
 
-**Decision.** Implement three encrypted upstream transports — **DoH** (HTTP/3
-preferred, earning the observational `DoH3` annotation), **DoT** (bounded
-per-endpoint connection pool, round-robin, max 4, with idle-staleness refresh),
-and **DoQ** — all wired into the tunnel on a shared response type. Keep encrypted
-transports opt-in (Plus) with Google plain DNS as the shipped default. Expose DoQ
-only through a custom DNS stamp/URL; ship no built-in DoQ preset.
+**Decision.** **Do not** reuse QUIC connections for DoQ. `DoQTransport` opens a **fresh QUIC connection per query**; the 4-lane pool provides concurrency, not handshake reuse.
 
-**Context.** The resolver stack evolved DoH → DoT → DoQ. Device QA found DoH
-functional but Quad9 DoH unstable under backoff, so there was not enough evidence
-to promote DoH to the default. DoQ lacked a stable connection-reuse story and
-built-in providers.
+**Context.** RFC 9250 maps each DNS query to its own QUIC stream, so true reuse needs the multi-stream `NWConnectionGroup`/`openStream` API that is **iOS 26.0+ only**, while the deployment floor is iOS 17. An iOS-26-gated reuse path was nonetheless implemented (compiled Debug+Release against the Xcode 26 SDK) and **device-tested on iOS 26.5** against AdGuard DoQ.
 
-**Rationale.** Offer encrypted transport as a power-user customization without
-making an under-verified transport the default for everyone. `DoH3` is labeled
-truthfully — HTTP/3 is preferred but never promised, so the annotation is earned
-only by an observed h3 ALPN negotiation.
+**Rationale.** The reuse path failed on every attempt on device (`openStream`/`receive` errored, then the fallback hit "Socket is not connected"), measuring **net worse** than the per-query baseline (control: 34 handshakes / 35 queries, all-success). This empirically confirmed Apple DTS's "hold off on QUIC with the new Network framework" guidance, so the work was reverted rather than shipped; only the docs and guard-test rationale retain the finding so it isn't re-attempted before the API matures.
 
-**Status.** **Adopted.** (Commits `a56f4728`/`39be21b9`/`2173c70e`/`571e4cd3`/`f176027d`;
-`DoHTransport.swift`, `DoTTransport.swift`, `DoQTransport.swift`;
-`plans/under_review/2026-05-17-dns-over-https-device-qa.md`. See
-[encrypted transports](../architecture/dns-filtering-and-blocklists.md#2-encrypted-transports-doh-dot-doq-doh3).)
+**Status.** **Reverted** (deferred until the deployment floor reaches iOS 26). Describe DoQ as per-query fresh connections.
 
 ---
 
-## ADR-005 — DoQ connection reuse: build, device-test, revert
+## 5. Reject a unifying `DNSResolvingTransport` protocol
 
-**Decision.** Build iOS-26-gated DoQ (DNS-over-QUIC) connection reuse — a pooled
-`NetworkConnection<QUIC>` per lane with idle-refresh and a circuit-breaker — to
-amortize the QUIC handshake across queries. Keep only the per-query path (fresh
-connection per query) and retain docs/guard-test rationale so the reuse path is
-not re-attempted prematurely.
+**Decision.** **Do not** unify the resolver transports under a single `DNSResolvingTransport` protocol; keep the closure-based `ResolverOrchestrator.Executors` seam.
 
-**Context.** Per-query DoQ pays one handshake per query. Reuse promised lower
-latency. The reuse implementation was device-tested on iOS 26.5.
+**Context.** A refactor (issue 407) proposed one protocol over all transports.
 
-**Rationale.** Every reuse attempt failed: `openStream`/`receive` errored, the
-fallback hit "Socket is not connected," and net behavior was **worse** than the
-per-query baseline. The OS QUIC reuse API is not ready; re-attempting before it
-matures wastes effort.
+**Rationale.** The transports are too dissimilar — async encrypted executors (DoH/DoT/DoQ) versus synchronous multi-address plain/device transports — so a unifying protocol would be a worse abstraction than the existing injectable closure seam, which already keeps wire execution testable.
 
-**Status.** **Reverted.** Per-query DoQ ships; reuse is **(Dropped)** with no
-defined re-attempt trigger. (Commit `fbdb1511`;
-`apps/ios/Sources/LavaSecCore/DoQTransport.swift`. See
-[DoQ and the reuse status](../architecture/dns-filtering-and-blocklists.md#doq-and-the-reuse-status).)
+**Status.** **Reverted** / won't-implement (closed as a bad abstraction).
 
 ---
 
-## ADR-006 — Zero-knowledge account backup
+## 6. Zero-knowledge encrypted backup (passwordless, passkey exception noted)
 
-**Decision.** An optional account (Sign in with Apple / Google) authenticates an
-**encrypted-backup** sync only — protection works with no login. The settings
-payload is encrypted on-device with AES-256-GCM under a random 32-byte payload
-key, which is wrapped into independent PBKDF2-HMAC-SHA256 key slots (device-secret
-keychain, assisted-recovery phrase, optional passkey). Servers store only
-ciphertext and non-secret envelope metadata. Recovery splits into an 8-word,
-locally-CSPRNG recovery phrase plus a server-held recovery share combined via
-SHA-256 — neither alone can decrypt.
+**Decision.** Back up a **minimized** settings payload client-side: AES-256-GCM seals it under a random 32-byte payload key, which is wrapped into per-secret **key slots** via PBKDF2-HMAC-SHA256 (**210,000** iterations in production). Only ciphertext plus non-secret metadata upload to the Supabase `user_backups` table (RLS per user). The shipped flow is **passwordless**: device-secret slot (device-local Keychain) + assisted-recovery slot + optional passkey slot.
 
-**Context.** Users wanted to carry blocklist/allowlist/DNS settings to a new
-device, but the privacy promise forbids Lava reading those settings. The team also
-chose **passwordless**: a backup-password design was dropped to avoid
-reset/MFA/lockout burden (the `.password` slot / `BackupPasswordPolicy` survive in
-core but are unwired, tests-only). Email sign-in was likewise deferred.
+**Context.** Optional account login (Apple + Google only) enables cross-device settings restore. The server must never be able to read a user's blocklists, allowlists, resolver choice, or other settings.
 
-**Rationale.** Encrypting client-side under keys that never leave the device means
-even a full server compromise yields only ciphertext. The recovery-phrase +
-server-share split enables account-assisted new-device restore while preserving
-zero-knowledge. Passkey recovery is offered too, but it is **server-gated, not
-zero-knowledge**: a Cloudflare Worker releases a stored recovery secret after a
-successful WebAuthn assertion.
+**Rationale.** Plaintext and decrypting secrets exist only on the device; the server holds one opaque envelope per user. Assisted recovery is deliberately two-factor — `SHA256("LavaSec assisted recovery v1" + serverRecoveryShare + normalizedPhrase)` requires **both** the server-held share and the user's 8-word recovery phrase (~105 bits), so neither half alone decrypts. Unlock material is stored device-local (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **not** in synchronizable iCloud Keychain — a privacy hardening that reversed the original plan's synchronizable design. The **passkey slot is also genuinely zero-knowledge**: it is wrapped with a WebAuthn **PRF / `hmac-secret`** authenticator output (HKDF-SHA256 derived) that never leaves the client, so no server-held value can unwrap it. There is no service-role passkey table and no Worker WebAuthn-assertion gate — the earlier server-gated passkey design was dropped, removing all server-side passkey state (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`; lavasec-infra: `supabase/migrations/20260616000000_drop_backup_passkey_recovery.sql`, `backend/worker/test/backup-passkeys-source.test.mjs`).
 
-**Status.** **Adopted.** Password slot and email sign-in are **(Dropped)**.
-(`plans/implemented/2026-05-18-zero-knowledge-account-backup-plan.md`,
-`plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md`,
-`plans/implemented/2026-05-18-defer-email-sign-in-plan.md`;
-`apps/ios/Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`. See
-[accounts & backup](../architecture/accounts-and-backup.md).)
+**Status.** **Adopted** (passwordless model, assisted recovery, and a zero-knowledge PRF-derived passkey slot, all in code). Making the passkey a fully production-ready recoverable factor on physical devices (Associated Domains / AASA hosting for the PRF model) is **Proposed** (backlog).
 
 ---
 
-## ADR-007 — Fail-closed on-demand VPN, reconciled after launch
+## 7. Fail-closed Connect-On-Demand
 
-**Decision.** Add Connect-On-Demand (`NEOnDemandRuleConnect(.any)`) so an
-OS-stopped tunnel auto-restarts. Keep **fail-closed** as the safe default: when
-the tunnel comes up without a reusable snapshot it blocks all traffic rather than
-passing it unfiltered, and the app reconciles the real snapshot after launch
-(`reconcileTunnelSnapshotAfterLaunch()`). Enable on-demand only **after** the
-tunnel is confirmed connected.
+**Decision.** Add an `NEOnDemandRuleConnect` rule so an OS-stopped tunnel auto-restarts, with **fail-closed** as the safe default: when there is no reusable filter snapshot the tunnel blocks all traffic rather than passing it unfiltered. On-demand is **disabled before any stop** so the VPN stays turn-off-able.
 
-**Context.** iOS silently stopped the tunnel on network changes (stop reason 17,
-`internalError`) with no auto-restart for long stretches. Adding on-demand fixed
-the silent-VPN-off but introduced two regressions: (1) enabling on-demand at
-profile install brought up a fail-closed tunnel mid-onboarding; (2) on restart
-iOS brought the tunnel up cold/fail-closed before the app pushed real rules.
+**Context.** iOS was silently stopping the tunnel (reason 17) with nothing restarting it for ~45 minutes, leaving users unprotected. Naively enabling on-demand makes the VPN impossible to turn off, and a fail-open default would pass traffic during the gap.
 
-**Rationale.** Fail-closed is the correct safety default — a tunnel with no rules
-must not leak unfiltered traffic. Gating on-demand on a confirmed connection and
-reconciling the snapshot on launch closes the two fail-closed edges without
-abandoning auto-restart.
+**Rationale.** On-demand closes the silent-stop gap; disabling-before-stop preserves the user's ability to turn protection off; fail-closed ensures the gap is safe rather than silently unfiltered, recovered by `reconcileTunnelSnapshotAfterLaunch`. The change had side effects — on-demand re-triggered the "Add VPN Configurations" system prompt during onboarding — which spawned a multi-commit fix chain: stop enabling on-demand at install, gate launch/protection restore on onboarding completion, and **neutralize an inherited/orphaned config by removing it** (`removeFromPreferences`, silent) rather than by saving `on-demand=false` (`saveToPreferences` re-showed the prompt).
 
-**Status.** **Adopted**, with two corrective fixes. (Commit `5dc76c42` added
-Connect-On-Demand; `fb5730ac` stopped enabling on-demand at profile install;
-`5e2afdac` fixed on-demand restart fail-closed. On-demand rule and
-`reconcileTunnelSnapshotAfterLaunch()` live in
-`apps/ios/LavaSecApp/AppViewModel.swift`.)
+**Status.** **Adopted** (on-demand restart plus the onboarding/fail-closed fix chain).
 
 ---
 
-## ADR-008 — Onboarding: neutralize an inherited VPN config by removing it
+## 8. Modular VPN refactor and the heat-regression discipline
 
-**Decision.** When the app finds an orphaned/inherited VPN configuration during
-onboarding, neutralize it by **removing** it (`removeFromPreferences`, silent),
-not by saving it. Gate `restoreProtectionIfNeeded` on onboarding completion, and
-request notification authorization only at the onboarding notifications step.
+**Decision.** Restructure the VPN path (VPNLifecycleController, ProtectionActionOrchestrator, ResolverOrchestrator, FilterArtifactStore, DNSResponseCache, RuleSetCache, FilterSnapshotPreparationService) for cache-first turn-on, bounded-parallel fetch, and flap coalescing — treating battery/latency as product requirements with explicit p50/p95 targets and **on-device** (not Simulator) profiling.
 
-**Context.** The "Add VPN Configurations" system prompt was firing at onboarding
-step 1. The first neutralize fix used `setManagerOnDemand` → `saveToPreferences`,
-which re-fired the very prompt it was meant to suppress on an orphaned profile.
-Notification authorization was also being requested at the wrong step on fresh
-installs.
+**Context.** Turn-on / refresh / pause / resume were slow. During the refactor a heat regression appeared (134% CPU, High energy, hot phone). A large agent panel first refuted the suspected cause using pre-regression evidence; a live device capture then confirmed it.
 
-**Rationale.** Saving an orphaned profile re-triggers the system prompt; removing
-it is silent and idempotent. Gating restore on onboarding completion closes a
-stale-status race; deferring the notification prompt aligns the system dialog with
-the step that explains it.
+**Rationale.** The real cause was a self-sustaining `NEVPNStatusDidChange` refresh loop — a coalescing loop that re-armed forever (~370 events/s, main thread ~100%, `vpn-debug-log.jsonl` grown to ~180–210 MB) after a drop-reentrant guard was replaced. The fix reads the cached manager state and bounds the loop. The plan's own before/after device artifact records warm turn-on (`action.turnOn`) dropping from **2,722 ms → 287 ms** on iPhone 15 Pro; a separate, later post-modular opportunity review measured the warm path at **112 ms** (decode 51 + managerSetup 57) on the same device. The episode set the standard: structural refactors pause until a measured heat regression is bounded, and Simulator thermal/battery results are rejected as meaningless.
 
-**Status.** **Adopted**, **superseding** the earlier save-based mechanism.
-(Commit `d8dfe4e9` / PR #40; `5e2afdac`.)
+**Status.** **Adopted** (`plans/implemented/2026-06-12-modular-speed-up-plan.md`). A post-modular review keeps `PacketTunnelProvider` and `AppViewModel` as known surviving god-objects.
 
 ---
 
-## ADR-009 — Tier gating by filter-rules budget, not list count
+## 9. Filter-rules budget instead of a list-count cap
 
-**Decision.** Gate tiers by **total compiled filter rules** — Free 500K / Plus 2M
-— under a ~3.26M hard device guardrail derived from the ~50 MiB NE memory ceiling.
-The device cap is a safety floor, never a paywall, and the tunnel ignores
-`isPaid` (Plus never bypasses guardrails). Manual blocked domains count toward the
-total. This replaced the old enabled-list-count cap (free 3 / paid 10).
+**Decision.** Gate tiers by a **filter-rules budget** — **Free 500K / Plus 2M** compiled domain rules — not by enabled-list count. A hard **~3.26M-rule device guardrail** (`maxResidentMegabytes 32.0`, `baselineMegabytes 4.0`, `estimatedBytesPerRule 9.0` → `maxFilterRuleCount = 3,262,236`) applies to **everyone** and is **never a paywall**. The compact domain blob is `mmap`'d (`.mappedIfSafe`) so it stays file-backed and outside jetsam-counted `phys_footprint`; only the decoded entry tables cost resident memory.
 
-**Context.** List count was a dishonest proxy — one list can hold 1K or 1M rules —
-and manual domains went uncounted. The real constraint is the packet tunnel's
-memory ceiling, made measurable by the mmap strategy (ADR-010).
+**Context.** The old cap was a list **count** (free 3 / paid 10). One list can hold 1K or 1M rules, so count was a dishonest proxy for the real constrained resource — the NE 50 MiB memory ceiling.
 
-**Rationale.** Rules ≈ honest memory cost. Gating on rules aligns the product
-limit with the real resource and lets users pick any combination that fits. The
-authoritative check runs at compile time on the deduped union (device-cap-first,
-then tier); the selection-meter UI is advisory with a 1.10 soft margin.
+**Rationale.** Rules map to actual memory, so any combination of lists that fits is allowed. Authoritative enforcement runs at compile time on the deduped union in `FilterSnapshotPreparationService` (device guardrail first, then tier limit); the selection-time UI meter uses a per-list sum with a 1.10 soft-ceiling margin. Over-budget configs are rejected deterministically (keeping protection off) rather than letting the tunnel jetsam.
 
-**Status.** **Adopted in code, In progress as a shipped tier** — the gating
-mechanism (`SubscriptionPolicy`, `FilterRuleBudget`, `FilterSnapshotMemoryBudget`)
-is present; the plan sits under review. (Commit `07e60793`;
-`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`. See
-[filter-rules budgets](../architecture/dns-filtering-and-blocklists.md#5-filter-rules-budgets-the-ne-memory-ceiling-and-mmap-strategy)
-and tiers & monetization.)
+**Status.** **Adopted** in code (`SubscriptionPolicy.swift`), which **Superseded** the list-count cap. The driving plan (`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`) is still in review and the public site's "Enabled blocklists 3 → 10" copy is **stale** — the real gate is the rules budget. See [`../product/features.md`](../product/features.md).
 
 ---
 
-## ADR-010 — mmap the domain table; gate snapshot reload to avoid NE jetsam
+## 10. Plans as markdown + one-way Linear sync
 
-**Decision.** Load the compact domain-string blob with
-`Data(contentsOf:options:[.mappedIfSafe])` (zero-copy mmap) and size the memory
-budget in dirty rule-table bytes only. Add a pre-decode no-op reuse gate so a
-live snapshot reload does not rebuild when the header is unchanged.
+**Decision.** Markdown files in `plans/<lane>/` are the **source of truth**; the **lane folder is the authoritative status** (`implemented`, `inflight`, `under_review`, `backlog`, `dropped`). A push to `main` syncs plans **one-way** to Linear (team LAV), refreshing only title/description after creation; a separate **manual, reviewed** return-leg pulls Linear status/priority/lane back into plan frontmatter.
 
-**Context.** Refreshing the filter while connected tore the tunnel down: peak
-memory roughly doubled and exceeded the ~50 MiB packet-tunnel jetsam ceiling,
-surfacing as a silent VPN-off with no turn-off log.
+**Context.** A small team needs tool-agnostic, reviewable planning state that doesn't fight a project tracker, and an autonomous agent loop needs a stable place to read and write plan state.
 
-**Rationale.** Mapped/clean file pages are excluded from the jetsam-counted
-`phys_footprint`, so on-disk list size stops being a memory factor — only decoded
-entry tables count. This lifted the on-device domain ceiling from ~1.3M to ~3.7M
-rules and is the honesty basis for the filter-rules budget.
+**Rationale.** The field-ownership split keeps the two systems conflict-free — markdown owns content, Linear owns triage state — so a push never clobbers human triage. The `dropped/` lane keeps cancelled plans out of the sync pipeline so they don't reappear (created when Allowed Exceptions Guardrails / LAV-5 was rejected). Stale frontmatter inside a plan is a doc bug, not a status; the folder wins, and where code shows a feature shipped despite a "Backlog" frontmatter (e.g. account deletion), the code wins.
 
-**Status.** **Adopted.** (Commits `055970a8`, `71a9a99b`. See
-[mmap strategy](../architecture/dns-filtering-and-blocklists.md#mmap-strategy).)
+**Status.** **Adopted** (`scripts/sync-plans-to-linear.mjs`, `.github/workflows/sync-plans.yml`; `dropped/` lane in use).
 
 ---
 
-## ADR-011 — Modular VPN-lifecycle refactor (cache-first turn-on)
+## 11. Repo split + copyleft open-source of the client
 
-**Decision.** Re-architect the VPN action path into explicit, observable modules —
-an extracted `VPNLifecycleController` for turn-on/pause/resume/on-demand/snapshot
-reload, extracted resolver transports, off-main filter preparation, and content-
-hash caches — to make turn-on/pause/resume **cache-first** and bound latency. De-
-scope `AppViewModel` and `PacketTunnelProvider`. Drive tunnel pause via the
-`sendProviderMessage` command, not Darwin `CFNotification` observers.
+**Decision.** Split the monorepo into per-component repos (`lavasec-ios`, `-android`, `-web`, `-infra`, `-doc`, `-runner`) and **open-source the first-party client under AGPL-3.0** in place of Apache-2.0, on the Mullvad/ProtonVPN copyleft precedent.
 
-**Context.** A stop-the-line Xcode heat regression (134% CPU, High energy, device
-overheating, traced to a self-sustaining status-refresh loop) plus slow
-turn-on/refresh eroded trust. A 40-agent review panel later found 5 of 11 "done"
-items were scaffold-plus-tests with no production call sites, and **refuted**
-popular heat suspects (debug-log appends, diagnostics rewrites, RootView poll
-cascade) as orders of magnitude too small. Dead `CFNotificationCenter` tunnel IPC
-was removed because Darwin observers do not self-fire in the NE extension until a
-provider message pumps the run loop.
+**Context.** Per-component development and an open-sourcing of the client. The license question is whether a competitor could fork the client, close it, and undercut on price.
 
-**Rationale.** VPN-path reliability and speed is the highest-priority surface;
-making the path modular, cache-first, and memory-bounded is what restores trust.
-The provider message is the reliable trigger inside the extension.
+**Rationale.** Copyleft forces derivatives to stay open, preventing a closed fork of the client — a "public client, private backend/ops" posture, with backend, legal, and ops kept private. AGPL-3.0 (rather than plain GPL-3.0) was chosen to close the network-use gap. The known GPL-vs-App-Store distribution tension is handled by Lava itself being the distributor of the App Store binary under its own copyright.
 
-**Status.** **Adopted (shipped)**; some scaffolded modules still pending real
-wiring per the panel re-review. (`plans/implemented/2026-06-12-modular-speed-up-plan.md`;
-commits `26926904`, `cb89dd7c`, `ef6e3db0`, `b19c3ff1`, `cda75f46`.)
+**Status.** **Adopted.** The repo split is **complete**: each component lives in its own repository (`lavasec-ios` at tag v0.4.0, plus `lavasec-android`, `lavasec-web`, `lavasec-infra`, `lavasec-doc`, `lavasec-runner`), and `lavasec-ios`'s `README.md` "Repository layout" section lists only that repo's per-component contents (`LavaSecApp/`, `LavaSecTunnel/`, `LavaSecWidget/`, `Shared/`, `Sources/`, `Tests/`) with infrastructure noted as living in separate private repositories. The client is open-sourced under **AGPL-3.0**: the `lavasec-ios` `LICENSE` is the GNU Affero General Public License v3 and `README.md` carries the AGPL-3.0 badge.
 
 ---
 
-## ADR-012 — Plans as markdown lanes, synced one-way to Linear
+## Appendix — other recorded reversals and rejections
 
-**Decision.** Keep plans as tool-agnostic markdown files in a top-level `plans/`
-tree with lane subfolders (`backlog`, `inflight`, `under_review`, `implemented`,
-`dropped`) and YAML frontmatter. Sync **one-way and idempotently** to Linear
-(reconcile by title; content-only on update so board edits are not clobbered).
-Retire the earlier GitHub Projects sync.
+These are smaller but were genuine decisions with a recorded flip; listed for completeness.
 
-**Context.** Plans had lived under `docs/plans/`. A status source of truth was
-needed that is readable by Linear, Obsidian, and GitHub at once, without a sync
-that overwrites human board triage.
+| Decision | Rationale | Status |
+|---|---|---|
+| Custom DNS free vs paid | Monetization positioning; briefly allowed on free, then returned to paid-only | **Reverted** to paid-only |
+| Email/password sign-in | Owning passwords adds reset/MFA/lockout/breach/takeover burden while Apple + Google suffice; bypass recovery would break zero-knowledge | **Reverted** / never shipped (Apple + Google only) |
+| Allowed Exceptions Guardrails (LAV-5) | Guardrail precedence shipped via the simpler filter-list-edit revamp; payment must never bypass the high-confidence threat guardrail | **Reverted** (`dropped/` lane created) |
+| TestFlight branch-promotion lockdown | Initial lockdown reconsidered; replaced by a planned post-open-source runner lockdown | **Reverted**, superseded by a backlog plan |
+| App↔extension control channel | Complementary by design, not either/or: Darwin notifications act only as lightweight wakeups, while the typed, revisioned state and the authoritative drive of the extension run loop go through `NETunnelProviderSession` provider messages (`sendProviderMessage`). The extension's `CFNotificationCenter` observer is not a reliable standalone trigger on device, so neither mechanism replaces the other. | **Adopted** (both mechanisms load-bearing) |
 
-**Rationale.** Frontmatter files travel with the repo and are diffable; one-way
-idempotent sync gives Linear visibility without making the board authoritative
-over the files. Lane folders double as the status legend.
-
-**Status.** **Adopted**; GitHub Projects sync **Superseded**. (Commits `578e45fb`,
-and prior `f6ee7e7b`/`21936304`; `scripts/sync-plans-to-linear.mjs`. See
-plans README.)
-
----
-
-## ADR-013 — Signal-style repo split with AGPL clients
-
-**Decision.** Split the monorepo into individual repos, Signal-style:
-`lavasec-ios` and `lavasec-android` public under **AGPL/GPLv3**, `lavasec-web` and
-`lavasec-infra` private, and `lavasec-legal` as a non-git **encrypted vault**.
-Switch the first-party open-source license recommendation from Apache-2.0 to
-GPL-3.0/AGPL.
-
-**Context.** Open client code builds trust, but private infra, secrets, PII, and
-legal strategy must never leak. A permissive license would let a competitor fork
-and close the client. Mullvad and ProtonVPN set the copyleft precedent.
-
-**Rationale.** A clean per-surface boundary gives zero chance of leaking private
-material while making the clients auditable. Copyleft prevents a closed fork of
-the very client whose openness is the trust argument.
-
-**Status.** **Proposed / In progress** — all four repos are built and committed
-locally and paused before any push (no GitHub repos created, monorepo untouched).
-(`plans/backlog/2026-06-14-repo-split-individual-repos-plan.md`, status In
-Progress; license recommendation captured in commit `d8dfe4e9`;
-`plans/backlog/2026-05-26-open-source-release-readiness-plan.md`.)
-
----
-
-## ADR-014 — Allowed-Exceptions Guardrails: not built
-
-**Decision.** Do not build a dedicated Allowed-Exceptions Guardrails surface or a
-user-selectable guardrail-import system. Guardrails remain always-on,
-backend-curated rules delivered via the catalog `guardrails[]` array; the
-allowlist stays exception-led, and guardrails cannot be overridden by it.
-
-**Context.** A plan (LAV-5) proposed a protection-guardrails explanation surface
-plus a future high-confidence threat-guardrail source. On review the abstraction
-was judged to add churn without proportional value for the v1 surface.
-
-**Rationale.** Keeping guardrails backend-curated keeps the precedence model
-simple (guardrail > allow > blocklist > default-allow) and avoids a symmetric
-allowlist-list system users would have to manage.
-
-**Status.** **Dropped / Cancelled.** (`plans/dropped/2026-05-16-allowed-exceptions-guardrails-plan.md`,
-status Cancelled; commit `0f5b03ee`.)
-
----
-
-## Related reading
-
-- [System overview](../architecture/system-overview.md) — components, data flows, trust boundaries, and the project status legend.
-- [DNS filtering & blocklists](../architecture/dns-filtering-and-blocklists.md) — pipeline, transports, budgets, source-url-only compliance.
-- [Accounts & backup](../architecture/accounts-and-backup.md) — zero-knowledge envelope and recovery.
-- Tiers & monetization — Free vs Plus boundary.
-- IP risk register — blocklist license posture and source-url-only record.
-- Roadmap & directions — plan lanes and status.
+> Cross-cutting safety invariant referenced throughout: payment never bypasses the server-signed non-allowable **threat guardrail**. Decision precedence is **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.**
