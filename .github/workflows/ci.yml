@@ -38,5 +38,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Guard — no dead monorepo path literals
+        run: |
+          if grep -rnE 'apps/ios/|server/backend|server/supabase|server/site' docs --include='*.md'; then
+            echo "::error::Dead pre-split monorepo path(s) in docs/. Repo-qualify to the split layout (lavasec-ios: / lavasec-infra: / lavasec-web:)."
+            exit 1
+          fi
+
       - name: Build (strict — fails on broken links)
         run: mkdocs build --strict
