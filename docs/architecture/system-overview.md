@@ -23,7 +23,7 @@ Everything below is in service of keeping that sentence true. The architecture i
 
 ## 3. Components
 
-### iOS client (four bundles, one App Group `group.com.lavasec`)
+### iOS client (three executable targets + shared code, one App Group `group.com.lavasec`)
 
 | Component | Bundle / location | Role | Status |
 |---|---|---|---|
