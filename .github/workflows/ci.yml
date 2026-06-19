@@ -45,5 +45,16 @@ jobs:
             exit 1
           fi
 
+      - name: Guard — no internal infra surface (public-doc hygiene)
+        run: |
+          # Public docs must not publish private-repo names, internal resource
+          # ids, secret/var names, or workers.dev hosts. Genericize to roles;
+          # describe behavior + the public api.lavasecurity.app endpoint instead.
+          pat='lavasec-infra|lavasec-runner|lavasec-ios-internal|lavasec-android-internal|lavasec-prod|lavasec-dev|lavasec-help-feedback|LAVASEC_R2|HELP_FEEDBACK_DB|SUPABASE_SERVICE_ROLE_KEY|ADMIN_API_KEY|LINEAR_API_KEY|LINEAR_TRIAGE_TEAM_KEY|SLACK_TRIAGE_WEBHOOK_URL|PUBLIC_SUPABASE_DASHBOARD_ORIGIN|workers\.dev'
+          if grep -rnE "$pat" docs --include='*.md'; then
+            echo "::error::Internal infra surface in public docs (private-repo name / resource id / secret name). Genericize to roles."
+            exit 1
+          fi
+
       - name: Build (strict — fails on broken links)
         run: mkdocs build --strict
