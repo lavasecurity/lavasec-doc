@@ -97,7 +97,7 @@ Optional account login and encrypted settings backup. None of this is required t
 | **Minimized backup payload** | Free | Backs up enabled blocklist IDs, allowed/blocked domains, resolver settings, local-log prefs, guardian look, etc. — and explicitly excludes `isPaid`, QA flags, diagnostics, snapshots, and full blocklist bytes. |
 | **Device-secret key slot** | Free | A 32-byte device secret in the device-only Keychain (`...ThisDeviceOnly`, not iCloud-synced) for seamless same-device restore. |
 | **Recovery phrase + assisted recovery** | Free | An 8-word CVCV phrase (~105 bits) combined with a server-held recovery share via SHA256 to unlock the assisted-recovery slot. Two-factor: neither half alone decrypts. |
-| **Passkey recovery slot** | Free | Optional WebAuthn-gated slot. **Note:** passkey recovery is **server-gated, not zero-knowledge** — the secret is released by the Worker only after a verified passkey assertion. Production readiness on physical devices depends on Associated Domains / AASA hosting (Planned). |
+| **Passkey recovery slot** | Free | Optional WebAuthn-gated slot, and **zero-knowledge**: its unwrap key is derived **on-device** from the authenticator's WebAuthn PRF (`hmac-secret`) output (HKDF-SHA256). The server registers no passkey, issues no challenges, holds no recovery secret, and exposes no passkey routes — the earlier server-escrow design was dropped. Production readiness on physical devices depends on Associated Domains / AASA hosting (Planned). |
 | **Account deletion / data rights** | Free | Authenticated Worker endpoint deletes backups, settings, entitlements, profile, and bug-report attachments, then the Supabase Auth user; the app signs out and clears local unlock material. |
 
 ---

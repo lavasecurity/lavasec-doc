@@ -177,7 +177,7 @@ Setting `hasSeenLavaOnboarding = true` at the end is what flips `hasCompletedOnb
 
 It delegates lifecycle serialization to a `protectionActionOrchestrator` (so a background restore won't interleave with a user turn-on), holds the cached `tunnelManager`, and drives all snapshot/config/pause changes to the extension via the provider-message helpers in [§2](#2-app-extension-ipc).
 
-> **Privacy framing.** DNS filtering happens locally on this device. The diagnostics and network-activity surfaces `AppViewModel` publishes are stored locally only — Lava never receives your routine DNS queries, browsing history, or per-domain telemetry. Any optional account backup is **zero-knowledge** (encrypted on-device; Lava can only ever store ciphertext); passkey-based recovery is **server-gated**, not zero-knowledge. See [System Overview](./system-overview.md) for the server boundary.
+> **Privacy framing.** DNS filtering happens locally on this device. The diagnostics and network-activity surfaces `AppViewModel` publishes are stored locally only — Lava never receives your routine DNS queries, browsing history, or per-domain telemetry. Any optional account backup is **zero-knowledge** (encrypted on-device; Lava can only ever store ciphertext), including passkey-based recovery — its key is PRF-derived on-device with no server-held secret. See [System Overview](./system-overview.md) for the server boundary.
 
 ---
 
@@ -185,7 +185,7 @@ It delegates lifecycle serialization to a `protectionActionOrchestrator` (so a b
 
 - [System Overview](./system-overview.md) — the whole system on one screen: the app, the catalog Worker, and Supabase, plus the trust boundaries and the status legend used throughout.
 - [DNS Filtering & Blocklists](./dns-filtering-and-blocklists.md) — the packet-tunnel internals referenced here only at the control boundary: the compiled filtering engine, the encrypted resolver transports (DoH / DoH3 / DoT / DoQ), the filter-rules budget, the blocklist catalog, and the source-url-only redistribution model.
-- [Accounts & Zero-Knowledge Backup](./accounts-and-backup.md) — the sign-in providers and the zero-knowledge backup envelope that `AppViewModel` orchestrates (and why passkey recovery is server-gated, not zero-knowledge).
+- [Accounts & Zero-Knowledge Backup](./accounts-and-backup.md) — the sign-in providers and the zero-knowledge backup envelope that `AppViewModel` orchestrates (including the zero-knowledge, PRF-derived passkey recovery slot).
 - [Backend & Data](./backend-and-data.md) — the `lavasec-api` catalog Worker, Cloudflare R2, and the Supabase schema/RLS that sit on the other side of the app↔server boundary.
 - [Design System](../design-system/overview.md) — the `LavaTier` depth model, the Soft Shield Guardian's seven states and shield skins, and the copy/localization conventions the client renders.
 - [Third-Party Notices](../legal/third-party-notices.md) and [GPL source-url-only compliance decision](../legal/gpl-source-url-only-compliance-decision.md) — the distribution constraints behind the catalog/filter pipeline the client consumes.
