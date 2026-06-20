@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # DNS-Filterung & Blocklisten
@@ -120,8 +120,8 @@ Die ausgelieferte Tier-Metrik ist das **Filter-Regel-Budget**: die Gesamtzahl de
 
 | Tier | `maxFilterRules` | `maxAllowedDomains` | `maxBlockedDomains` | Eigene Blocklisten / DNS |
 |---|---|---|---|---|
-| **Free** | **500.000** | 10 | 10 | Nein |
-| **Plus** (`.paid` / `.plus`) | **2.000.000** | 500 | 500 | Ja |
+| **Free** | **500.000** | 25 | 25 | Nein |
+| **Plus** (`.paid` / `.plus`) | **2.000.000** | 1.000 | 1.000 | Ja |
 
 Das Tier-Limit ist eine Monetarisierungsgrenze und **niemals eine Paywall auf der Geräte-Schutzbarriere**. **Lava Security Plus** schaltet ausschließlich Anpassbarkeit frei — niemals die grundlegende Sicherheit, niemals die Schutzbarriere. Eigene (kostenpflichtige) Blocklisten werden direkt vom Gerät des Nutzers abgerufen, lokal geparst und gecacht und nie über Lava-Server geleitet.
 
@@ -152,6 +152,17 @@ Der Compact-Snapshot wird mit `Data(contentsOf:options:[.mappedIfSafe])` geladen
 ### 4.5 Der Parser (Umgesetzt) {#45-the-parser-implemented}
 
 `BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) zählt Regeln wörtlich: Er verwirft Kommentare/Leerzeilen/ungültige Zeilen, normalisiert, dedupliziert exakte Strings innerhalb einer Liste (über ein `Set`) und deckelt bei **`maxRules = 1.000.000`** pro Liste (Standard), mit einer maximalen Zeilenlänge von 4.096 Zeichen. Unterstützte Formate: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (`auto` probiert hosts → dnsmasq → adblock → plain). Eine gültige Zeile = eine Regel = die Speichereinheit.
+
+> **`hosts`-Zeilen mit mehreren Hosts (Parser-Regelversion 2).** Eine `hosts`-Zeile, die eine IP auf mehrere Hosts abbildet (`0.0.0.0 a.com b.com c.com`), gibt jetzt **jeden** Host als eigene Regel aus, nicht nur den ersten; `maxRules` wird **pro Regel** durchgesetzt (nicht pro Zeile), sodass eine Zeile mit mehreren Hosts nahe der Obergrenze nicht überschießen kann. Weil dieselben Upstream-Bytes jetzt mehr Regeln ergeben können, wurde die Regelversion des Parsers von **1 → 2** angehoben, was veraltete `RuleSetCache`-Einträge ungültig macht, die unter dem alten Verhalten (nur erster Host) geparst wurden.
+
+### 4.6 Robustheit von Download & Decode (Umgesetzt) {#46-download--decode-robustness-implemented}
+
+Der Tunnel und der Katalog-Sync laufen innerhalb des NE-Speicherbudgets, daher ist die Listen-Aufnahme gegen feindliche oder fehlerhafte Eingaben gehärtet:
+
+- **Gestreamte Downloads.** `defaultDataFetcher` lädt die Listen-Bytes über `URLSession.download` in eine temporäre Datei (begrenzter Speicher-Peak) mit einer Größenprüfung nach dem Download (`maximumBlocklistBytes`), statt den gesamten Body im RAM zu puffern; ein übergroßer Body löst `BlocklistDownloadSizeLimitExceeded` aus.
+- **Obergrenze für Katalog-Metadaten (8 MB).** `BlocklistCatalogRepository.maximumCatalogBytes` lehnt einen übergroßen Remote-Katalog vor dem Decode ab, sodass ein feindlicher/MITM-Host keinen OOM-JSON-Decode in der Erweiterung erzwingen kann.
+- **Nachsichtiges UTF-8-Decoding.** Ein einzelnes ungültiges UTF-8-Byte lehnt nicht mehr eine ganze Liste ab (was unter Fail-Closed alles DNS blockieren würde); ungültige Bytes werden zu U+FFFD, und nur die betreffende Zeile scheitert an der zeilenweisen Validierung und wird verworfen.
+- **Benannte Fehler für eigene Blocklisten.** Eine fehlgeschlagene eigene Liste meldet jetzt `customBlocklistUnavailable(displayName:reason:)` — „Die eigene Blockliste ‚<name>' konnte nicht geladen werden. <warum>" — statt eines rohen `URLError`; ein Abbruch wird als Abbruch weitergereicht, nicht als Download-Fehler.
 
 ---
 

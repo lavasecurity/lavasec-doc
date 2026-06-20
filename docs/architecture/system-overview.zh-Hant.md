@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # 系統總覽 {#system-overview}
@@ -27,7 +27,7 @@ Lava Security 是一款隱私優先的 iOS app，它**在裝置本機上**透過
 
 | 元件 | Bundle／位置 | 角色 | 狀態 |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | SwiftUI app 外殼；進入點，雙分頁的「防護」+「設定」導覽（「篩選器」/「活動」是「防護」的明細畫面）。 | 已實作 |
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI app 外殼；進入點，雙分頁的「防護」+「設定」導覽（「篩選」/「活動」是「防護」的明細畫面；網路活動已移至「設定 → 進階」之下）。 | 已實作 |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`；裝置端的 DNS 篩選／解析引擎。受 iOS **每個擴充功能約 50 MiB 記憶體上限**約束。 | 已實作 |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit 即時動態（鎖定畫面 + 動態島）。 | 已實作 |
 | **Shared/** | `Shared/` | 跨目標的原始碼：App Group、命令服務、吉祥物、即時動態的屬性／意圖。 | 已實作 |
@@ -35,7 +35,7 @@ Lava Security 是一款隱私優先的 iOS app，它**在裝置本機上**透過
 **App 端控制器（位於 LavaSecApp 內）：**
 
 - **AppViewModel** — app 端控制器（god-object）：負責 `NETunnelProviderManager` 生命週期、共享狀態持久化、provider 訊息傳遞、即時動態調和、目錄同步、備份、StoreKit 與驗證。
-- **RootView** — 雙分頁 `TabView`（「防護」+「設定」），「篩選器」與「活動」作為「防護」下的明細畫面進入；控管初始引導流程，並承載安全鎖／隱私遮罩覆蓋層。
+- **RootView** — 雙分頁 `TabView`（「防護」+「設定」），「篩選」與「活動」作為「防護」下的明細畫面進入；控管初始引導流程，並承載安全鎖／隱私遮罩覆蓋層。
 - **SecurityController** — 密碼（Keychain 中加鹽的 SHA256）+ 生物辨識 + 各介面分別防護。
 - **LavaLiveActivityController** — 單一即時動態的調和器，已去重並以版號控管。
 - **OnboardingFlowView** — 多頁的首次執行流程（6 頁：`lava → guardIntro → features → vpn → notifications → done`）。

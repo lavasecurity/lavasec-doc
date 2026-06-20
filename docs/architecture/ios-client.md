@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # iOS Client Architecture
@@ -124,6 +124,20 @@ There are two related state vocabularies: a connectivity *assessment* and a Guar
 - Primary actions: `turnOff` or `reconnect`.
 
 This single assessment drives both the in-app Guard surface and (mapped further) the Dynamic Island state, so the two never disagree.
+
+**Honesty floor (v1.0).** A current, uncovered DNS smoke-probe failure can never read as `.healthy` — the assessment surfaces `.recovering` until a probe actually succeeds, so fallback-carried traffic over a wedged primary is no longer painted "Protected." Reconnect logic keys on `consecutiveDNSSmokeProbeFailureCount` and `lastPrimaryUpstreamSuccessAt` (primary-only) rather than the generic upstream counters, and a resolver that stays reachable but keeps **rejecting** the known-good probe (hijack/captive/stale) is escalated to restart-worthy via a resolver-identity-scoped `consecutiveRejectedSmokeResponseCount` (LAV-87), even when the generic streak keeps getting reset on churny roaming networks.
+
+### Connectivity notifications
+
+`ProtectionConnectivityNotificationPolicy` (`Sources/LavaSecCore/ProtectionConnectivityNotificationPolicy.swift`) turns the assessment into at-most-one outstanding local notification, throttled (600s) and deduped. v1.0 adds:
+
+- A distinct **`dnsSlow`** kind ("Lava DNS is slow") — slow DNS used to reuse the `reconnectNeeded` kind, so a real outage couldn't supersede it.
+- **Escalation/superseding** — a strictly more-urgent problem (only `reconnectNeeded` outranks the rest) can supersede a standing lower-ranked banner, bypassing both the "problem already outstanding" guard and the throttle, so a wedge after a Device-DNS fallback surfaces the actionable "Reconnect" prompt instead of leaving a reassuring banner up.
+- A **persistence migration** (`ProtectionConnectivityNotificationStore`, schema v2, wired via `LavaSecAppGroup.migrateProtectionNotificationStateIfNeeded`) demotes a legacy outstanding `reconnect-needed` marker to `dnsSlow` so escalation works across upgrade.
+
+### Device-DNS capture retry
+
+When the active configuration depends on the device resolver (as primary or as fallback), a network handoff/wake can leave the tunnel holding an empty system-resolver capture — a silent wedge. `DeviceDNSFallbackPolicy` drives a **bounded retry** (`shouldRetryDeviceDNSCapture`, `deviceDNSCaptureRetryInterval` 1s, `deviceDNSCaptureMaxRetryAttempts` 5): the tunnel re-reads system resolvers every second for up to five attempts until the capture is non-empty, then adopts it in place — auto-recovering without a tunnel restart (events `device-dns-capture-retry` / `-exhausted`). It is a no-op for pure DoH/DoT/DoQ configs (`currentConfigurationDependsOnDeviceDNS()`).
 
 ### Guardian mascot states
 

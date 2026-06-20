@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Principales décisions de conception {#key-design-decisions}
@@ -128,7 +128,7 @@ grounded_at: {lavasec-ios: "1fbab70"}
 
 **Logique.** Les règles correspondent à de la mémoire réelle, donc toute combinaison de listes qui tient est permise. L'application de référence tourne à la compilation sur l'union dédupliquée dans `FilterSnapshotPreparationService` (garde-fou matériel d'abord, puis limite de l'offre) ; le compteur de l'interface au moment de la sélection utilise une somme par liste avec une marge plafond souple de 1,10. Les configs au-dessus du quota sont rejetées de façon déterministe (la protection reste coupée) plutôt que de laisser le tunnel se faire jetsam.
 
-**Statut.** **Adoptée** dans le code (`SubscriptionPolicy.swift`), ce qui a **Remplacé** le plafond du nombre de listes. Le plan moteur (`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`) est encore en revue et le texte du site public « Listes de blocage activées 3 → 10 » est **périmé** — la vraie limite est le quota de règles. Voir [`../product/features.md`](../product/features.md).
+**Statut.** **Adoptée** dans le code (`SubscriptionPolicy.swift`), livrée en **v1.0.0**, ce qui a **Remplacé** le plafond du nombre de listes. Le quota de règles est désormais la barrière de niveau active ; les plafonds par domaine ont aussi été relevés en 1.0 (Gratuit 25 / Plus 1 000 domaines autorisés et bloqués). Voir [`../product/features.md`](../product/features.md).
 
 ---
 

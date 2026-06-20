@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # 主要な設計上の決定
@@ -128,7 +128,7 @@ grounded_at: {lavasec-ios: "1fbab70"}
 
 **根拠。** ルールは実際のメモリに対応するので、収まるならどんなリストの組み合わせでも許されます。権威ある強制は、`FilterSnapshotPreparationService` で重複排除した和集合に対してコンパイル時に走ります(まずデバイスガードレール、次にプラン上限)。選択時の UI メーターは、リストごとの合計に 1.10 のソフトシーリングのマージンを使います。上限超過の構成は(保護をオフのままにして)決定的に拒否され、トンネルを jetsam させることはありません。
 
-**ステータス。** コード(`SubscriptionPolicy.swift`)で **採用** され、リスト数の上限を **置き換え** ました。これを推進したプラン(`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`)はまだレビュー中で、公開サイトの「有効なブロックリスト 3 → 10」というコピーは **古い** です。本当のゲートはルールの上限です。[`../product/features.md`](../product/features.md) を参照。
+**ステータス。** コード(`SubscriptionPolicy.swift`)で **採用** され、**v1.0.0** で出荷され、リスト数の上限を **置き換え** ました。ルールの上限が、いまや生きたプランのゲートです。ドメインごとの上限も 1.0 で引き上げられました(無料 25 / Plus 1,000 の、許可およびブロックするドメイン)。[`../product/features.md`](../product/features.md) を参照。
 
 ---
 

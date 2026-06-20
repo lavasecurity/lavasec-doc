@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Key Design Decisions
@@ -128,7 +128,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Rationale.** Rules map to actual memory, so any combination of lists that fits is allowed. Authoritative enforcement runs at compile time on the deduped union in `FilterSnapshotPreparationService` (device guardrail first, then tier limit); the selection-time UI meter uses a per-list sum with a 1.10 soft-ceiling margin. Over-budget configs are rejected deterministically (keeping protection off) rather than letting the tunnel jetsam.
 
-**Status.** **Adopted** in code (`SubscriptionPolicy.swift`), which **Superseded** the list-count cap. The driving plan (`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`) is still in review and the public site's "Enabled blocklists 3 → 10" copy is **stale** — the real gate is the rules budget. See [`../product/features.md`](../product/features.md).
+**Status.** **Adopted** in code (`SubscriptionPolicy.swift`), shipped in **v1.0.0**, which **Superseded** the list-count cap. The rules budget is now the live tier gate; the per-domain caps were also raised at 1.0 (Free 25 / Plus 1,000 allowed and blocked domains). See [`../product/features.md`](../product/features.md).
 
 ---
 

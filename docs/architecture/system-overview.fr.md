@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Vue d'ensemble du système {#system-overview}
@@ -27,7 +27,7 @@ Tout ce qui suit sert à garder cette phrase vraie. L'architecture est volontair
 
 | Composant | Bundle / emplacement | Rôle | Statut |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | Coquille SwiftUI de l'app ; point d'entrée, navigation à deux onglets Protection + Réglages (Filtres/Activité sont des écrans de détail sous Protection). | Implémenté |
+| **LavaSecApp** | `com.lavasec.app` | Coquille SwiftUI de l'app ; point d'entrée, navigation à deux onglets Protection + Réglages (Filtre/Activité sont des écrans de détail sous Protection ; Activité réseau déplacée sous Réglages → Avancé). | Implémenté |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider` ; le moteur de filtrage/résolution DNS qui tourne sur l'appareil. Soumis au **plafond mémoire iOS d'environ 50 Mio par extension**. | Implémenté |
 | **LavaSecWidget** | `com.lavasec.app.widget` | Live Activity WidgetKit (écran verrouillé + Dynamic Island). | Implémenté |
 | **Shared/** | `Shared/` | Sources communes à plusieurs cibles : App Group, service de commandes, mascotte, attributs/intents de Live Activity. | Implémenté |
@@ -35,7 +35,7 @@ Tout ce qui suit sert à garder cette phrase vraie. L'architecture est volontair
 **Contrôleurs côté app (dans LavaSecApp) :**
 
 - **AppViewModel** — le contrôleur côté app (l'objet-dieu) : il gère le cycle de vie du `NETunnelProviderManager`, la persistance de l'état partagé, la messagerie avec le provider, la réconciliation des Live Activity, la synchro du catalogue, la sauvegarde, StoreKit et l'authentification.
-- **RootView** — un `TabView` à deux onglets (Protection + Réglages), avec Filtres et Activité accessibles en écrans de détail sous Protection ; gère l'arrivée à l'onboarding, héberge les surcouches de verrouillage de sécurité / de masquage pour la confidentialité.
+- **RootView** — un `TabView` à deux onglets (Protection + Réglages), avec Filtre et Activité accessibles en écrans de détail sous Protection ; gère l'arrivée à l'onboarding, héberge les surcouches de verrouillage de sécurité / de masquage pour la confidentialité.
 - **SecurityController** — code (SHA256 salé dans le Keychain) + biométrie + protection par surface.
 - **LavaLiveActivityController** — réconciliateur d'une seule Activity, dédoublonné et contrôlé par révision.
 - **OnboardingFlowView** — flux multi-pages au premier lancement (6 pages : `lava → guardIntro → features → vpn → notifications → done`).

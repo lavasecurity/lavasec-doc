@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # システム概要 {#system-overview}
@@ -27,7 +27,7 @@ Lava Security はプライバシー最優先の iOS アプリで、DNS を **端
 
 | コンポーネント | バンドル / 場所 | 役割 | ステータス |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | SwiftUI のアプリ本体。エントリーポイントで、ガード + 設定の2タブ構成（フィルターとアクティビティはガードの詳細画面）。 | 実装済み |
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI のアプリ本体。エントリーポイントで、ガード + 設定の2タブ構成（フィルターとアクティビティはガードの詳細画面。ネットワークアクティビティは設定 → 詳細設定の下に移動）。 | 実装済み |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`。端末上で動く DNS フィルター/解決エンジン。iOS の **拡張あたり ~50 MiB のメモリ上限** の制約を受けます。 | 実装済み |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit のライブアクティビティ（ロック画面 + Dynamic Island）。 | 実装済み |
 | **Shared/** | `Shared/` | ターゲットをまたいで共有するソース。App Group、コマンドサービス、マスコット、ライブアクティビティの属性/インテントなど。 | 実装済み |

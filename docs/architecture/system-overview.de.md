@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Systemüberblick
@@ -27,7 +27,7 @@ Alles weiter unten dient dazu, diesen Satz wahr zu halten. Die Architektur ist s
 
 | Komponente | Bundle / Ort | Rolle | Status |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | SwiftUI-App-Hülle; Einstiegspunkt, Navigation mit zwei Tabs Schutz + Einstellungen (Filter/Aktivität sind Detailansichten unter Schutz). | Umgesetzt |
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI-App-Hülle; Einstiegspunkt, Navigation mit zwei Tabs Schutz + Einstellungen (Filter/Aktivität sind Detailansichten unter Schutz; Netzwerkaktivität nach Einstellungen → Erweitert verschoben). | Umgesetzt |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`; die DNS-Filter-/Auflöse-Engine direkt auf dem Gerät. Unterliegt der iOS-**Speichergrenze von ~50 MiB pro Extension**. | Umgesetzt |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit Live Activity (Sperrbildschirm + Dynamic Island). | Umgesetzt |
 | **Shared/** | `Shared/` | Quellen, die über Targets hinweg geteilt werden: App Group, Command-Service, Maskottchen, Live-Activity-Attribute/-Intents. | Umgesetzt |
@@ -35,7 +35,7 @@ Alles weiter unten dient dazu, diesen Satz wahr zu halten. Die Architektur ist s
 **App-seitige Controller (in LavaSecApp):**
 
 - **AppViewModel** — der app-seitige Controller (Gott-Objekt): kümmert sich um den Lebenszyklus von `NETunnelProviderManager`, die Persistenz des geteilten Zustands, die Provider-Kommunikation, den Live-Activity-Abgleich, den Katalog-Sync, das Backup, StoreKit und die Authentifizierung.
-- **RootView** — `TabView` mit zwei Tabs (Schutz + Einstellungen), wobei Filter und Aktivität als Detailansichten unter Schutz erreichbar sind; steuert das Onboarding, beherbergt die Overlays für Sicherheitssperre und Datenschutzmaske.
+- **RootView** — `TabView` mit zwei Tabs (Schutz + Einstellungen), wobei Filter und Aktivität als Detailansichten unter Guard erreichbar sind; steuert das Onboarding, beherbergt die Overlays für Sicherheitssperre und Datenschutzmaske.
 - **SecurityController** — Passcode (gesalzenes SHA256 im Keychain) + Biometrie + Schutz pro Oberfläche.
 - **LavaLiveActivityController** — Abgleicher für eine einzelne Activity, dedupliziert und revisionsgesteuert.
 - **OnboardingFlowView** — mehrseitiger Ablauf beim ersten Start (6 Seiten: `lava → guardIntro → features → vpn → notifications → done`).
