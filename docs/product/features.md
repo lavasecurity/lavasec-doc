@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: product
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Feature Catalog
@@ -56,14 +56,16 @@ What gets blocked, how lists are chosen, and the tier boundary.
 | **Source-url-only blocklists** | Free | Lava publishes only the upstream URL + accepted hashes; the device fetches/parses the list **bytes** itself. Lava **never** stores, mirrors, transforms, or serves third-party blocklist bytes. See [GPL source-url-only compliance decision](../legal/gpl-source-url-only-compliance-decision.md). |
 | **Curated catalog (10 sources)** | Free to enable | `lavasec-ios: Sources/LavaSecCore/BlocklistModels.swift` (`DefaultCatalog.curatedSources`): Block List Basic, Block List Project Phishing / Scam / Ransomware, Phishing.Database Active Domains, HaGeZi Multi Light / Normal / PRO mini / PRO, OISD Small. |
 | **Free default blocklists** | Free | Fresh install enables **Block List Project Phishing + Scam** (the two sources flagged `defaultEnabled: true`; `DefaultCatalog.recommendedDefaultSourceIDs`). |
-| **On-device parse / normalize / dedup** | Free | `BlocklistParser` supports auto/plain/hosts/adblock/dnsmasq, drops comments/blanks/invalid, dedups exact strings, caps at 1,000,000 rules per list. |
+| **On-device parse / normalize / dedup** | Free | `BlocklistParser` supports auto/plain/hosts/adblock/dnsmasq, drops comments/blanks/invalid, dedups exact strings, caps at 1,000,000 rules per list. A multi-host `hosts` line now emits **every** host on the line, not just the first (parser rules version 2). |
 | **Upstream byte validation** | Free | Fetched bytes are SHA-256'd and accepted only if the checksum is in the catalog's `accepted_source_hashes`; on mismatch Lava falls back to last-good cache or fails closed. |
 | **Protected-domain filter** | Free | Every parsed source is stripped of protected Lava / Apple / identity-provider domains (apple.com, icloud.com, lavasecurity.app, google.com, accounts.google.com, …) so an upstream list can't break the app, tunnel, or sign-in. |
-| **Allowed Exceptions (allowlist)** | Free | User-managed allowlist permitting domains despite blocklists. Free cap: 10 allowed / 10 blocked domains (`FeatureLimits.free`). |
+| **Allowed Exceptions (allowlist)** | Free | User-managed allowlist permitting domains despite blocklists. Free cap: 25 allowed / 25 blocked domains (`FeatureLimits.free`). |
 | **Filter-rules budget (tier metric)** | Free / Plus | The shipped tier metric is total compiled domain **rules**: **Free 500K / Plus 2M** (`maxFilterRules` in `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift`). Replaces the old list-count cap. Over-tier configs surface `exceedsTierFilterRuleLimit`. |
-| **Higher domain limits** | Plus | 500 allowed / 500 blocked domains (`FeatureLimits.plus`). |
+| **Higher domain limits** | Plus | 1,000 allowed / 1,000 blocked domains (`FeatureLimits.plus`). |
 | **Custom blocklists** | Plus | `allowsCustomBlocklists`. Custom lists are fetched and parsed on the device, cached locally, never proxied to Lava servers. |
 | **Warm-startup artifact reuse** | Free | A manifest + identity fingerprint lets the tunnel reuse the on-disk compact snapshot without recompiling; reuse is rejected (with a privacy-safe field-name-only reason) when inputs change. |
+| **Smart Save (weakening-only confirm)** | Free | Edits to your filter that only *strengthen* or are neutral (add a blocklist or a blocked domain) apply directly; edits that *weaken* protection — removing a blocklist, removing a blocked domain, or adding an allowed exception — route through a review confirmation sheet first, with a "Be extra careful" panel when exceptions are added (`FiltersView.saveChanges()`, `weakensProtection`). |
+| **Budget meter (savable-selection)** | Free / Plus | The selection meter abbreviates counts (500K / 1.2M / 2M) and uses a 1.10 soft-ceiling margin (the per-list sum over-counts the deduped union by ~7–10%); a count still within tolerance is clamped to read e.g. "500K of 500K" until it passes the soft ceiling (`FilterRuleBudget`). |
 
 > Authoritative budget enforcement runs at compile time on the deduped union (`FilterSnapshotPreparationService`); the device cap is checked first, then the tier limit. The selection-time UI meter uses a per-list sum with a 1.10 soft-ceiling margin.
 
@@ -137,14 +139,15 @@ Configuration, security, diagnostics, and feedback surfaces.
 |---|---|---|
 | **App-unlock passcode + biometrics** | Free | `SecurityController`: salted SHA256 passcode verifier in the Keychain + `LAContext` biometrics, with an app-unlock blocking overlay and privacy mask on scene-phase changes. |
 | **Per-surface protection** | Free | `SecurityProtectedSurface` gates six surfaces: `appUnlock, protectionControl, protectionPause, filterEditing, activityViewing, appSettings`. Each can independently require local device auth (e.g. the Settings tab returns `.requires(.appSettings)`). |
-| **Lava Guard look picker (7 looks)** | Free | `GuardianShieldStyle`: `original, fireOpal, purpleObsidian, obsidian, cherryQuartz, emerald, kiwiCreme`, each with a paired Dynamic Island glyph color. |
+| **Lava Guard look picker (7 looks)** | Free | `GuardianShieldStyle`: `original, fireOpal, purpleObsidian, obsidian, cherryQuartz, emerald, kiwiCreme`, each with a paired Dynamic Island glyph color. Chosen from a bottom-sheet radio picker ("Choose your Guard", `LavaGuardLookPickerSheet`); still-gated looks carry a lock glyph and the unlock/upgrade panel lives in the sheet. |
 | **Match App Icon** | Free | Optional alternate app icon paired to the selected guardian look. |
 | **Appearance** | Free | Light/dark/system color scheme. |
-| **Local-only logging controls** | Free | Toggles for filtering counts, domain history (diagnostics), and network activity — all stored on-device. |
-| **Reports / Activity (Guard detail)** | Free | Dynamic local-only diagnostics: block/allow counts, tunnel health, top domains. Domain rows appear only when history opt-in is on. Reached as a detail screen from the Guard tab (`GuardDestination.activity`). |
-| **Filters (Guard detail)** | Free | Overview-first filter screen with Blocked Domains / Allowed Exceptions detail and a staged view/edit/confirm draft flow (`GuardDestination.filters`). |
-| **Network & Lava State activity log** | Free | Bounded local-only event stream of network/runtime/user transitions, shared via App Group (`NetworkActivityLog`). |
-| **Bug report** | Free | User-triggered wizard sending an anonymized bundle to `POST /v1/bug-reports`; no domain history in v1. Also reachable via shake-to-report (`RageShakeDetector`). |
+| **Local-only logging controls** | Free | Toggles for filtering counts, domain history (diagnostics), and network activity — all stored on-device. Fine-grained logs (domain history + network activity) are pruned to a **7-day** window (`LocalLogRetention.fineGrainedDays = 7`); counts and Lava Guard progress are kept longer. |
+| **Activity / Domain Logs (Guard detail)** | Free | Dynamic local-only diagnostics, reached from the Guard tab (`GuardDestination.activity`). The digest is a request **flow** — a "requests processed" total split into an Allowed/Blocked volume bar with "% protected locally" (honest rounding: a tiny share reads `<1%`, a near-total share reads `>99%`). A **Domain Logs** section holds **Top Domains** (most blocked & allowed, ranked by query count) and **Domain History** (recent lookups & decisions); domain rows appear only when history opt-in is on. |
+| **Filter (Guard detail)** | Free | Single unified filter screen reached from the Guard tab. A "My filter" hub opens one consolidated **My filter** screen with two shelves — **"Lava blocks these"** (blocklists + individually blocked domains) and **"Lava lets these through"** (allowed exceptions) — under one Edit/Save draft flow. A "Phone → Lava → Internet" flow diagram leads the tab, and opening My filter auto-refreshes the catalog. |
+| **Network Activity (Settings → Advanced)** | Free | Bounded local-only event stream of network/runtime/user transitions, shared via App Group (`NetworkActivityLog`). Moved off the Activity surface into **Settings → Advanced** (after "Nerd Stats", `SettingsRoute.networkActivity`), behind the `.activityViewing` lock, with its own privacy panel ("Stays on this iPhone", kept 7 days). |
+| **Bug report** | Free | User-triggered wizard sending an anonymized bundle to `POST /v1/bug-reports`; no domain history in v1. The bundle now also carries build provenance (`appVersion`/`appBuild`/`sourceRevision`) and connectivity honesty counters. Also reachable via shake-to-report (`RageShakeDetector`). |
+| **Subscription management** | Plus | For active subscribers the Upgrade screen shows Manage Subscription (auto-renewable plans, via `AppStore.showManageSubscriptions`), Restore Purchase, and the entitlement expiration date; a lifetime unlock shows no Manage row. |
 | **Legal Notices + Version** | Free | Settings surfaces third-party legal notices (see [Third-party notices](../legal/third-party-notices.md)) and a version/build page. |
 
 ---
@@ -153,7 +156,7 @@ Configuration, security, diagnostics, and feedback surfaces.
 
 Three bundles share one App Group `group.com.lavasec`, alongside a `lavasec-ios: Shared/` sources folder compiled into them:
 
-- **LavaSecApp** (`com.lavasec.app`) — SwiftUI app shell; in this build the root is a two-tab `TabView` (**Guard** + **Settings**), with Filters and Activity reached as detail screens under the Guard tab.
+- **LavaSecApp** (`com.lavasec.app`) — SwiftUI app shell; in this build the root is a two-tab `TabView` (**Guard** + **Settings**), with Filter and Activity reached as detail screens under the Guard tab (Network Activity now lives under Settings → Advanced).
 - **LavaSecTunnel** (`.tunnel`) — the on-device DNS filter/resolve engine.
 - **LavaSecWidget** (`.widget`) — the WidgetKit Live Activity.
 - **Shared/** — cross-target sources (not a bundle): App Group, command service, mascot, Live Activity attributes/intents.

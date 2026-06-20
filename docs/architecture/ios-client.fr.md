@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Architecture du client iOS {#ios-client-architecture}
@@ -124,6 +124,20 @@ Il existe deux vocabulaires d'état apparentés : une *évaluation* de la connec
 - Actions principales : `turnOff` ou `reconnect`.
 
 Cette évaluation unique pilote à la fois la surface Protection dans l'app et (après une correspondance supplémentaire) l'état de la Dynamic Island, pour que les deux ne se contredisent jamais.
+
+**Plancher d'honnêteté (v1.0).** Un échec de sonde de fumée DNS actuel et non couvert ne peut jamais se lire comme `.healthy` — l'évaluation expose `.recovering` jusqu'à ce qu'une sonde réussisse réellement, pour que le trafic porté par un repli au-dessus d'un résolveur principal coincé ne soit plus peint en « Protégé ». La logique de reconnexion s'appuie sur `consecutiveDNSSmokeProbeFailureCount` et `lastPrimaryUpstreamSuccessAt` (principal uniquement) plutôt que sur les compteurs amont génériques, et un résolveur qui reste joignable mais continue de **rejeter** la sonde réputée bonne (détournement/captif/périmé) est escaladé jusqu'à mériter un redémarrage via un `consecutiveRejectedSmokeResponseCount` propre à l'identité du résolveur (LAV-87), même quand la série générique continue d'être réinitialisée sur des réseaux à itinérance instable.
+
+### Notifications de connectivité {#connectivity-notifications}
+
+`ProtectionConnectivityNotificationPolicy` (`Sources/LavaSecCore/ProtectionConnectivityNotificationPolicy.swift`) transforme l'évaluation en au plus une notification locale en attente, limitée (600 s) et dédupliquée. La v1.0 ajoute :
+
+- Un type **`dnsSlow`** distinct (« Le DNS de Lava est lent ») — le DNS lent réutilisait auparavant le type `reconnectNeeded`, donc une vraie panne ne pouvait pas le supplanter.
+- **Escalade/supplantation** — un problème strictement plus urgent (seul `reconnectNeeded` prime sur le reste) peut supplanter une bannière de rang inférieur déjà affichée, en contournant à la fois la garde « problème déjà en attente » et la limitation, pour qu'un blocage après un repli sur le DNS de l'appareil fasse remonter l'invite actionnable « Reconnecter » au lieu de laisser une bannière rassurante.
+- Une **migration de persistance** (`ProtectionConnectivityNotificationStore`, schéma v2, branchée via `LavaSecAppGroup.migrateProtectionNotificationStateIfNeeded`) qui rétrograde un marqueur `reconnect-needed` hérité en attente vers `dnsSlow` pour que l'escalade fonctionne d'une mise à niveau à l'autre.
+
+### Nouvelle tentative de capture du DNS de l'appareil {#device-dns-capture-retry}
+
+Quand la configuration active dépend du résolveur de l'appareil (en principal ou en repli), un transfert/réveil de réseau peut laisser le tunnel avec une capture de résolveur système vide — un blocage silencieux. `DeviceDNSFallbackPolicy` pilote une **nouvelle tentative bornée** (`shouldRetryDeviceDNSCapture`, `deviceDNSCaptureRetryInterval` 1 s, `deviceDNSCaptureMaxRetryAttempts` 5) : le tunnel relit les résolveurs système chaque seconde, jusqu'à cinq tentatives, jusqu'à ce que la capture soit non vide, puis l'adopte sur place — récupération automatique sans redémarrage du tunnel (événements `device-dns-capture-retry` / `-exhausted`). C'est un no-op pour les configs purement DoH/DoT/DoQ (`currentConfigurationDependsOnDeviceDNS()`).
 
 ### États de la mascotte Guardian {#guardian-mascot-states}
 

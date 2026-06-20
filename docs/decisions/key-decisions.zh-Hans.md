@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # 关键设计决策
@@ -128,7 +128,7 @@ grounded_at: {lavasec-ios: "1fbab70"}
 
 **理由。** 规则对应的是实际内存，所以只要装得下，任何列表组合都允许。权威的强制执行发生在编译期，作用在去重合并后的并集上，位于 `FilterSnapshotPreparationService`（先过设备护栏，再过套餐上限）；选择时界面上的那个量表用的是按列表求和、加 1.10 的软上限余量。超出预算的配置会被确定性地拒绝（让防护保持关闭），而不是放任隧道被 jetsam 杀掉。
 
-**状态。** 在代码里**已采纳**（`SubscriptionPolicy.swift`），它**替代**了列表数量上限。推动它的那份计划（`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`）还在评审中，而公开站点上"启用的拦截列表 3 → 10"那句文案是**过时的**——真正的门槛是规则预算。见 [`../product/features.md`](../product/features.md)。
+**状态。** 在代码里**已采纳**（`SubscriptionPolicy.swift`），已在 **v1.0.0** 上线，它**替代**了列表数量上限。规则预算现在就是生效的档位门槛；按域名的上限也在 1.0 一并提高了（免费 25 / Plus 1,000 个允许和已拦截域名）。见 [`../product/features.md`](../product/features.md)。
 
 ---
 

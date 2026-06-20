@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # iOS 客户端架构 {#ios-client-architecture}
@@ -124,6 +124,20 @@ Connect-On-Demand 可能在启动时（或者在 iOS 因网络变化把隧道拆
 - 主要动作：`turnOff` 或 `reconnect`。
 
 这一份评估同时驱动 App 内的防护界面，以及（再往下映射后的）灵动岛状态，所以两者永远不会对不上。
+
+**诚实下限（v1.0）。** 一次当前的、还没被覆盖掉的 DNS 冒烟探测失败，绝不能被读成 `.healthy`——评估会一直浮现 `.recovering`，直到某次探测真的成功为止，这样在一个卡死的主解析器上靠回退承载的流量就不会再被涂成「已保护」。重连逻辑依据的是 `consecutiveDNSSmokeProbeFailureCount` 和 `lastPrimaryUpstreamSuccessAt`（仅针对主解析器），而不是那套通用的上游计数器；而一个始终可达、却一直**拒绝**那个已知正常探测的解析器（被劫持／门户劫持／陈旧），会通过一个按解析器身份限定范围的 `consecutiveRejectedSmokeResponseCount`（LAV-87）被升级为值得重启，哪怕在那种连接频繁变动的漫游网络上，通用的连续计数一直被重置也一样。
+
+### 连通性通知 {#connectivity-notifications}
+
+`ProtectionConnectivityNotificationPolicy`（`Sources/LavaSecCore/ProtectionConnectivityNotificationPolicy.swift`）把评估转化成最多一条尚未处理的本地通知，并做节流（600 秒）和去重。v1.0 增加了：
+
+- 一种独立的 **`dnsSlow`** 类型（「Lava DNS is slow」）——DNS 慢以前是复用 `reconnectNeeded` 这个类型的，所以一次真正的中断没法把它顶替掉。
+- **升级／顶替**——一个严格地更紧急的问题（只有 `reconnectNeeded` 压得过其余所有）可以顶替掉一条正挂着的、排名更低的横幅，绕过「问题已经在等待处理」这道守卫以及节流限制，这样在一次 Device-DNS 回退之后发生的卡死，浮现出来的就是可操作的「Reconnect」提示，而不是把一条让人安心的横幅一直挂在那里。
+- 一次 **持久化迁移**（`ProtectionConnectivityNotificationStore`，schema v2，通过 `LavaSecAppGroup.migrateProtectionNotificationStateIfNeeded` 接好线）会把一个遗留的、尚未处理的 `reconnect-needed` 标记降级为 `dnsSlow`，这样升级在跨版本升级时也能正常工作。
+
+### Device-DNS 捕获重试 {#device-dns-capture-retry}
+
+当生效的配置依赖设备解析器时（作为主解析器或作为回退），一次网络切换／唤醒可能会让隧道握着一份空的系统解析器捕获——一处无声的卡死。`DeviceDNSFallbackPolicy` 驱动一次**有上限的重试**（`shouldRetryDeviceDNSCapture`，`deviceDNSCaptureRetryInterval` 1 秒，`deviceDNSCaptureMaxRetryAttempts` 5）：隧道每秒重新读取一次系统解析器，最多尝试五次，直到捕获结果非空，然后就地采用它——无需重启隧道就自动恢复（事件 `device-dns-capture-retry` / `-exhausted`）。对于纯 DoH/DoT/DoQ 的配置，它是个空操作（`currentConfigurationDependsOnDeviceDNS()`）。
 
 ### Guardian 吉祥物状态 {#guardian-mascot-states}
 

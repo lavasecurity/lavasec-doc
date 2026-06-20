@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # DNS 过滤与拦截列表
@@ -120,8 +120,8 @@ UI 只在**真正观测到 h3 协商成功时**，才把它标注成 **`DoH3`（
 
 | 分层 | `maxFilterRules` | `maxAllowedDomains` | `maxBlockedDomains` | 自定义拦截列表 / DNS |
 |---|---|---|---|---|
-| **免费方案** | **500,000** | 10 | 10 | 否 |
-| **Plus**（`.paid` / `.plus`） | **2,000,000** | 500 | 500 | 是 |
+| **免费方案** | **500,000** | 25 | 25 | 否 |
+| **Plus**（`.paid` / `.plus`） | **2,000,000** | 1,000 | 1,000 | 是 |
 
 分层上限是一条变现的边界，**绝不是把设备护栏拿来收费的门槛**。**Lava Security Plus** 解锁的只是自定义能力——绝不涉及基础安全，也绝不涉及安全护栏。自定义（付费）拦截列表是直接从用户设备这端去拉取、在本地解析并缓存的，绝不经过 Lava Security 的服务器中转。
 
@@ -152,6 +152,17 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 ### 4.5 解析器（parser）（已实现） {#45-the-parser-implemented}
 
 `BlocklistParser`（`Sources/LavaSecCore/BlocklistParser.swift`）按字面规则逐条计数：它丢掉注释/空行/无效行，做归一化，在一个列表内对精确字符串去重（用一个 `Set`），并对每个列表封顶在 **`maxRules = 1,000,000`** 条（默认值），单行最长 4,096 个字符。支持的格式有：`auto`、`plainDomains`、`hosts`、`adblock`、`dnsmasq`（`auto` 会依次尝试 hosts → dnsmasq → adblock → plain）。一条有效行 = 一条规则 = 那个内存单位。
+
+> **带多个主机的 `hosts` 行（解析器规则版本 2）。** 一条把一个 IP 映射到多个主机的 `hosts` 行（`0.0.0.0 a.com b.com c.com`）现在会把**每一个**主机都生成成它自己的一条规则，而不是只取第一个；`maxRules` 是**按规则**强制执行的（不是按行），所以一条靠近上限的多主机行不会超出。由于同样的上游字节现在能产出更多规则，解析器的规则版本被从 **1 → 2**，使得那些按旧的「只取第一个主机」行为解析出来的、已过期的 `RuleSetCache` 条目失效。
+
+### 4.6 下载与解码的健壮性（已实现） {#46-download--decode-robustness-implemented}
+
+隧道和目录同步都跑在 NE 的内存预算之内，所以列表的摄取过程针对恶意或畸形的输入做了加固：
+
+- **流式下载。** `defaultDataFetcher` 通过 `URLSession.download` 把列表字节下载到一个临时文件里（峰值内存有上限），并在下载完成后做一次大小检查（`maximumBlocklistBytes`），而不是把整个响应体都缓冲在 RAM 里；超大的响应体会抛出 `BlocklistDownloadSizeLimitExceeded`。
+- **目录元数据上限（8 MB）。** `BlocklistCatalogRepository.maximumCatalogBytes` 会在解码之前就拒掉一份超大的远程目录，这样恶意／中间人主机就没法逼着扩展去做一次 OOM 的 JSON 解码。
+- **宽容的 UTF-8 解码。** 单个无效的 UTF-8 字节不再会让整份列表被拒（在失败即关闭下那会拦掉所有 DNS）；无效字节会变成 U+FFFD，只有那一行出问题的行才会在逐行校验里失败并被丢弃。
+- **具名的自定义拦截列表错误。** 一份加载失败的自定义列表现在会浮现出 `customBlocklistUnavailable(displayName:reason:)` ——「Couldn't load the custom blocklist '<name>'. <why>」——而不是一个裸的 `URLError`；取消会作为取消被传播，而不是当作一次下载失败。
 
 ---
 

@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Wichtige Designentscheidungen
@@ -128,7 +128,7 @@ Weiterführendes: das Modell der Katalogverteilung in [`../legal/gpl-source-url-
 
 **Begründung.** Regeln entsprechen tatsächlichem Speicher, jede Kombination von Listen, die passt, ist also erlaubt. Die maßgebliche Durchsetzung läuft zur Kompilierzeit auf der deduplizierten Vereinigung in `FilterSnapshotPreparationService` (erst die Geräte-Schutzbarriere, dann das Stufenlimit); die Anzeige zur Auswahlzeit in der Oberfläche nutzt eine Summe pro Liste mit einer weichen Obergrenzen-Marge von 1,10. Über dem Budget liegende Konfigurationen werden deterministisch abgelehnt (der Schutz bleibt aus), statt den Tunnel ins jetsam laufen zu lassen.
 
-**Status.** **Übernommen** im Code (`SubscriptionPolicy.swift`), was die Obergrenze für die Listenanzahl **ersetzt** hat. Der treibende Plan (`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`) ist noch in Prüfung, und der Text der öffentlichen Website „Aktivierte Blocklisten 3 → 10" ist **veraltet** – das echte Gate ist das Regelbudget. Siehe [`../product/features.md`](../product/features.md).
+**Status.** **Übernommen** im Code (`SubscriptionPolicy.swift`), ausgeliefert in **v1.0.0**, was die Obergrenze für die Listenanzahl **ersetzt** hat. Das Regelbudget ist jetzt das lebende Tier-Gate; die Domain-Obergrenzen pro Nutzer wurden bei 1.0 ebenfalls angehoben (Free 25 / Plus 1.000 erlaubte und blockierte Domains). Siehe [`../product/features.md`](../product/features.md).
 
 ---
 

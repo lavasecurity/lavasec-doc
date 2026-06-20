@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Filtrage DNS et listes de blocage
@@ -120,8 +120,8 @@ La mesure de niveau qui est livrée, c'est le **quota des règles de filtrage** 
 
 | Niveau | `maxFilterRules` | `maxAllowedDomains` | `maxBlockedDomains` | Listes de blocage / DNS personnalisés |
 |---|---|---|---|---|
-| **Gratuit** | **500 000** | 10 | 10 | Non |
-| **Plus** (`.paid` / `.plus`) | **2 000 000** | 500 | 500 | Oui |
+| **Gratuit** | **500 000** | 25 | 25 | Non |
+| **Plus** (`.paid` / `.plus`) | **2 000 000** | 1 000 | 1 000 | Oui |
 
 La limite de niveau est une frontière de monétisation, **jamais un paywall sur le garde-fou de l'appareil**. **Lava Security Plus** débloque seulement la personnalisation — jamais la sécurité de base, jamais le garde-fou de sécurité. Les listes de blocage personnalisées (payantes) sont récupérées directement depuis l'appareil de l'utilisateur, analysées et mises en cache localement, et ne transitent jamais par les serveurs de Lava.
 
@@ -152,6 +152,17 @@ Le snapshot compact est chargé avec `Data(contentsOf:options:[.mappedIfSafe])` 
 ### 4.5 Le parseur (Implémenté) {#45-the-parser-implemented}
 
 `BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) compte les règles au pied de la lettre : il jette les commentaires/lignes vides/lignes invalides, normalise, dédup les chaînes exactes à l'intérieur d'une liste (via un `Set`), et plafonne à **`maxRules = 1 000 000`** par liste (par défaut), avec une longueur de ligne max de 4 096 caractères. Formats pris en charge : `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (le mode `auto` essaie hosts → dnsmasq → adblock → plain). Une ligne valide = une règle = l'unité de mémoire.
+
+> **Lignes `hosts` multi-hôtes (version 2 des règles d'analyse).** Une ligne `hosts` qui associe une même IP à plusieurs hôtes (`0.0.0.0 a.com b.com c.com`) émet désormais **chaque** hôte comme sa propre règle, pas seulement le premier ; `maxRules` est appliqué **par règle** (et non par ligne) pour qu'une ligne multi-hôtes proche du plafond ne puisse pas le dépasser. Comme les mêmes octets en amont peuvent désormais produire plus de règles, la version des règles du parseur est passée de **1 à 2**, ce qui invalide les entrées périmées de `RuleSetCache` analysées sous l'ancien comportement « premier hôte uniquement ».
+
+### 4.6 Robustesse du téléchargement et du décodage (Implémenté) {#46-download--decode-robustness-implemented}
+
+Le tunnel et la synchro du catalogue tournent à l'intérieur du budget mémoire NE, donc l'ingestion des listes est durcie contre les entrées hostiles ou malformées :
+
+- **Téléchargements en flux.** `defaultDataFetcher` télécharge les octets de la liste vers un fichier temporaire via `URLSession.download` (pic mémoire borné) avec une vérification de taille après téléchargement (`maximumBlocklistBytes`) plutôt que de tamponner tout le corps en RAM ; un corps surdimensionné lève `BlocklistDownloadSizeLimitExceeded`.
+- **Plafond des métadonnées du catalogue (8 Mo).** `BlocklistCatalogRepository.maximumCatalogBytes` rejette un catalogue distant surdimensionné avant le décodage, pour qu'un hôte hostile/MITM ne puisse pas forcer un décodage JSON en OOM dans l'extension.
+- **Décodage UTF-8 indulgent.** Un seul octet UTF-8 invalide ne rejette plus une liste entière (ce qui, en fail-closed, bloquerait tout le DNS) ; les octets invalides deviennent U+FFFD et seule la ligne fautive échoue à la validation par ligne et est écartée.
+- **Erreurs nommées pour les listes de blocage personnalisées.** Une liste personnalisée en échec fait désormais remonter `customBlocklistUnavailable(displayName:reason:)` — « Impossible de charger la liste de blocage personnalisée '<nom>'. <pourquoi> » — au lieu d'une `URLError` brute ; une annulation est propagée comme une annulation, pas comme un échec de téléchargement.
 
 ---
 

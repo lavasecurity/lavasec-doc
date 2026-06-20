@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # System Overview
@@ -27,7 +27,7 @@ Everything below is in service of keeping that sentence true. The architecture i
 
 | Component | Bundle / location | Role | Status |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | SwiftUI app shell; entry point, two-tab Guard + Settings nav (Filters/Activity are Guard detail screens). | Implemented |
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI app shell; entry point, two-tab Guard + Settings nav (Filter/Activity are Guard detail screens; Network Activity moved under Settings → Advanced). | Implemented |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`; the on-device DNS filter/resolve engine. Subject to the iOS **~50 MiB per-extension memory ceiling**. | Implemented |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit Live Activity (lock screen + Dynamic Island). | Implemented |
 | **Shared/** | `Shared/` | Cross-target sources: App Group, command service, mascot, Live Activity attributes/intents. | Implemented |
@@ -35,7 +35,7 @@ Everything below is in service of keeping that sentence true. The architecture i
 **App-side controllers (in LavaSecApp):**
 
 - **AppViewModel** — the app-side controller (god-object): owns the `NETunnelProviderManager` lifecycle, shared-state persistence, provider messaging, Live Activity reconcile, catalog sync, backup, StoreKit, and auth.
-- **RootView** — two-tab `TabView` (Guard + Settings), with Filters and Activity reached as detail screens under Guard; gates onboarding, hosts security-lock / privacy-mask overlays.
+- **RootView** — two-tab `TabView` (Guard + Settings), with Filter and Activity reached as detail screens under Guard; gates onboarding, hosts security-lock / privacy-mask overlays.
 - **SecurityController** — passcode (salted SHA256 in Keychain) + biometrics + per-surface protection.
 - **LavaLiveActivityController** — single-Activity reconciler, deduped and revision-gated.
 - **OnboardingFlowView** — multi-page first-run flow (6 pages: `lava → guardIntro → features → vpn → notifications → done`).
