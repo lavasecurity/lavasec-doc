@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Design System
@@ -36,8 +36,11 @@ Das Design System ist eine echte, tokenisierte SwiftUI-Ebene, neben dem `LavaTie
 - **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5) — die adaptive Farb-Quelle der Wahrheit: ~18 semantische Farben (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), jede erzeugt von einer einzigen `adaptiveColor(light:dark:)`-Factory, sodass hell/dunkel zusammen definiert sind. Gefahren-Rot ist hier als `dangerRed`/`errorText` tokenisiert (Zeilen 81/86).
 - **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101) — Karten-/Panel-/Auswahl-Oberflächenrollen und Eckenradien: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
 - **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183) — die Abstandsskala: `xs`/`sm`/`md`/`lg`/`xl` plus `screenHorizontal`/`screenTop`/`screenBottom`.
+- **`LavaActionRole`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift, v1.0) — ein semantisches Aktionsrollen-Enum (`.cancel`, `.close`, `.confirm`, `.destructive`), abgebildet auf das System-`ButtonRole`. `NativeToolbarIconButton` erhielt einen `role:`-Parameter und wird durchgängig verwendet, sodass Toolbar-Glyphen in nahezu jedem Sheet/jeder Toolbar das native Rollen-Styling aufnehmen.
 
 Die verbleibende Restlücke ist die Handvoll roher `.red`-Aufrufstellen, die noch nicht auf `LavaStyle.dangerRed` umgestellt sind (siehe §1).
+
+> **Komponenten-Umbau (v1.0).** `LavaTabOverviewCard` wurde entfernt; die Headline-Blöcke von Filter und Aktivität teilen sich jetzt `LavaInfoCard` + `LavaOverviewMetricBlock`, sodass sie in Größe und Position übereinstimmen. Zusammen mit dem Filter-/Aktivitäts-Redesign kamen neue gemeinsame Komponenten dazu: `FiltersFlowDiagram` (das Diagramm „Phone → Lava → Internet"), `ActivityFlowBar` / `ActivityFlowStatRow` (die Anfrage-Fluss-Zusammenfassung), `NetworkActivityPrivacyInfoPanel` und `LavaGuardLookPickerSheet` (die Guard-Auswahl im Bottom-Sheet). Import-/Share-Abläufe ersetzten ihren eigenen In-Content-Header durch eine native `importFlowToolbar`.
 
 ---
 
@@ -189,6 +192,7 @@ Lava lokalisiert in **6 Sprachen**: **en** (Quelle) + **ja, zh-Hant, zh-Hans, de
 - **zh-Hant** verwendet im ersten Durchgang taiwan-freundliche Formulierungen.
 - App-Store-Metadaten existieren für alle 6 Sprachen.
 - Prioritätsreihenfolge für die Übersetzung: ja, zh-Hant, zh-Hans, de, fr.
+- Das v1.0-Release schloss eine Prüfung der String-Kataloge über fünf Sprachen ein (≈56 Korrekturen), und das Produkt-Substantiv wechselte über alle Sprachen hinweg vom Plural **„Filters"** zum Singular **„Filter"** — halte Übersetzungen konsistent mit dem Singular-Modell „my filter".
 
 Die Grundlagen sind vorhanden, aber die vollständige menschliche Übersetzungsprüfung steht vor dem Release noch aus, daher ist der Gesamtstatus **In Arbeit**.
 

@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # 關鍵設計決策 {#key-design-decisions}
@@ -128,7 +128,7 @@ grounded_at: {lavasec-ios: "1fbab70"}
 
 **理由。** 規則對應到實際記憶體，因此任何能容下的清單組合都被允許。權威性的強制執行在編譯時於 `FilterSnapshotPreparationService` 中對去重後的聯集進行（先裝置防護欄，再分級上限）；選擇時的 UI 量表則使用逐清單加總，並帶一個 1.10 的軟上限餘裕。超出預算的設定會被確定性地拒絕（使防護保持關閉），而不是讓通道被 jetsam。
 
-**狀態。** 在程式碼中**採用**（`SubscriptionPolicy.swift`），它**取代**了清單數量上限。驅動的計畫（`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`）仍在審查中，而公開網站的「Enabled blocklists 3 → 10」文案已**過時**——真正的閘門是規則預算。見 [`../product/features.md`](../product/features.md)。
+**狀態。** 在程式碼中**採用**（`SubscriptionPolicy.swift`），於 **v1.0.0** 出貨，並**取代**了清單數量上限。規則預算現在是實際的分級閘門；逐網域上限也在 1.0 一併調高（免費 25／Plus 1,000 個允許與封鎖網域）。見 [`../product/features.md`](../product/features.md)。
 
 ---
 

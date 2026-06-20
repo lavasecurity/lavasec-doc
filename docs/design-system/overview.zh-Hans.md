@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # 设计系统
@@ -36,8 +36,11 @@ Lava 面向的是不太懂技术的普通用户 —— 比如家长、长辈 —
 - **`LavaStyle`**（lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5）—— 自适应颜色的唯一来源：约 18 个语义色（`safeGreen`、`safeControlGreen`、`softGreen`、`lavaOrange`、`cream`、`ink`、`cardBackground`、`panelBackground`、`guardianSleepGray`、……），每一个都由同一个 `adaptiveColor(light:dark:)` 工厂产出，所以浅色/深色是一起定义的。危险红在这里被 token 化成 `dangerRed`/`errorText`（第 81/86 行）。
 - **`LavaSurface`**（lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101）—— 卡片/面板/选中态这些表面角色，以及各圆角值：`cardCornerRadius` 20、`compactCornerRadius` 16、`selectionCornerRadius` 12。
 - **`LavaSpacing`**（lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183）—— 间距刻度：`xs`/`sm`/`md`/`lg`/`xl`，再加上 `screenHorizontal`/`screenTop`/`screenBottom`。
+- **`LavaActionRole`**（lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift，v1.0）—— 一个语义化的操作角色枚举（`.cancel`、`.close`、`.confirm`、`.destructive`），映射到系统的 `ButtonRole`。`NativeToolbarIconButton` 新增了一个 `role:` 参数，并被广泛使用，所以工具栏字形几乎在每一张弹出页／工具栏上都拾取到了原生的角色样式。
 
 剩下还没补齐的小缺口，就是那几处还没迁到 `LavaStyle.dangerRed` 的直接写死的 `.red`（见 §1）。
+
+> **组件变动（v1.0）。** `LavaTabOverviewCard` 被移除了；过滤和活动的标题区块现在共用 `LavaInfoCard` + `LavaOverviewMetricBlock`，这样它们在尺寸和位置上就对齐了。随着过滤／活动改版一起落地的还有几个新的共享组件：`FiltersFlowDiagram`（那张「Phone → Lava → Internet」流程图）、`ActivityFlowBar` / `ActivityFlowStatRow`（请求流摘要）、`NetworkActivityPrivacyInfoPanel`，以及 `LavaGuardLookPickerSheet`（底部弹出的 Guard 选择器）。导入／分享流程把它们原来那个自定义的内容内标题换成了原生的 `importFlowToolbar`。
 
 ---
 
@@ -189,6 +192,7 @@ Lava 本地化到 **6 种语言**：**en**（源语言）+ **ja、zh-Hant、zh-H
 - **zh-Hant** 在第一遍里用的是适合台湾的措辞。
 - 6 种语言的 App Store 元数据都已具备。
 - 翻译的优先顺序：ja、zh-Hant、zh-Hans、de、fr。
+- v1.0 这一版纳入了一次五种语言的字符串目录审校（约 56 处修订），并且产品名词从复数的 **「Filters」** 改成了单数的 **「Filter」**，在所有语言里都是如此——请让译文与单数的「my filter」模型保持一致。
 
 底子已经铺好，但发布前完整的人工翻译审校还没做，所以整体状态是 **进行中**。
 

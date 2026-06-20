@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Design System
@@ -36,8 +36,11 @@ The design system is a real, tokenized SwiftUI layer, alongside the `LavaTier` d
 - **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5) — the adaptive color source of truth: ~18 semantic colors (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), each produced by a single `adaptiveColor(light:dark:)` factory so light/dark are defined together. Danger-red is tokenized here as `dangerRed`/`errorText` (lines 81/86).
 - **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101) — card/panel/selection surface roles and corner radii: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
 - **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183) — the spacing scale: `xs`/`sm`/`md`/`lg`/`xl` plus `screenHorizontal`/`screenTop`/`screenBottom`.
+- **`LavaActionRole`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift, v1.0) — a semantic action-role enum (`.cancel`, `.close`, `.confirm`, `.destructive`) mapped to the system `ButtonRole`. `NativeToolbarIconButton` gained a `role:` parameter and is used pervasively, so toolbar glyphs pick up native role styling across nearly every sheet/toolbar.
 
 The remaining residual gap is the handful of raw `.red` call sites not yet migrated to `LavaStyle.dangerRed` (see §1).
+
+> **Component churn (v1.0).** `LavaTabOverviewCard` was removed; the Filter and Activity headline blocks now share `LavaInfoCard` + `LavaOverviewMetricBlock` so they line up in size and position. New shared components landed alongside the Filter/Activity redesign: `FiltersFlowDiagram` (the "Phone → Lava → Internet" diagram), `ActivityFlowBar` / `ActivityFlowStatRow` (the request-flow digest), `NetworkActivityPrivacyInfoPanel`, and `LavaGuardLookPickerSheet` (the bottom-sheet Guard picker). Import/share flows replaced their custom in-content header with a native `importFlowToolbar`.
 
 ---
 
@@ -189,6 +192,7 @@ Lava localizes into **6 locales**: **en** (source) + **ja, zh-Hant, zh-Hans, de,
 - **zh-Hant** uses Taiwan-friendly wording on the first pass.
 - App Store metadata exists for all 6 locales.
 - Priority order for translation: ja, zh-Hant, zh-Hans, de, fr.
+- The v1.0 release folded in a five-locale string-catalog review (≈56 fixes), and the product noun changed from plural **"Filters"** to singular **"Filter"** across all locales — keep translations consistent with the singular "my filter" model.
 
 Foundations are in place but full human translation review is still pending before release, so the overall status is **In progress**.
 

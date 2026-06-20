@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Architektur des iOS-Clients
@@ -124,6 +124,20 @@ Es gibt zwei verwandte Zustands-Vokabulare: eine Konnektivitäts-*Einschätzung*
 - Primäre Aktionen: `turnOff` oder `reconnect`.
 
 Diese eine Einschätzung steuert sowohl die In-App-Schutz-Oberfläche als auch (weiter abgebildet) den Dynamic-Island-Zustand, sodass die beiden nie widersprüchlich sind.
+
+**Ehrlichkeits-Untergrenze (v1.0).** Ein aktuelles, nicht abgedecktes Scheitern der DNS-Smoke-Probe kann nie als `.healthy` gelesen werden — die Einschätzung zeigt `.recovering`, bis eine Probe tatsächlich erfolgreich ist, sodass per Fallback getragener Traffic über einen verklemmten Primär-Resolver nicht mehr als „Geschützt" dargestellt wird. Die Reconnect-Logik stützt sich auf `consecutiveDNSSmokeProbeFailureCount` und `lastPrimaryUpstreamSuccessAt` (nur primär) statt auf die generischen Upstream-Zähler, und ein Resolver, der erreichbar bleibt, aber die bekannte-gute Probe weiterhin **ablehnt** (Hijack/Captive/veraltet), wird über einen auf die Resolver-Identität bezogenen `consecutiveRejectedSmokeResponseCount` zu einem neustartwürdigen Zustand eskaliert (LAV-87), selbst wenn die generische Serie auf wechselhaften Roaming-Netzwerken immer wieder zurückgesetzt wird.
+
+### Konnektivitäts-Benachrichtigungen {#connectivity-notifications}
+
+`ProtectionConnectivityNotificationPolicy` (`Sources/LavaSecCore/ProtectionConnectivityNotificationPolicy.swift`) verwandelt die Einschätzung in höchstens eine ausstehende lokale Benachrichtigung, gedrosselt (600 s) und dedupliziert. v1.0 ergänzt:
+
+- Eine eigene **`dnsSlow`**-Art („Lava DNS ist langsam") — langsames DNS verwendete früher dieselbe `reconnectNeeded`-Art wieder, sodass ein echter Ausfall sie nicht ablösen konnte.
+- **Eskalation/Ablösung** — ein strikt dringenderes Problem (nur `reconnectNeeded` rangiert über dem Rest) kann ein bestehendes, niedriger eingestuftes Banner ablösen und umgeht dabei sowohl den „Problem bereits ausstehend"-Schutz als auch die Drosselung, sodass eine Verklemmung nach einem Geräte-DNS-Fallback die handlungsrelevante „Neu verbinden"-Aufforderung anzeigt, statt ein beruhigendes Banner stehen zu lassen.
+- Eine **Persistenz-Migration** (`ProtectionConnectivityNotificationStore`, Schema v2, verdrahtet über `LavaSecAppGroup.migrateProtectionNotificationStateIfNeeded`) stuft einen veralteten ausstehenden `reconnect-needed`-Marker auf `dnsSlow` herab, damit die Eskalation auch über ein Upgrade hinweg funktioniert.
+
+### Geräte-DNS-Capture-Retry {#device-dns-capture-retry}
+
+Wenn die aktive Konfiguration vom Geräte-Resolver abhängt (als primär oder als Fallback), kann ein Netzwerkwechsel/Aufwachen den Tunnel mit einem leeren System-Resolver-Capture zurücklassen — eine stille Verklemmung. `DeviceDNSFallbackPolicy` treibt einen **begrenzten Retry** (`shouldRetryDeviceDNSCapture`, `deviceDNSCaptureRetryInterval` 1 s, `deviceDNSCaptureMaxRetryAttempts` 5): Der Tunnel liest die System-Resolver jede Sekunde für bis zu fünf Versuche erneut, bis das Capture nicht leer ist, und übernimmt es dann an Ort und Stelle — Selbstheilung ohne Tunnel-Neustart (Events `device-dns-capture-retry` / `-exhausted`). Es ist ein No-op für reine DoH/DoT/DoQ-Konfigurationen (`currentConfigurationDependsOnDeviceDNS()`).
 
 ### Guardian-Maskottchen-Zustände {#guardian-mascot-states}
 

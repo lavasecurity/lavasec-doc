@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # DNS Filtering & Blocklists
@@ -120,8 +120,8 @@ The shipped tier metric is the **filter-rules budget**: the total compiled domai
 
 | Tier | `maxFilterRules` | `maxAllowedDomains` | `maxBlockedDomains` | Custom blocklists / DNS |
 |---|---|---|---|---|
-| **Free** | **500,000** | 10 | 10 | No |
-| **Plus** (`.paid` / `.plus`) | **2,000,000** | 500 | 500 | Yes |
+| **Free** | **500,000** | 25 | 25 | No |
+| **Plus** (`.paid` / `.plus`) | **2,000,000** | 1,000 | 1,000 | Yes |
 
 The tier limit is a monetization boundary, **never a paywall on the device guardrail**. **Lava Security Plus** unlocks customization only — never baseline safety, never the threat guardrail. Custom (paid) blocklists are fetched directly from the user's device, parsed and cached locally, and never proxied to Lava servers.
 
@@ -152,6 +152,17 @@ The compact snapshot is loaded with `Data(contentsOf:options:[.mappedIfSafe])` (
 ### 4.5 The parser (Implemented)
 
 `BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) counts rules literally: it drops comments/blanks/invalid lines, normalizes, dedups exact strings within a list (via a `Set`), and caps at **`maxRules = 1,000,000`** per list (default), with a 4,096-char max line length. Supported formats: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto tries hosts → dnsmasq → adblock → plain). One valid line = one rule = the memory unit.
+
+> **Multi-host `hosts` lines (parser rules version 2).** A `hosts` line that maps one IP to several hosts (`0.0.0.0 a.com b.com c.com`) now emits **every** host as its own rule, not just the first; `maxRules` is enforced **per rule** (not per line) so a multi-host line near the cap can't overshoot. Because the same upstream bytes can now yield more rules, the parser's rules version was bumped **1 → 2**, invalidating stale `RuleSetCache` entries parsed under the old first-host-only behavior.
+
+### 4.6 Download & decode robustness (Implemented)
+
+The tunnel and catalog sync run inside the NE memory budget, so list ingestion is hardened against hostile or malformed inputs:
+
+- **Streamed downloads.** `defaultDataFetcher` downloads list bytes to a temp file via `URLSession.download` (bounded peak memory) with a post-download size check (`maximumBlocklistBytes`) instead of buffering the whole body in RAM; an oversized body raises `BlocklistDownloadSizeLimitExceeded`.
+- **Catalog metadata cap (8 MB).** `BlocklistCatalogRepository.maximumCatalogBytes` rejects an oversized remote catalog before decode, so a hostile/MITM host can't force an OOM JSON decode in the extension.
+- **Lenient UTF-8 decoding.** A single invalid UTF-8 byte no longer rejects an entire list (which under fail-closed would block all DNS); invalid bytes become U+FFFD and only the offending line fails per-line validation and is dropped.
+- **Named custom-blocklist errors.** A failed custom list now surfaces `customBlocklistUnavailable(displayName:reason:)` — "Couldn't load the custom blocklist '<name>'. <why>" — instead of a raw `URLError`; cancellation is propagated as cancellation, not a download failure.
 
 ---
 
