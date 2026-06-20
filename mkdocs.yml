@@ -69,6 +69,18 @@ plugins:
         - locale: ja
           name: 日本語
           build: true
+        - locale: es
+          name: Español
+          build: true
+        - locale: ko
+          name: 한국어
+          build: true
+        - locale: pt-BR
+          name: Português (Brasil)
+          build: true
+        - locale: it
+          name: Italiano
+          build: true
   # "Last update" shown on each page, from git history. MUST be listed after the
   # i18n plugin (it consumes the locale i18n adds). CI checks out full history
   # (fetch-depth: 0) for accurate dates; otherwise falls back to the build date.
