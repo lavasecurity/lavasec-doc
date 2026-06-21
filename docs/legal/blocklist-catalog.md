@@ -66,7 +66,6 @@ Pornography and other adult-content domains.
 
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
-| Block List Adult | The Block List Project | Unlicense | Large |  | [link](https://blocklistproject.github.io/Lists/porn.txt) |
 | HaGeZi NSFW | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt) |
 | OISD NSFW | OISD | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_nsfw.txt) |
 | OISD NSFW Small | OISD | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_nsfw_small.txt) |
@@ -93,4 +92,4 @@ Piracy portals and torrent trackers.
 
 ---
 
-_Catalog spec schema version 1 · 33 sources across 7 categories._
+_Catalog spec schema version 1 · 32 sources across 7 categories._

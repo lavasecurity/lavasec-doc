@@ -422,22 +422,6 @@
       "counsel_status": "required"
     },
     {
-      "id": "blocklistproject-porn",
-      "name": "Block List Adult",
-      "provider": "blocklistproject",
-      "category": "nsfw",
-      "license": "Unlicense",
-      "license_text_url": null,
-      "source_url": "https://blocklistproject.github.io/Lists/porn.txt",
-      "project_url": "https://github.com/blocklistproject/Lists",
-      "parse_format": "hosts",
-      "redistribution_mode": "source_url_only",
-      "warning_level": "aggressive",
-      "default_enabled": false,
-      "size_hint": "large",
-      "counsel_status": "not_reviewed"
-    },
-    {
       "id": "hagezi-nsfw",
       "name": "HaGeZi NSFW",
       "provider": "hagezi",
