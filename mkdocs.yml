@@ -118,6 +118,7 @@ nav:
   - Decisions (ADRs): decisions/key-decisions.md
   - Support: support.md
   - Legal & Compliance:
+      - Blocklist Catalog: legal/blocklist-catalog.md
       - Third-Party Notices: legal/third-party-notices.md
       - Source-URL-Only / GPL Compliance: legal/gpl-source-url-only-compliance-decision.md
       - Open-Source List Data Terms: legal/open-source-list-data-terms-carveout.md
