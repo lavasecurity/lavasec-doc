@@ -147,7 +147,7 @@ Die mit Abstand am häufigsten gebrochene Regel hier ist das **schrägstrichlose
 
 ### 4.3 Do-Not-Translate-Begriffe {#43-do-not-translate-terms}
 
-Marken- und Protokollbegriffe sind in **allen** Sprachen wörtlich festgepinnt. Die Do-Not-Translate-Liste des Lokalisierungs-Glossars ist maßgeblich, und sie pinnt fest: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD.**
+Marken- und Protokollbegriffe sind in **allen** Sprachen wörtlich festgepinnt. Die Do-Not-Translate-Liste des Lokalisierungs-Glossars ist maßgeblich, und sie pinnt fest: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD, AdGuard, 1Hosts, StevenBlack.**
 
 Von den DNS-Transporten ist nur **DoH** ein Do-Not-Translate-Eintrag des Glossars; `DoH3`, `DoT` und `DoQ` sind Transport-Labels (siehe §4.2), keine Glossar-Begriffe. Sie werden trotzdem wörtlich geschrieben, aber führe das Glossar nicht als ihre Quelle an.
 

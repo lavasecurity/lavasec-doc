@@ -147,7 +147,7 @@ La règle la plus souvent cassée ici, c'est le **`DoH3` sans slash** — écriv
 
 ### 4.3 Termes à ne pas traduire {#43-do-not-translate-terms}
 
-Les termes de marque et de protocole sont figés verbatim dans **toutes** les locales. La liste Do-Not-Translate du glossaire de localisation fait autorité, et elle fige : **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD.**
+Les termes de marque et de protocole sont figés verbatim dans **toutes** les locales. La liste Do-Not-Translate du glossaire de localisation fait autorité, et elle fige : **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD, AdGuard, 1Hosts, StevenBlack.**
 
 Parmi les transports DNS, seul **DoH** est une entrée Do-Not-Translate du glossaire ; `DoH3`, `DoT` et `DoQ` sont des étiquettes de transport (voir §4.2), pas des termes du glossaire. Ils s'écrivent quand même verbatim, mais ne citez pas le glossaire comme source.
 
