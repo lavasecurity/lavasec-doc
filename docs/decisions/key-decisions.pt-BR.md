@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-19
+last_reviewed: 2026-06-20
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "1fbab70"}
+grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
 # Principais decisões de design
@@ -128,7 +128,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Justificativa.** As regras correspondem à memória de fato, então qualquer combinação de listas que caiba é permitida. A aplicação autoritativa roda em tempo de compilação sobre a união deduplicada em `FilterSnapshotPreparationService` (primeiro o limite de proteção do dispositivo, depois o limite do plano); o medidor da interface no momento da seleção usa uma soma por lista com uma margem de teto suave de 1,10. Configurações acima do orçamento são rejeitadas de forma determinística (mantendo a proteção desligada) em vez de deixar o túnel sofrer jetsam.
 
-**Status.** **Adotada** no código (`SubscriptionPolicy.swift`), o que **Substituiu** o limite por contagem de listas. O plano que a originou (`plans/under_review/2026-06-13-filter-rules-budget-tier-revamp.md`) ainda está em revisão, e o texto do site público "Blocklists ativadas 3 → 10" está **desatualizado** — o limite real é o orçamento de regras. Veja [`../product/features.md`](../product/features.md).
+**Status.** **Adotada** no código (`SubscriptionPolicy.swift`), publicada na **v1.0.0**, o que **Substituiu** o limite por contagem de listas. O orçamento de regras é agora o gate de plano ativo; os limites por domínio também foram elevados na 1.0 (Free 25 / Plus 1.000 domínios permitidos e bloqueados). Veja [`../product/features.md`](../product/features.md).
 
 ---
 
