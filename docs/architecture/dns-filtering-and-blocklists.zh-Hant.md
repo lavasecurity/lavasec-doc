@@ -184,30 +184,17 @@ compact 快照以 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel/Pa
 
 ### 5.2 精選來源（Implemented） {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources`（`BlocklistModels.swift:232-243`）列出 **10** 個來源：
+`DefaultCatalog.curatedSources` 由標準的 [封鎖清單目錄](../legal/blocklist-catalog.md) 產生，目前涵蓋六大類別共 **33** 個來源：Security & Threat Intel、Ads & Trackers、Social Media、Adult Content、Gambling，以及 Piracy & Torrent。來源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard 與 1Hosts。
 
-| 來源 | 授權 |
-|---|---|
-| Block List Basic | Unlicense |
-| Block List Project Phishing | Unlicense |
-| Block List Project Scam | Unlicense |
-| Block List Project Ransomware | Unlicense |
-| Phishing.Database Active Domains | MIT |
-| HaGeZi Multi Light | GPL-3.0 |
-| HaGeZi Multi Normal | GPL-3.0 |
-| HaGeZi Multi PRO mini | GPL-3.0 |
-| HaGeZi Multi PRO | GPL-3.0 |
-| OISD Small | GPL-3.0 |
-
-`guardrailSources` 為空。GPL 來源（HaGeZi、OISD）在目錄中可見，但**選擇加入／預設關閉**，待法務核准；Worker 將上線時的同步／發佈限制為 `source_url_only` 加上允許的 GPL 前綴（`hagezi-`/`oisd-`）。
+`guardrailSources` 為空。GPL 來源（HaGeZi、OISD、AdGuard）在目錄中可見，但**選擇加入／預設關閉**；Worker 將上線時的同步／發佈限制為 `source_url_only` 加上已核准的 GPL 前綴（`hagezi-`、`oisd-`、`adguard-`）。
 
 ### 5.3 免費使用者的預設啟用清單（Implemented） {#53-default-enabled-lists-for-free-users-implemented}
 
-實際的免費預設設定是 `OnboardingDefaults.lavaRecommendedDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift:7-10`），它啟用 **Block List Project Phishing + Block List Project Scam**，搭配 device-DNS 解析器預設（`resolverPresetID = DNSResolverPreset.device.id`）並開啟裝置 DNS 後援。
+實際的免費預設設定是 `OnboardingDefaults.lavaRecommendedDefaults`，它啟用 **Block List Basic**——一份廣泛、採寬鬆授權的綜合清單（廣告 + 追蹤 + 惡意軟體 + 釣魚／詐騙）——搭配 device-DNS 解析器預設（`resolverPresetID = DNSResolverPreset.device.id`）並開啟裝置 DNS 後援。這取代了先前的 Block List Project Phishing + Scam 組合：Basic 的綜合涵蓋範圍已將兩者納入，且兩者仍維持為可選擇加入的清單。
 
-該免費預設是由 `defaultEnabled` **產生**的，並非硬編碼。`blockListProjectPhishing`（`BlocklistModels.swift:139`）與 `blockListProjectScam`（`BlocklistModels.swift:148`）都設定了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs`（`BlocklistModels.swift:250-252`）則由 `curatedSources.filter(\.defaultEnabled)` 推導而來。原始碼註解（`BlocklistModels.swift:246-249`）稱 `defaultEnabled` 為「全新安裝預設的單一真相來源」，鏡射後端目錄的 `default_enabled` 欄位。經由 `recommendedDefaultSourceIDs` 流入 `OnboardingDefaults`，`defaultEnabled` 是實際運作的機制——翻動某個來源上的這個旗標即可改變預設。
+該免費預設是由 `defaultEnabled` **產生**的，並非硬編碼。**Block List Basic** 設定了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs` 則由 `curatedSources.filter(\.defaultEnabled)` 推導而來。原始碼註解稱 `defaultEnabled` 為「全新安裝預設的單一真相來源」，鏡射後端目錄的 `default_enabled` 欄位。經由 `recommendedDefaultSourceIDs` 流入 `OnboardingDefaults`，`defaultEnabled` 是實際運作的機制——翻動某個來源上的這個旗標即可改變預設。
 
-> **預設的真相來源（以程式碼為準）。** 任何說「Block List Basic 是唯一預設」的計畫／目錄文案，對裝置而言都是錯的；裝置出貨的是依 `defaultEnabled: true` 啟用的 Phishing + Scam，而 iOS 的 `BlocklistSource.defaultEnabled` 旗標才是權威的實際運作機制。後端目錄的 `default_enabled` 欄位已透過一次遷移重新對齊到相同的 Phishing + Scam 集合，因此現在所提供的 `/v1/catalog` 中繼資料與用戶端相符。公開網站「Enabled blocklists 3 → 10」的文案仍**過時**——真正的閘門是 500K/2M 的篩選規則預算，而非清單數量。
+> **預設的真相來源（以程式碼為準）。** 全新安裝的預設是 **Block List Basic**，由各來源上的 `defaultEnabled: true` 旗標啟用；iOS 的 `BlocklistSource.defaultEnabled` 旗標是權威的實際運作機制。後端目錄的 `default_enabled` 欄位由同一份標準目錄規格產生，因此所提供的 `/v1/catalog` 中繼資料與用戶端相符。真正的閘門是 500K/2M 的篩選規則預算，而非清單數量。
 
 ### 5.4 僅來源 URL 的 GPL 散布模型（Implemented） {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -236,7 +223,7 @@ compact 快照以 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel/Pa
 | compact 快照的零複製 mmap | Implemented |
 | 僅來源 URL 目錄 + 直接上游擷取 + 雜湊驗證 | Implemented |
 | 受保護網域篩選 | Implemented |
-| 免費預設 = Phishing + Scam（非 Basic） | Implemented（目錄已重新對齊以相符） |
+| 免費預設 = Block List Basic | Implemented（產生的目錄與 iOS／後端投影一致） |
 | 第一方 Lava Security 程式碼授權 | AGPL-3.0（`LICENSE`）；第三方清單於上游仍為 GPL-3.0 |
 
 ---

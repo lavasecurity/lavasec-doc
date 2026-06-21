@@ -150,7 +150,7 @@ Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游
 - **设备护栏（人人有份，永远不是付费墙）：** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 条规则** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`——在 ~50 MiB 的 NE 上限之下设定的 32 MB 目标。超额的配置会被确定性地拒绝，而不是放任隧道被系统 jetsam 杀掉。
 - **档位上限（`FeatureLimits`）：** **免费 50 万条规则 / Plus 200 万条规则**，这个值卡在设备护栏之下。它取代了旧的按启用列表**数量**来卡的上限（免费 3 个 / 付费 10 个）——列表数量上限已经作废。
 
-> **默认启用的注意点（以代码为准）：** 出厂的免费默认值是 **Block List Project 的钓鱼 + 诈骗**（`OnboardingDefaults.lavaRecommendedDefaults`）。它们是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），这个标志是设备上的事实来源，且与后端目录的 `default_enabled` 列保持一致。方案/目录文案里说「Block List Basic 是唯一的默认值」，对设备来说是错的（内部已跟踪）。
+> **默认启用的事实来源：** 出厂的免费默认值是 **Block List Basic**（`OnboardingDefaults.lavaRecommendedDefaults`）。它是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），这个标志与后端目录的 `default_enabled` 列保持一致，而后者又由同一份规范的目录规格（canonical catalog spec）生成。
 
 ### C. 备份（零知识，需主动开启）— 已实现 {#c-backup-zero-knowledge-opt-in-implemented}
 

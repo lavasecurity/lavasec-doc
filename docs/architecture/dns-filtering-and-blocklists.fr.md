@@ -184,30 +184,17 @@ L'**ensemble des domaines protégés** (filtrés avant l'activation) : `apple.co
 
 ### 5.2 Sources sélectionnées (Implémenté) {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` (`BlocklistModels.swift:232-243`) liste **10** sources :
+`DefaultCatalog.curatedSources` est généré à partir du [Catalogue de listes de blocage](../legal/blocklist-catalog.md) canonique, soit actuellement **33** sources réparties sur six catégories : Security & Threat Intel, Ads & Trackers, Social Media, Adult Content, Gambling, et Piracy & Torrent. Les familles de sources incluent The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard, et 1Hosts.
 
-| Source | Licence |
-|---|---|
-| Block List Basic | Unlicense |
-| Block List Project Phishing | Unlicense |
-| Block List Project Scam | Unlicense |
-| Block List Project Ransomware | Unlicense |
-| Phishing.Database Active Domains | MIT |
-| HaGeZi Multi Light | GPL-3.0 |
-| HaGeZi Multi Normal | GPL-3.0 |
-| HaGeZi Multi PRO mini | GPL-3.0 |
-| HaGeZi Multi PRO | GPL-3.0 |
-| OISD Small | GPL-3.0 |
-
-`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** en attendant l'aval du service juridique ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL autorisés (`hagezi-` / `oisd-`).
+`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD, AdGuard) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL autorisés (`hagezi-`, `oisd-`, `adguard-`).
 
 ### 5.3 Listes activées par défaut pour les utilisateurs gratuits (Implémenté) {#53-default-enabled-lists-for-free-users-implemented}
 
-La vraie config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults` (`Sources/LavaSecCore/OnboardingDefaults.swift:7-10`), qui active **Block List Project Phishing + Block List Project Scam**, avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli sur le DNS de l'appareil activé.
+La config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic** — une liste combinée large, sous licence permissive (publicités + traçage + maliciels + phishing/arnaque) — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli sur le DNS de l'appareil activé. Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture combinée de Basic les englobe, et tous deux restent des listes sélectionnables en option.
 
-Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectPhishing` (`BlocklistModels.swift:139`) et `blockListProjectScam` (`BlocklistModels.swift:148`) mettent tous les deux `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` (`BlocklistModels.swift:250-252`) est dérivé de `curatedSources.filter(\.defaultEnabled)`. Le commentaire dans le code (`BlocklistModels.swift:246-249`) appelle `defaultEnabled` « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, `defaultEnabled` est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
+Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. La source **Block List Basic** met `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` est dérivé de `curatedSources.filter(\.defaultEnabled)`. Le commentaire dans le code appelle `defaultEnabled` « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, `defaultEnabled` est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
 
-> **Source de vérité du défaut (c'est le code qui gagne).** Tout texte de plan/catalogue qui dit « Block List Basic est le seul défaut » est faux pour l'appareil ; l'appareil livre Phishing + Scam via `defaultEnabled: true`, et le flag iOS `BlocklistSource.defaultEnabled` est le mécanisme vivant qui fait autorité. La colonne `default_enabled` du catalogue backend a été réalignée sur le même ensemble Phishing + Scam par une migration, donc les métadonnées servies par `/v1/catalog` correspondent maintenant au client. Le texte « Listes de blocage activées 3 → 10 » du site public est encore **périmé** — la vraie barrière, c'est le quota des règles de filtrage de 500 K / 2 M, pas un nombre de listes.
+> **Source de vérité du défaut (une seule spécification générée).** Le défaut à l'installation fraîche est **Block List Basic**, et le flag iOS `BlocklistSource.defaultEnabled` est le mécanisme vivant qui fait autorité. La colonne `default_enabled` du catalogue backend est générée à partir de la même spécification de catalogue canonique, donc les métadonnées servies par `/v1/catalog` correspondent au client. Le texte « Listes de blocage activées 3 → 10 » du site public est encore **périmé** — la vraie barrière, c'est le quota des règles de filtrage de 500 K / 2 M, pas un nombre de listes.
 
 ### 5.4 Modèle de distribution GPL basé uniquement sur l'URL source (Implémenté) {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -236,7 +223,7 @@ Côté Worker, `syncOneBlocklist` récupère chaque source en amont, la normalis
 | mmap sans copie du snapshot compact | Implémenté |
 | Catalogue source-url-only + récupération directe en amont + validation par hash | Implémenté |
 | Filtre des domaines protégés | Implémenté |
-| Défaut gratuit = Phishing + Scam (pas Basic) | Implémenté (catalogue réaligné pour correspondre) |
+| Défaut gratuit = Block List Basic | Implémenté (catalogue généré + projections iOS/backend cohérentes) |
 | Licence du code Lava de première partie | AGPL-3.0 (`LICENSE`) ; les listes tierces restent en GPL-3.0 en amont |
 
 ---
