@@ -110,7 +110,7 @@ Worker-side normalization (`normalizeBlocklist`) filters protected domains, enfo
 
 ### 3.4 What is publishable
 
-`isPublicBlocklistSource` only publishes a source when `status` is `sync` or `nosync`, `redistribution_mode === "source_url_only"`, **and** `isAllowedLaunchGPLSource` passes. The launch-GPL gate (`isAllowedLaunchGPLSource`) allows non-GPL sources freely but restricts GPL-3.0 sources to `list_id` prefixes `hagezi-` or `oisd-`.
+`isPublicBlocklistSource` only publishes a source when `status` is `sync` or `nosync`, `redistribution_mode === "source_url_only"`, **and** `isAllowedLaunchGPLSource` passes. The launch-GPL gate (`isAllowedLaunchGPLSource`) allows non-GPL sources freely and permits the cleared GPL-3.0 source families by `list_id` prefix: `hagezi-`, `oisd-`, and `adguard-`.
 
 ### 3.5 Seeded sources & default-enabled
 

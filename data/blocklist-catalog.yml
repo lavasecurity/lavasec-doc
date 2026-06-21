@@ -23,9 +23,8 @@
 #      upstream `source_url` directly and processes it locally.
 #    * GPL-3.0 sources are NEVER `default_enabled: true`. (Downstream copyleft —
 #      we link to source, we do not pre-select copyleft lists for users.)
-#    * StevenBlack sources are NEVER `default_enabled: true` and stay
-#      `counsel_status: required` until counsel clears them (the unified hosts
-#      aggregate mixed-license upstreams; same posture Pi-hole ships them under).
+#    * StevenBlack sources are NEVER `default_enabled: true`. `counsel_status`
+#      is review bookkeeping for aggregated/copyleft sources, not a runtime gate.
 #    * Every `source_url` is https. Every `id` is unique and stable (it keys
 #      user selections + backup payloads — never rename an existing id).
 #    * `license_text_url` is required for GPL-3.0 sources.

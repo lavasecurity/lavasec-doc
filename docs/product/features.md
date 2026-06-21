@@ -127,7 +127,7 @@ First-run flow that installs the local VPN config and sets sensible defaults.
 | **Multi-page first-run flow** | Free | `OnboardingFlowView` — 6 pages: `lava, guardIntro, features, vpn, notifications, done`. (Profile install and the notification prompt happen at the right step, not up front.) |
 | **Local VPN profile install** | Free | Installs the local VPN config during onboarding **without** enabling Connect-On-Demand, so protection is never silently auto-on at completion — the Guard surface stays authoritative. |
 | **Notification permission prompt** | Free | Requested in-flow at the notifications step. |
-| **Recommended defaults applied** | Free | Device DNS resolver, device-DNS fallback on, local logging on (counts + history + activity), Block List Project Phishing + Scam enabled, continue without account (`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`, `lavaRecommendedDefaults`). |
+| **Recommended defaults applied** | Free | Device DNS resolver, device-DNS fallback on, local logging on (counts + history + activity), Block List Basic enabled, continue without account (`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`, `lavaRecommendedDefaults`). |
 
 ---
 

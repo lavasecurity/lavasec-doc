@@ -184,22 +184,9 @@ The **protected-domain set** (filtered out before activation): `apple.com`, `icl
 
 ### 5.2 Curated sources (Implemented)
 
-`DefaultCatalog.curatedSources` (`BlocklistModels.swift:232-243`) lists **10** sources:
+`DefaultCatalog.curatedSources` is generated from the canonical [Blocklist Catalog](../legal/blocklist-catalog.md), currently **33** sources across six categories: Security & Threat Intel, Ads & Trackers, Social Media, Adult Content, Gambling, and Piracy & Torrent. The source families include The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard, and 1Hosts.
 
-| Source | License |
-|---|---|
-| Block List Basic | Unlicense |
-| Block List Project Phishing | Unlicense |
-| Block List Project Scam | Unlicense |
-| Block List Project Ransomware | Unlicense |
-| Phishing.Database Active Domains | MIT |
-| HaGeZi Multi Light | GPL-3.0 |
-| HaGeZi Multi Normal | GPL-3.0 |
-| HaGeZi Multi PRO mini | GPL-3.0 |
-| HaGeZi Multi PRO | GPL-3.0 |
-| OISD Small | GPL-3.0 |
-
-`guardrailSources` is empty. GPL sources (HaGeZi, OISD) are catalog-visible but **opt-in / OFF by default** pending counsel approval; the Worker gates launch sync/publish to `source_url_only` plus the allowed GPL prefixes (`hagezi-`/`oisd-`).
+`guardrailSources` is empty. GPL sources (HaGeZi, OISD, AdGuard) are catalog-visible but **opt-in / OFF by default**; the Worker gates launch sync/publish to `source_url_only` plus the cleared GPL prefixes (`hagezi-`, `oisd-`, `adguard-`).
 
 ### 5.3 Default-enabled lists for free users (Implemented)
 
@@ -215,7 +202,7 @@ That free default is **produced by `defaultEnabled`**, not hardcoded. `blockList
 
 On the Worker side, `syncOneBlocklist` fetches each upstream source and normalizes+hashes it (computing `source_hash`, `normalized_hash`, `entry_count`) but writes `raw_r2_key = null` / `normalized_r2_key = null` — only the catalog JSON metadata reaches R2. `check-gpl-blocklist-distribution.sh` is the CI guardrail enforcing the whole model: no mirror/transform code, no Lava artifact/download URLs, no GPL sources default-enabled, no Worker R2 writes of list bytes, no "Lava-hosted mirror" copy, no bundled GPL `.txt`/`.json`, and `source_url_only` required in migrations + legal docs.
 
-> **License note:** first-party Lava code ships under **AGPL-3.0** (the `LICENSE` file is GNU AGPL v3, matching the README badge). The third-party blocklists (HaGeZi, OISD) remain **GPL-3.0** under their own upstream licenses — the source-url-only model exists precisely so Lava can use them without ever redistributing GPL-licensed bytes. GPL-3.0 here is a property of the upstream lists, not of the Lava app.
+> **License note:** first-party Lava code ships under **AGPL-3.0** (the `LICENSE` file is GNU AGPL v3, matching the README badge). The third-party blocklists (including HaGeZi, OISD, and AdGuard) remain under their own upstream licenses — the source-url-only model exists precisely so Lava can use them without ever redistributing copyleft list bytes. GPL-3.0 here is a property of the upstream lists, not of the Lava app.
 
 ---
 
@@ -236,7 +223,7 @@ On the Worker side, `syncOneBlocklist` fetches each upstream source and normaliz
 | Zero-copy mmap of compact snapshot | Implemented |
 | Source-url-only catalog + direct upstream fetch + hash validation | Implemented |
 | Protected-domain filter | Implemented |
-| Free default = Phishing + Scam (not Basic) | Implemented (catalog realigned to match) |
+| Free default = Block List Basic | Implemented (generated catalog + iOS/backend projections agree) |
 | First-party Lava code license | AGPL-3.0 (`LICENSE`); third-party lists stay GPL-3.0 upstream |
 
 ---
