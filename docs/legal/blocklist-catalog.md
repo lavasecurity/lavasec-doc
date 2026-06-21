@@ -23,16 +23,14 @@ Phishing, scam, malware, ransomware, and live threat-intelligence feeds.
 | HaGeZi Threat Intelligence Feed Mini | HaGeZi | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini-onlydomains.txt) |
 | Phishing.Database Active Domains | Phishing.Database | MIT | Large |  | [link](https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt) |
 
-## Ads & Trackers
+## Multi-purpose
 
-Advertising and cross-site tracking domains.
+All-in-one lists that block ads, trackers, malware, phishing, and more from a single feed.
 
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
 | 1Hosts Lite | 1Hosts | MPL-2.0 | Medium |  | [link](https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/adblock.txt) |
 | AdGuard DNS Filter | AdGuard | GPL-3.0 | Medium |  | [link](https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt) |
-| Block List Ads | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/ads.txt) |
-| Block List Tracking | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/tracking.txt) |
 | HaGeZi Multi Light | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt) |
 | HaGeZi Multi Normal | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/multi-onlydomains.txt) |
 | HaGeZi Multi PRO | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt) |
@@ -42,6 +40,15 @@ Advertising and cross-site tracking domains.
 | OISD Big | OISD | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_big.txt) |
 | OISD Small | OISD | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_small.txt) |
 | StevenBlack Unified Hosts | Steven Black | MIT | Medium |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) |
+
+## Ads & Trackers
+
+Dedicated advertising and cross-site tracking lists.
+
+| List | Provider | License | Size | Default | Source |
+| --- | --- | --- | :---: | :---: | --- |
+| Block List Ads | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/ads.txt) |
+| Block List Tracking | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/tracking.txt) |
 
 ## Social Media
 
@@ -86,4 +93,4 @@ Piracy portals and torrent trackers.
 
 ---
 
-_Catalog spec schema version 1 · 33 sources across 6 categories._
+_Catalog spec schema version 1 · 33 sources across 7 categories._

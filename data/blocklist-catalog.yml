@@ -44,10 +44,15 @@ categories:
     label: "Security & Threat Intel"
     description: "Phishing, scam, malware, ransomware, and live threat-intelligence feeds."
     icon: shield
+  - id: multi_purpose
+    order: 15
+    label: "Multi-purpose"
+    description: "All-in-one lists that block ads, trackers, malware, phishing, and more from a single feed."
+    icon: square-stack
   - id: ads_tracking
     order: 20
     label: "Ads & Trackers"
-    description: "Advertising and cross-site tracking domains."
+    description: "Dedicated advertising and cross-site tracking lists."
     icon: megaphone
   - id: social
     order: 30
@@ -199,7 +204,7 @@ sources:
   - id: hagezi-multi-light
     name: "HaGeZi Multi Light"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt
@@ -214,7 +219,7 @@ sources:
   - id: hagezi-multi-normal
     name: "HaGeZi Multi Normal"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/multi-onlydomains.txt
@@ -229,7 +234,7 @@ sources:
   - id: hagezi-multi-pro-mini
     name: "HaGeZi Multi PRO mini"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.mini-onlydomains.txt
@@ -244,7 +249,7 @@ sources:
   - id: hagezi-multi-pro
     name: "HaGeZi Multi PRO"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt
@@ -259,7 +264,7 @@ sources:
   - id: hagezi-multi-pro-plus-mini
     name: "HaGeZi Multi PRO++ mini"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus.mini-onlydomains.txt
@@ -274,7 +279,7 @@ sources:
   - id: hagezi-multi-ultimate-mini
     name: "HaGeZi Multi Ultimate mini"
     provider: hagezi
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/ultimate.mini-onlydomains.txt
@@ -289,7 +294,7 @@ sources:
   - id: oisd-small
     name: "OISD Small"
     provider: oisd
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_small.txt
@@ -304,7 +309,7 @@ sources:
   - id: oisd-big
     name: "OISD Big"
     provider: oisd
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_big.txt
@@ -319,7 +324,7 @@ sources:
   - id: stevenblack-unified
     name: "StevenBlack Unified Hosts"
     provider: stevenblack
-    category: ads_tracking
+    category: multi_purpose
     license: MIT
     license_text_url: null
     source_url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
@@ -334,7 +339,7 @@ sources:
   - id: adguard-dns-filter
     name: "AdGuard DNS Filter"
     provider: adguard
-    category: ads_tracking
+    category: multi_purpose
     license: GPL-3.0
     license_text_url: https://www.gnu.org/licenses/gpl-3.0.en.html
     source_url: https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
@@ -349,7 +354,7 @@ sources:
   - id: 1hosts-lite
     name: "1Hosts Lite"
     provider: onehosts
-    category: ads_tracking
+    category: multi_purpose
     license: MPL-2.0
     license_text_url: https://www.mozilla.org/en-US/MPL/2.0/
     source_url: https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/adblock.txt
