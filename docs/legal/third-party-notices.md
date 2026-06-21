@@ -1,33 +1,40 @@
 # Third-Party Notices
 
-Last reviewed: 2026-05-26
-Status: Engineering draft for counsel review
+Last reviewed: 2026-06-21
+Status: Engineering self-review (not a formal legal opinion)
 
-## Active v1 Blocklist Sources
+Lava publishes catalog metadata for launch sources and the app fetches selected
+source URLs directly on the user's device. Lava does not publish third-party
+blocklist bytes from Lava-controlled R2, Worker, CDN, or app bundle locations.
+The full active source list, including provider, license, and upstream URL for
+each source, is published in the [Blocklist Catalog](blocklist-catalog.md).
 
-Lava publishes catalog metadata for launch sources and the app fetches selected source URLs directly on the user's device. Lava does not publish third-party blocklist bytes from Lava-controlled R2, Worker, CDN, or app bundle locations.
+Lava's terms do not restrict users' rights under upstream licenses; see
+[`open-source-list-data-terms-carveout.md`](open-source-list-data-terms-carveout.md).
 
-| Source | License | Lava mode | Project URL | Source URL |
-| --- | --- | --- | --- | --- |
-| The Block List Project Basic | Unlicense | source_url_only | https://github.com/blocklistproject/Lists | https://blocklistproject.github.io/Lists/basic.txt |
-| The Block List Project Malware | Unlicense | source_url_only | https://github.com/blocklistproject/Lists | https://blocklistproject.github.io/Lists/malware.txt |
-| The Block List Project Phishing | Unlicense | source_url_only | https://github.com/blocklistproject/Lists | https://blocklistproject.github.io/Lists/phishing.txt |
-| The Block List Project Scam | Unlicense | source_url_only | https://github.com/blocklistproject/Lists | https://blocklistproject.github.io/Lists/scam.txt |
-| The Block List Project Ransomware | Unlicense | source_url_only | https://github.com/blocklistproject/Lists | https://blocklistproject.github.io/Lists/ransomware.txt |
-| Phishing.Database Active Domains | MIT | source_url_only | https://github.com/Phishing-Database/Phishing.Database | https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt |
-| HaGeZi Multi Light | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt |
-| HaGeZi Multi Normal | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/multi-onlydomains.txt |
-| HaGeZi Multi PRO mini | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.mini-onlydomains.txt |
-| HaGeZi Multi PRO | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt |
-| HaGeZi Multi PRO++ mini | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus.mini-onlydomains.txt |
-| HaGeZi Multi Ultimate mini | GPL-3.0 | source_url_only | https://github.com/hagezi/dns-blocklists | https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/ultimate.mini-onlydomains.txt |
-| OISD Small | GPL-3.0 | source_url_only | https://github.com/sjhgvr/oisd | https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_small.txt |
-| OISD Big | GPL-3.0 | source_url_only | https://github.com/sjhgvr/oisd | https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_big.txt |
+## Upstream License Terms
 
-## Inactive GPL Review Records
+- **The Block List Project** — Unlicense (public-domain dedication); no notice
+  requirement beyond attribution in the catalog.
+- **Phishing.Database** — MIT; Lava records the license and links to the
+  upstream source URL, which carries the MIT copyright/permission notice, and
+  does not mirror or modify the bytes.
+- **StevenBlack hosts variants** — MIT; Lava links only to the published hosts
+  files and does not mirror or modify the bytes.
+- **HaGeZi**, **OISD**, and **AdGuard DNS Filter** — GPL-3.0. Lava references
+  them source-url-only, off by default, and does not redistribute the list bytes.
+- **1Hosts** — MPL-2.0. Under source-url-only Lava neither modifies nor
+  redistributes the list, so share-alike obligations are not triggered.
 
-AdGuard DNS Filter remains inactive pending separate review. Active GPL entries above are source-url-only options, off by default, and are not bundled, transformed, or served from Lava infrastructure.
+## Copyleft Source Posture
 
-| Source family | Current launch state |
-| --- | --- |
-| AdGuard DNS Filter | Inactive; license review |
+Copyleft sources in the catalog are source-url-only and off by default. The
+fresh-install set is Block List Basic, the only source currently flagged
+`defaultEnabled: true`; changing that default for a GPL-3.0 or MPL-2.0 source
+would require a deliberate catalog change and a counsel check first.
+
+The `counsel_status` field in the canonical manifest is a review-tracking
+annotation, not a runtime gate. Aggregated / meta-lists (for example,
+StevenBlack, OISD, and 1Hosts) compile multiple upstreams under their published
+license; Lava links only to their source URLs and never mirrors or modifies the
+bytes.
