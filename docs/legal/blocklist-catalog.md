@@ -20,7 +20,6 @@ Phishing, scam, malware, ransomware, and live threat-intelligence feeds.
 | Block List Phishing | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/phishing.txt) |
 | Block List Ransomware | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/ransomware.txt) |
 | Block List Scam | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/scam.txt) |
-| HaGeZi Threat Intelligence Feed | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif-onlydomains.txt) |
 | HaGeZi Threat Intelligence Feed Mini | HaGeZi | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini-onlydomains.txt) |
 | Phishing.Database Active Domains | Phishing.Database | MIT | Large |  | [link](https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt) |
 
@@ -31,7 +30,6 @@ Advertising and cross-site tracking domains.
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
 | 1Hosts Lite | 1Hosts | MPL-2.0 | Medium |  | [link](https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/adblock.txt) |
-| 1Hosts Xtra | 1Hosts | MPL-2.0 | Large |  | [link](https://raw.githubusercontent.com/badmojr/1Hosts/master/Xtra/adblock.txt) |
 | AdGuard DNS Filter | AdGuard | GPL-3.0 | Medium |  | [link](https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt) |
 | Block List Ads | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/ads.txt) |
 | Block List Tracking | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/tracking.txt) |
@@ -88,4 +86,4 @@ Piracy portals and torrent trackers.
 
 ---
 
-_Catalog spec schema version 1 · 35 sources across 6 categories._
+_Catalog spec schema version 1 · 33 sources across 6 categories._

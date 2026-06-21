@@ -127,22 +127,6 @@
       "counsel_status": "not_reviewed"
     },
     {
-      "id": "hagezi-tif",
-      "name": "HaGeZi Threat Intelligence Feed",
-      "provider": "hagezi",
-      "category": "security",
-      "license": "GPL-3.0",
-      "license_text_url": "https://www.gnu.org/licenses/gpl-3.0.en.html",
-      "source_url": "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif-onlydomains.txt",
-      "project_url": "https://github.com/hagezi/dns-blocklists",
-      "parse_format": "domain_list",
-      "redistribution_mode": "source_url_only",
-      "warning_level": "advanced",
-      "default_enabled": false,
-      "size_hint": "large",
-      "counsel_status": "not_reviewed"
-    },
-    {
       "id": "hagezi-tif-mini",
       "name": "HaGeZi Threat Intelligence Feed Mini",
       "provider": "hagezi",
@@ -188,22 +172,6 @@
       "warning_level": "normal",
       "default_enabled": false,
       "size_hint": "medium",
-      "counsel_status": "required"
-    },
-    {
-      "id": "1hosts-xtra",
-      "name": "1Hosts Xtra",
-      "provider": "onehosts",
-      "category": "ads_tracking",
-      "license": "MPL-2.0",
-      "license_text_url": "https://www.mozilla.org/en-US/MPL/2.0/",
-      "source_url": "https://raw.githubusercontent.com/badmojr/1Hosts/master/Xtra/adblock.txt",
-      "project_url": "https://github.com/badmojr/1Hosts",
-      "parse_format": "adblock",
-      "redistribution_mode": "source_url_only",
-      "warning_level": "aggressive",
-      "default_enabled": false,
-      "size_hint": "large",
       "counsel_status": "required"
     },
     {
