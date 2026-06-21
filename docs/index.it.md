@@ -64,7 +64,7 @@ ovunque:
 | **Implementato** | Presente nel codice rilasciato |
 | **In corso** | In fase di sviluppo ora |
 | **Pianificato** | Una direzione, non ancora realizzata |
-| **Scartato** | Deciso di non procedere, conservato per memoria |
+| **Abbandonato** | Deciso di non procedere, conservato per memoria |
 
 Quando la documentazione e il codice non coincidono, vince il codice. Questa
 documentazione è un'istantanea, rigenerata dal codice man mano che il prodotto

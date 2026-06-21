@@ -64,7 +64,7 @@ Toda afirmação aqui tem base no código-fonte. O status é indicado ao longo d
 | **Implementado** | Presente no código já publicado |
 | **Em andamento** | Sendo construído agora |
 | **Planejado** | Uma direção, ainda não construída |
-| **Descartado** | Decidiu-se não fazer — mantido para registro |
+| **Descontinuado** | Decidiu-se não fazer — mantido para registro |
 
 Quando a documentação e o código divergem, o código prevalece. Esta documentação
 é um retrato do momento, gerado novamente a partir do código à medida que o
