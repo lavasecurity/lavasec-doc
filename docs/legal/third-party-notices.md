@@ -16,8 +16,9 @@ Lava's terms do not restrict users' rights under upstream licenses; see
 
 - **The Block List Project** — Unlicense (public-domain dedication); no notice
   requirement beyond attribution in the catalog.
-- **Phishing.Database** — MIT; the copyright/permission notice is preserved in
-  the per-source catalog metadata.
+- **Phishing.Database** — MIT; Lava records the license and links to the
+  upstream source URL, which carries the MIT copyright/permission notice, and
+  does not mirror or modify the bytes.
 - **StevenBlack hosts variants** — MIT; Lava links only to the published hosts
   files and does not mirror or modify the bytes.
 - **HaGeZi**, **OISD**, and **AdGuard DNS Filter** — GPL-3.0. Lava references
