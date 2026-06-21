@@ -165,7 +165,7 @@ O target do widget renderiza apenas a Live Activity e a Dynamic Island. O `LavaS
 
 O `LavaActivityAttributes.ContentState` carrega `protectionState`, uma `resumeDate` (para contagens regressivas de pausa), `pauseRequiresAuthentication` e o `shieldStyle` escolhido. A decodificação é tolerante — um `shieldStyle` ausente recai para `.original` — para que payloads de Live Activity mais antigos continuem funcionando.
 
-No lado do app, o `LavaLiveActivityController` (`LavaSecApp/LavaLiveActivityController.swift`) é dono da `Activity<LavaActivityAttributes>` ao vivo: ele observa mudanças de autorização do ActivityKit, só oferece Live Activities em idiomas de telefone/tablet, e `reconcile(...)` inicia/atualiza/encerra a activity para casar com o estado de proteção solicitado. O `AppViewModel.reconcileLiveActivity()` (`AppViewModel.swift:3069`) é o único funil que recalcula o estado desejado e chama o controller. Os botões da Dynamic Island despacham `LiveActivityIntent`s, que chamam o `LavaProtectionCommandService` como descrito em [§2](#2-app-extension-ipc).
+No lado do app, o `LavaLiveActivityController` (`LavaSecApp/LavaLiveActivityController.swift`) é dono da `Activity<LavaActivityAttributes>` ao vivo: ele observa mudanças de autorização do ActivityKit, só oferece Live Activities nos idioms de interface phone/pad, e `reconcile(...)` inicia/atualiza/encerra a activity para casar com o estado de proteção solicitado. O `AppViewModel.reconcileLiveActivity()` (`AppViewModel.swift:3069`) é o único funil que recalcula o estado desejado e chama o controller. Os botões da Dynamic Island despacham `LiveActivityIntent`s, que chamam o `LavaProtectionCommandService` como descrito em [§2](#2-app-extension-ipc).
 
 ---
 

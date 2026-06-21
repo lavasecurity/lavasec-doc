@@ -165,7 +165,7 @@ Live Activity의 `LavaActivityAttributes.ProtectionState`(`Shared/LavaActivityAt
 
 `LavaActivityAttributes.ContentState`는 `protectionState`, `resumeDate`(일시 중지 카운트다운용), `pauseRequiresAuthentication`, 그리고 선택된 `shieldStyle`을 운반해요. 디코딩은 관대해서 — `shieldStyle`이 없으면 `.original`로 폴백돼요 — 더 오래된 Live Activity 페이로드도 계속 동작해요.
 
-앱 측에서는 `LavaLiveActivityController`(`LavaSecApp/LavaLiveActivityController.swift`)가 활성 `Activity<LavaActivityAttributes>`를 소유해요. ActivityKit 권한 변경을 관찰하고, phone/pad 관용구에서만 Live Activity를 제공하며, `reconcile(...)`이 요청된 보호 상태에 맞게 액티비티를 시작/업데이트/종료해요. `AppViewModel.reconcileLiveActivity()`(`AppViewModel.swift:3069`)는 원하는 상태를 다시 계산하고 컨트롤러를 호출하는 단일 깔때기예요. Dynamic Island 버튼은 `LiveActivityIntent`를 디스패치하고, 이는 [§2](#2-app-extension-ipc)에서 설명한 대로 `LavaProtectionCommandService`를 호출해요.
+앱 측에서는 `LavaLiveActivityController`(`LavaSecApp/LavaLiveActivityController.swift`)가 활성 `Activity<LavaActivityAttributes>`를 소유해요. ActivityKit 권한 변경을 관찰하고, phone/pad 인터페이스 idiom에서만 Live Activity를 제공하며, `reconcile(...)`이 요청된 보호 상태에 맞게 액티비티를 시작/업데이트/종료해요. `AppViewModel.reconcileLiveActivity()`(`AppViewModel.swift:3069`)는 원하는 상태를 다시 계산하고 컨트롤러를 호출하는 단일 깔때기예요. Dynamic Island 버튼은 `LiveActivityIntent`를 디스패치하고, 이는 [§2](#2-app-extension-ipc)에서 설명한 대로 `LavaProtectionCommandService`를 호출해요.
 
 ---
 
