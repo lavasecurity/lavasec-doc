@@ -14,7 +14,7 @@ Este documento cubre la filosofía de diseño, el vocabulario de profundidad Lav
 
 ---
 
-## 1. Filosofía: núcleo tranquilo, profundidad ganada
+## 1. Filosofía: núcleo tranquilo, profundidad ganada {#1-philosophy-calm-core-earned-depth}
 
 El público de Lava son usuarios cotidianos no técnicos — padres y madres, personas mayores — y el diseño se desprende de eso. La superficie cotidiana "simplemente funciona" con tranquilidad para todo el mundo; el detalle adicional, el deleite y el control se revelan (**se ganan**) solo cuando el usuario va a buscarlos. Nada insiste, nada alarma, y la maquinaria técnica permanece invisible hasta que se la busca.
 
@@ -29,7 +29,7 @@ Dos reglas transversales de paleta/tono sustentan la postura tranquila:
 - **rojo = solo peligro.** El rojo se reserva exclusivamente para el peligro y el error; la paleta tranquila es verde/naranja. Esto mantiene el rojo fiable como señal de alarma genuina. El rojo de peligro está tokenizado como `LavaStyle.dangerRed`, con `LavaStyle.errorText` como alias suyo (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:81/86) y lo consume el texto de error en las vistas. El tinte de protección se resuelve a través de la tabla de roles semántica `ProtectionTintRole` (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7) en lugar de `.green`/`.orange` en crudo. Persisten genuinamente unos pocos puntos de llamada con `.red` en crudo (p. ej. lavasec-ios: LavaSecApp/SettingsView.swift:697, LavaSecApp/SecurityController.swift:600, LavaSecApp/FiltersView.swift) — migrarlos a `LavaStyle.dangerRed` es la limpieza pendiente.
 - **Sin lenguaje de seguridad cargado de miedo.** Los textos son sencillos, tranquilos y prácticos. Consulta [§4 Textos y nomenclatura](#4-copy-naming).
 
-### La capa tokenizada que existe hoy **(Implementado)**
+### La capa tokenizada que existe hoy **(Implementado)** {#the-tokenized-layer-that-exists-today-implemented}
 
 El sistema de diseño es una capa SwiftUI real y tokenizada, junto al vocabulario de profundidad `LavaTier` (§2):
 
@@ -44,7 +44,7 @@ La brecha residual que queda es el puñado de puntos de llamada con `.red` en cr
 
 ---
 
-## 2. LavaTier — Floor / Window / Workshop **(Implementado)**
+## 2. LavaTier — Floor / Window / Workshop **(Implementado)** {#2-lavatier-floor-window-workshop-implemented}
 
 `LavaTier` es el vocabulario ligero de profundidad que codifica "núcleo tranquilo, profundidad ganada" directamente en la capa de tokens. Es un vocabulario más unos pocos valores por defecto de tokens — no un retematizado completo — y se publica como un enum en lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, cableado en superficies representativas en lugar de readaptar todas las vistas.
 
@@ -66,13 +66,13 @@ expuesto a través de un `EnvironmentKey` más un modificador `.lavaTier(_:)` y 
 
 ---
 
-## 3. La mascota Soft Shield Guardian **(Implementado)**
+## 3. La mascota Soft Shield Guardian **(Implementado)** {#3-the-soft-shield-guardian-mascot}
 
 El **Soft Shield Guardian** es la mascota de Lava — un escudo redondeado con una cara simple y cambiante — que expresa visualmente el estado de protección en la pestaña Guard, la Live Activity, la Dynamic Island y la incorporación. Es el portador más visible del tono tranquilo.
 
 El grafo de estados es independiente de plataforma y vive en `LavaSecCore` (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift); el renderizador SwiftUI es lavasec-ios: Shared/SoftShieldGuardian.swift.
 
-### 3.1 Los 7 estados de expresión
+### 3.1 Los 7 estados de expresión {#31-the-7-expression-states}
 
 La mascota tiene **exactamente 7** estados de expresión, regidos por un grafo de estados de transiciones permitidas (`GuardianMascotState.allowedNextStates`, fijado por lavasec-ios: Tests/LavaSecCoreTests/GuardianMascotAnimationTests.swift):
 
@@ -86,7 +86,7 @@ Restricciones del grafo que conviene conocer: la única salida de `sleeping` es 
 > - **`retrying`** es la cara *despreocupada y autorreparadora*: párpados relajados (~0,80), ojos a nivel, una boca plana y **sin inclinación de preocupación**. El movimiento lo lleva la **insignia de estado, no la cara** — una autorecuperación transitoria nunca debería alarmar. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
 > - **`concerned`** es una preocupación *suave que pide ayuda*: cejas internas levantadas (`concernAmount` 1, `mouthCurve` -0,22) que se leen como "me vendría bien una mano", **nunca una mirada severa**. Los problemas reales deberían invitar a ayudar, no a regañar. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
 
-### 3.2 Mapeo conectividad → expresión (6 → 4)
+### 3.2 Mapeo conectividad → expresión (6 → 4) {#32-connectivity-expression-mapping-6-4}
 
 La salud de la protección se evalúa en `LavaSecCore` como **6 severidades de conectividad** + 2 acciones (lavasec-ios: Sources/LavaSecCore/ProtectionConnectivityPolicy.swift):
 
@@ -106,7 +106,7 @@ La pestaña Guard colapsa esas 6 severidades en **4 caras** (`guardianState` en 
 
 > **Reconciliación del tinte.** La granularidad del color de tinte de protección se mantiene reconciliada con esta división de expresiones para que el tinte y la cara nunca se contradigan. El mapeo de expresiones y la tabla de roles semántica `ProtectionTintRole` se publican ambos hoy (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7, consumida por `AppViewModel.protectionTintRole`). Solo queda **Planeada** la tokenización de roles de color `LavaColorRole` que mapearía los roles a colores totalmente tokenizados (Fase 3 del plan del DS).
 
-### 3.3 Aspectos (looks) **(Implementado)**
+### 3.3 Aspectos (looks) **(Implementado)** {#33-skins-looks-implemented}
 
 La mascota se publica en **7 "aspectos" de escudo seleccionables**, persistidos como `GuardianShieldStyle` (lavasec-ios: Shared/LavaActivityAttributes.swift:5). Cada uno tiene su propia gama de colores y un color de glifo emparejado para la Dynamic Island:
 
@@ -114,11 +114,11 @@ La mascota se publica en **7 "aspectos" de escudo seleccionables**, persistidos 
 
 Los dos valores en crudo heredados son intencionados — no los "corrijas"; romperían las selecciones de usuario persistidas.
 
-### 3.4 Redacción por privacidad **(Implementado)**
+### 3.4 Redacción por privacidad **(Implementado)** {#34-privacy-redaction-implemented}
 
 El Guardian respeta la redacción por privacidad: la expresión puede enmascararse cuando la superficie está redactada por privacidad mientras el **propio escudo permanece visible** (`maskExpressionWhenPrivacyRedacted` / `keepsShieldVisibleWhenRedacted`, lavasec-ios: Shared/SoftShieldGuardian.swift:11). La presencia de protección tranquiliza; el estado emocional concreto es la parte que se oculta.
 
-### 3.5 Fuera de este árbol **(Planeado)**
+### 3.5 Fuera de este árbol **(Planeado)** {#35-not-in-this-tree-planned}
 
 Un minijuego huevo de pascua en Guard (toque = animación de gratitud; pulsación larga de 10 s = un juego de atrapar dominios maliciosos) está en **P3 / pendientes (backlog)**. Añadiría expresiones extra de la mascota (`confused` / `dazed` / `inZone` / `powerSurge`) vistas en una rama de funcionalidad — estas **no** están en el target de la app. Según los hechos canónicos, la mascota tiene exactamente **7** estados; no documentes las expresiones del juego como publicadas.
 
@@ -126,11 +126,11 @@ Un minijuego huevo de pascua en Guard (toque = animación de gratitud; pulsació
 
 ## 4. Textos y nomenclatura {#4-copy-naming}
 
-### 4.1 Voz y tono
+### 4.1 Voz y tono {#41-voice-tone}
 
 Sencillos, tranquilos, prácticos. Evita el lenguaje de seguridad cargado de miedo. Sé honesto sobre el alcance: Lava es **filtrado local de DNS/listas de bloqueo**, no una garantía de que todo dominio o URL malicioso quede bloqueado, y la protección **nunca** se describe como activada automáticamente en cuanto termina la incorporación — la **pestaña Guard es la autoridad** sobre si la protección está activa en ese momento.
 
-### 4.2 Etiquetas de transporte DNS
+### 4.2 Etiquetas de transporte DNS {#42-dns-transport-labels}
 
 Las anotaciones de transporte siguen una convención compacta estricta (lavasec-ios: Sources/LavaSecCore/DoHTransport.swift:16 y lavasec-ios: Sources/LavaSecCore/DNSResolverPreset.swift:270, fijada por `DNSResolverPresetTests.swift`):
 
@@ -145,19 +145,19 @@ Las anotaciones de transporte siguen una convención compacta estricta (lavasec-
 
 La regla que más se incumple aquí es la del **`DoH3` sin barra** — escribe `DoH3`, nunca `DoH/3` ni `DoH3 (h3)`, y nunca lo apliques de forma especulativa. Estas etiquetas de transporte las emiten `DoHTransport`/`DNSResolverPreset`; mantenlas literales en todas las configuraciones regionales, pero ten en cuenta que *no* son entradas de No-Traducir del glosario (consulta §4.3).
 
-### 4.3 Términos de No-Traducir
+### 4.3 Términos de No-Traducir {#43-do-not-translate-terms}
 
 Los términos de marca y de protocolo se fijan literalmente en **todas** las configuraciones regionales. La lista de No-Traducir del glosario de localización es la autoridad, y fija: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD.**
 
 De los transportes DNS, solo **DoH** es una entrada de No-Traducir del glosario; `DoH3`, `DoT` y `DoQ` son etiquetas de transporte (consulta §4.2), no términos del glosario. Aun así se escriben literalmente, pero no cites el glosario como su fuente.
 
-### 4.4 Encuadre de seguridad
+### 4.4 Encuadre de seguridad {#44-safety-framing}
 
 El pago nunca sortea el **guardarraíl de amenazas** no anulable y validado por hash. Enuncia la precedencia de forma consistente: **guardarraíl de amenazas > lista de permitidos local (excepciones permitidas) > lista de bloqueo > permitir por defecto.**
 
 ---
 
-## 5. Experiencia de incorporación (onboarding) **(Implementado)**
+## 5. Experiencia de incorporación (onboarding) **(Implementado)** {#5-onboarding-ux-implemented}
 
 La incorporación de primera ejecución es un flujo de varias páginas — **6 páginas** (`OnboardingPage`: `lava → guardIntro → features → vpn → notifications → done`) — implementado en lavasec-ios: LavaSecApp/OnboardingFlowView.swift. Reutiliza el `SoftShieldGuardian` para el momento de aparición del guardián.
 
@@ -184,7 +184,7 @@ Los valores por defecto de primera ejecución que instala el flujo: resolver de 
 
 ---
 
-## 6. Internacionalización **(En curso)**
+## 6. Internacionalización **(En curso)** {#6-internationalization-in-progress}
 
 Lava se localiza en **6 configuraciones regionales**: **en** (fuente) + **ja, zh-Hant, zh-Hans, de, fr**, mediante catálogos de cadenas de Xcode.
 
@@ -202,7 +202,7 @@ La mecánica de i18n (el glosario de localización, el esquema de archivos de lo
 
 ---
 
-## 7. Artefactos de referencia
+## 7. Artefactos de referencia {#7-reference-artifacts}
 
 Referencias de diseño HTML (no se publican, internas): el storyboard del flujo de incorporación, un estudio del aspecto kiwi-creme del guardián y opciones visuales para el botón principal dentro del panel.
 

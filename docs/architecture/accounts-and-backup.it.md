@@ -20,7 +20,7 @@ Suddivisione dei componenti: la crittografia pura e la costruzione delle richies
 
 ---
 
-## 1. Flusso di autenticazione
+## 1. Flusso di autenticazione {#1-authentication-flow}
 
 **Provider: solo Apple e Google.** **(Implementato)** `AccountAuthProvider` enumera esattamente `.apple` e `.google` (`AccountAuthService.swift`). Email/password — e qualsiasi recupero assistito dal supporto che aggiri l'autenticazione — sono esplicitamente **Abbandonati**; gestire le password aggiungerebbe obblighi di reset/MFA/blocco/violazione che non valgono la complessità, dato che Apple/Google sono sufficienti, e il recupero tramite aggiramento romperebbe la garanzia di conoscenza zero.
 
@@ -47,7 +47,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 ---
 
-## 2. Archiviazione di sessione e Keychain
+## 2. Archiviazione di sessione e Keychain {#2-session--keychain-storage}
 
 L'**unica** cosa persistita dall'accesso è la sessione Supabase — access e refresh token in formato JSON. **Non** esiste alcun mirror lato server della tua identità oltre all'utente Supabase Auth e alle righe di cui sei proprietario.
 
@@ -60,15 +60,15 @@ Lo stesso meccanismo `GenericKeychainStore` sta alla base di tre store: la sessi
 
 ---
 
-## 3. Backup a conoscenza zero
+## 3. Backup a conoscenza zero {#3-zero-knowledge-backup}
 
-### 3.1 Che cos'è, con precisione
+### 3.1 Che cos'è, con precisione {#31-what-it-is-precisely}
 
 Quando attivi il backup crittografato, il **client iOS** cripta una copia ridotta al minimo delle tue *impostazioni* e carica su Supabase solo il testo cifrato più i metadati non segreti. Il telefono è l'unico luogo in cui il testo in chiaro e i segreti di decifratura esistono.
 
 > **Backup a conoscenza zero:** involucro AES-256-GCM lato client; la chiave casuale del payload è racchiusa in slot di chiave per ciascun fattore — PBKDF2-HMAC-SHA256 (210k iter) per gli slot password/frase/dispositivo/assistito, HKDF-SHA256 per lo slot passkey PRF. Su Supabase `user_backups` (RLS per utente) vengono caricati solo il testo cifrato + i metadati non segreti. Il server non può decifrare senza un segreto in possesso dell'utente. Anche lo slot passkey è **a conoscenza zero**: la sua chiave di apertura è derivata sul dispositivo dall'output WebAuthn PRF (`hmac-secret`) dell'authenticator, e il server non detiene alcun segreto della passkey (vedi §4.3).
 
-### 3.2 Cosa viene incluso nel backup (il payload minimizzato)
+### 3.2 Cosa viene incluso nel backup (il payload minimizzato) {#32-what-gets-backed-up-the-minimized-payload}
 
 `BackupConfigurationPayload` (`LavaSecCore`) è il testo in chiaro che viene sigillato. È volutamente piccolo e converte avanti e indietro con `AppConfiguration`. **(Implementato)**
 
@@ -76,7 +76,7 @@ Quando attivi il backup crittografato, il **client iOS** cripta una copia ridott
 
 **Escluso:** `isPaid` (l'abilitazione è locale), i flag QA, le diagnostiche, gli snapshot dei filtri e il contenuto completo delle blocklist (referenziato solo tramite ID di catalogo). La cronologia di navigazione e le query DNS non fanno mai parte di questo payload, perché il dispositivo non le registra come flusso di telemetria di routine.
 
-### 3.3 L'involucro (crittografia lato client)
+### 3.3 L'involucro (crittografia lato client) {#33-the-envelope-client-side-crypto}
 
 `ZeroKnowledgeBackupEnvelope` (`LavaSecCore`) implementa la crittografia. **(Implementato)**
 
@@ -88,7 +88,7 @@ La configurazione rilasciata è **senza password** (`makePasswordless`, gestita 
 
 **Integrità / anti-downgrade:** `envelopeVersion` è fissato in modo rigido a `1`, e la KDF di ciascuno slot è fissata per tipo — `PBKDF2-HMAC-SHA256` per gli slot password/frase/dispositivo/assistito, `HKDF-SHA256` per lo slot passkey PRF. Le versioni non supportate o le KDF non corrispondenti vengono rifiutate, così che metadati falsificati o sottoposti a downgrade non possano indebolire l'apertura. **(Implementato)**
 
-### 3.4 Caricamento e archiviazione
+### 3.4 Caricamento e archiviazione {#34-upload--storage}
 
 `BackupSyncService` (`SupabaseBackupSyncService`, `LavaSecApp`) carica l'involucro **direttamente** sulla tabella PostgREST di Supabase `user_backups`, con upsert su `user_id`, nell'ambito dell'access token dell'utente. **Non esiste alcuna route del Worker per il caricamento dell'involucro** — il client parla direttamente con Supabase sotto RLS; il Worker tocca `user_backups` solo per eliminarlo durante la cancellazione dell'account. **(Implementato)**
 
@@ -99,7 +99,7 @@ Cosa finisce in `user_backups`:
 
 La riga è protetta da **row-level security**: ogni riga è leggibile/scrivibile solo dal suo proprietario (`auth.uid() = user_id`); il ruolo anonimo non ha accesso. La dimensione è limitata a ~256 KiB di testo cifrato / 32 KiB di metadati a livello di DB (`20260518000000_zero_knowledge_backups.sql`, irrigidito in `20260605000000_tighten_backup_envelope_constraints.sql`). **(Implementato)**
 
-### 3.5 La garanzia — cosa il server può e non può vedere
+### 3.5 La garanzia — cosa il server può e non può vedere {#35-the-guarantee--what-the-server-can-and-cannot-see}
 
 **Il server memorizza:** il testo cifrato, i salt/le iterazioni della KDF, gli slot di chiave avvolti, il `server_recovery_share` e alcuni campi non segreti (cifrario, dimensione, timestamp).
 
@@ -111,17 +111,17 @@ La riga è protetta da **row-level security**: ogni riga è leggibile/scrivibile
 
 ---
 
-## 4. Recupero
+## 4. Recupero {#4-recovery}
 
 Un backup è utile solo se puoi ripristinarlo. `restoreEncryptedBackup` (in `AppViewModel`) decifra provando gli slot disponibili: chiave del dispositivo, frase di recupero o passkey. In ogni modalità l'involucro viene caricato localmente (o recuperato da Supabase) e poi **decifrato sul dispositivo** — il server non decifra mai.
 
-### 4.1 Frase di recupero
+### 4.1 Frase di recupero {#41-recovery-phrase}
 
 `BackupRecoveryPhrase` (`LavaSecCore`) genera una **frase CVCV di 8 parole** (consonante-vocale-consonante-vocale) da `SecRandom` con rejection sampling (~13,2 bit/token → **~105 bit in totale**), normalizzata in minuscolo. **(Implementato)** Il ripristino tollera la formattazione dell'utente (spaziatura/maiuscole) tramite parsing/normalizzazione prima di provare lo slot.
 
 Questo è il fattore di recupero **fuori dal dispositivo** dell'utente — salvato dall'utente, mai caricato. In base all'irrobustimento della privacy (§5), copiare la frase è **opzionale** e, quando usato, passa attraverso un pasteboard solo locale / a scadenza (10 minuti) anziché forzare l'esposizione al pasteboard globale.
 
-### 4.2 Recupero assistito (la combinazione a due fattori)
+### 4.2 Recupero assistito (la combinazione a due fattori) {#42-assisted-recovery-the-two-factor-combination}
 
 La sola frase di recupero **non** sblocca lo slot `assistedRecovery`. Il segreto dello slot è derivato da **entrambe** le metà:
 
@@ -132,7 +132,7 @@ assistedRecoverySecret =
 
 I tre segmenti sono uniti da un **separatore byte NUL (`0x00`)** nell'effettivo input UTF-8 — cioè la stringa sottoposta ad hash è `"LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase` — quindi il simbolo `‖` qui sopra indica una concatenazione delimitata da NUL, non una concatenazione semplice. `serverRecoveryShare` è un valore casuale archiviato nei metadati dell'involucro lato server; `normalizedPhrase` è la frase di recupero dell'utente. **Nessuna delle due metà da sola decifra** — il ripristino richiede la quota del server (recuperata con il backup) *e* la frase in possesso dell'utente. **(Implementato)**
 
-### 4.3 Recupero tramite passkey — a conoscenza zero, derivato da PRF
+### 4.3 Recupero tramite passkey — a conoscenza zero, derivato da PRF {#43-passkey-recovery--zero-knowledge-prf-derived}
 
 Lo slot opzionale `passkey` aggiunge un fattore supportato dall'hardware, ed è **a conoscenza zero**: la sua chiave di apertura è derivata **sul dispositivo** dall'output WebAuthn PRF (`hmac-secret`) dell'authenticator. Il server non registra alcuna passkey, non emette alcuna challenge WebAuthn e non memorizza alcun segreto di recupero — non esiste alcun passaggio di rilascio lato server.
 
@@ -145,7 +145,7 @@ Il precedente design di escrow (una tabella `backup_passkey_recovery` con servic
 
 ---
 
-## 5. Minimizzazione dei dati e postura sulla privacy
+## 5. Minimizzazione dei dati e postura sulla privacy {#5-data-minimization--privacy-posture}
 
 - **Account opzionale.** La protezione funziona senza alcun account; l'accesso abilita solo il backup delle impostazioni.
 - **Solo testo in chiaro locale.** Il telefono è l'unico luogo in cui esistono le impostazioni in chiaro e i segreti di decifratura; Supabase detiene un involucro opaco per utente.
@@ -153,7 +153,7 @@ Il precedente design di escrow (una tabella `backup_passkey_recovery` con servic
 - **Nessuna telemetria di navigazione/DNS.** Non esiste alcuna tabella lato server per le query DNS di routine o la telemetria per dominio; il filtraggio resta sul dispositivo.
 - **Il materiale di sblocco è locale al dispositivo.** Il materiale di sblocco del backup è archiviato con accessibilità `…ThisDeviceOnly` e **non** è sincronizzato su iCloud. Questo ha **invertito** il design del Keychain sincronizzabile del piano originale, così che Lava non sincronizzi silenziosamente il materiale di sblocco tramite iCloud (`plans/implemented/2026-05-25-backup-privacy-secret-handling-plan.md`). **(Implementato; inverte un piano precedente.)**
 
-### Eliminazione dell'account
+### Eliminazione dell'account {#account-deletion}
 
 L'eliminazione è **Implementata** e passa attraverso un endpoint Worker autenticato, non tramite cancellazioni dirette del client. `AccountAuthService.deleteAccount` invia l'access token dell'utente a `POST /v1/account/delete`; il Worker `lavasec-api` (service role) elimina le righe `bug_reports` dell'utente (e i loro allegati R2), `user_backups`, `entitlements`, `user_settings` e `profiles`, poi elimina l'utente Supabase Auth tramite l'API admin, restituendo solo uno stato di eliminazione + i provider collegati. L'app quindi effettua il logout localmente e cancella il materiale di sblocco del backup (`plans/implemented/2026-05-25-account-deletion-data-rights-plan.md`).
 
@@ -161,7 +161,7 @@ L'eliminazione è **Implementata** e passa attraverso un endpoint Worker autenti
 
 ---
 
-## 6. Riepilogo dello stato
+## 6. Riepilogo dello stato {#6-status-summary}
 
 | Area | Dettaglio | Stato |
 |---|---|---|
@@ -181,7 +181,7 @@ L'eliminazione è **Implementata** e passa attraverso un endpoint Worker autenti
 
 ---
 
-## Correlati
+## Correlati {#related}
 
 - [Panoramica del sistema](./system-overview.md) — l'intero sistema in una schermata, inclusi i confini di fiducia.
 - [Client iOS](./ios-client.md) — `AppViewModel` e i target dell'app che gestiscono il backup.

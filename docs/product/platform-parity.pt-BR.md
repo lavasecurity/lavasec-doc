@@ -1,4 +1,4 @@
-# Paridade entre plataformas
+# Paridade entre plataformas {#platform-parity}
 
 O sistema de paridade entre plataformas da Lava acompanha quais promessas do
 produto são compartilhadas entre iOS, Android e clientes futuros. Ele é o
@@ -18,7 +18,7 @@ Quando os documentos e o código publicado divergem, o código prevalece até qu
 documentos sejam atualizados. Quando um plano e esta página divergem, trate esta
 página como o contrato de produto e o plano como a fila de trabalho.
 
-## Vocabulário de status
+## Vocabulário de status {#status-vocabulary}
 
 | Status | Significado |
 |---|---|
@@ -30,7 +30,7 @@ página como o contrato de produto e o plano como a fila de trabalho.
 | **Não aplicável** | Não deve existir um recurso equivalente naquela plataforma. |
 | **Removido** | Já foi considerado ou construído e depois retirado de forma intencional. |
 
-## Formato do registro de recurso
+## Formato do registro de recurso {#feature-record-format}
 
 Todo recurso acompanhado pela paridade deve ter um id estável. Use nomes no
 formato `area.capability` que sobrevivam a mudanças no texto da interface, por
@@ -47,7 +47,7 @@ Um registro completo de recurso responde:
 | Verificação | Testes, fixtures, arquivos de origem ou revisões que mantêm o comportamento honesto. |
 | Notas de plataforma | Diferenças específicas de cada sistema operacional que precisam ficar explícitas, e não ser redescobertas depois. |
 
-## Fluxo de atualização
+## Fluxo de atualização {#update-workflow}
 
 1. Adicione ou atualize o id do recurso quando uma mudança altera uma promessa do
    produto, uma garantia de privacidade, um limite de plano ou um comportamento
@@ -62,7 +62,7 @@ Um registro completo de recurso responde:
    implementação, ao que é privado, a preços, a risco jurídico e a operações;
    resuma aqui apenas o contrato público.
 
-## Registro de paridade atual
+## Registro de paridade atual {#current-parity-ledger}
 
 | Id do recurso | Promessa do produto | iOS | Android | Requisito de paridade | Verificação / origem |
 |---|---|---:|---:|---|---|
@@ -81,7 +81,7 @@ Um registro completo de recurso responde:
 | `design.calm-earned-depth` | A experiência padrão é tranquila, com superfícies técnicas ou comemorativas mais profundas apenas quando merecidas ou solicitadas. | Parcial | Planejado | Corresponder pela intenção de design por meio de tokens/papéis compartilhados. | Documentos do sistema de design e plano de base de portabilidade. |
 | `platform.ambient-presence` | O status da proteção pode aparecer fora do app quando o sistema operacional oferece uma superfície ambiente nativa. | Nativo da plataforma | Planejado | Paridade de intenção, não de superfície. | Documentos de Live Activity do iOS; decisão sobre notificação/Configurações Rápidas do Android pendente. |
 
-## Uso na preparação do Android
+## Uso na preparação do Android {#android-readiness-use}
 
 Antes de a implementação no Android começar, esta página deve ser revisada junto
 ao plano do Android e ao plano de portabilidade do sistema de design. O contrato

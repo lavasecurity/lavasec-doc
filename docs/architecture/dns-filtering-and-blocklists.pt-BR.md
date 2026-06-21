@@ -15,7 +15,7 @@ A Lava é uma **filtragem local de DNS/listas de bloqueio**, não uma garantia d
 
 ---
 
-## 1. O pipeline de DNS (Implementado)
+## 1. O pipeline de DNS (Implementado) {#1-the-dns-pipeline-implemented}
 
 O mecanismo de filtragem/resolução roda dentro do **túnel de pacotes / NE** — a extensão `NEPacketTunnelProvider` chamada `LavaSecTunnel` (`com.lavasec.app.tunnel`), que intercepta apenas DNS. Os endereços do túnel são `10.255.0.2` (túnel) e `10.255.0.1` (servidor DNS). O processo do app nunca vê o tráfego de consultas; ele apenas grava artefatos compilados no **App Group** (`group.com.lavasec`) e sinaliza o túnel via **mensagens de provedor** do NETunnelProviderSession (não notificações Darwin).
 
@@ -33,9 +33,9 @@ Uma consulta que passa pelo filtro (ação `.allow`) é entregue ao caminho do r
 
 ---
 
-## 2. O mecanismo de filtragem (Implementado)
+## 2. O mecanismo de filtragem (Implementado) {#2-the-filtering-engine-implemented}
 
-### 2.1 Precedência de decisão
+### 2.1 Precedência de decisão {#21-decision-precedence}
 
 `FilterSnapshot.decision(forNormalizedDomain:)` (`Sources/LavaSecCore/FilterSnapshot.swift:57-71`) aplica a precedência de segurança canônica:
 
@@ -54,11 +54,11 @@ Um domínio que falha na normalização é bloqueado com o motivo `.invalidDomai
 
 > Note: na árvore de trabalho atual, `nonAllowableThreatRules` / `guardrailSources` estão vazios (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`); o espaço da precedência está conectado e em vigor, mas é entregue ainda sem entradas de barreira.
 
-### 2.2 Armazenamento de regras e a unidade de memória residente
+### 2.2 Armazenamento de regras e a unidade de memória residente {#22-rule-storage-and-the-resident-memory-unit}
 
 `DomainRuleSet` (`Sources/LavaSecCore/DomainRuleSet.swift`) armazena os conjuntos `exactDomains` + `suffixDomains`. A correspondência (`containsNormalized`) faz uma busca exata mais uma varredura de sufixo do nível pai (estilo `hasSuffix`) no momento da consulta — **não há subsunção de subdomínios em tempo de compilação**. Uma linha de wildcard válida é **uma regra** e uma entrada na tabela de memória. Essa identidade de 1 linha = 1 regra é o que torna a contagem de regras a métrica honesta de recursos (§4).
 
-### 2.3 Formas do snapshot compilado
+### 2.3 Formas do snapshot compilado {#23-compiled-snapshot-forms}
 
 - **`FilterSnapshot`** — o filtro compilado em memória: `blockRules`, `allowRules`, `nonAllowableThreatRules` e o preset do resolvedor.
 - **`CompactFilterSnapshot`** — a forma binária em disco, amigável a mmap, que o túnel realmente lê (magic `LSCFSNP1`, `fileVersion 1`). É carregada com cópia zero via mmap (§4.3).
@@ -67,9 +67,9 @@ O app grava tanto `filter-snapshot.json` quanto `filter-snapshot.compact` no App
 
 ---
 
-## 3. Transportes criptografados e o caminho do resolvedor (Implementado)
+## 3. Transportes criptografados e o caminho do resolvedor (Implementado) {#3-encrypted-transports--the-resolver-path-implemented}
 
-### 3.1 Enum de transporte
+### 3.1 Enum de transporte {#31-transport-enum}
 
 Consultas não bloqueadas são encaminhadas ao resolvedor upstream configurado. `DNSResolverTransport` (`Sources/LavaSecCore/DNSResolverPreset.swift:6-11`) tem **cinco** valores:
 
@@ -83,23 +83,23 @@ Consultas não bloqueadas são encaminhadas ao resolvedor upstream configurado. 
 
 Os presets integrados são Google, Cloudflare, Quad9, Mullvad (cada um nas variantes IP / DoH / DoT) mais DNS do dispositivo e Personalizado. Resolvedores personalizados aceitam um servidor IPv4/IPv6 comum, uma URL DoH, uma URL DoT (`tls://` / `dot://`), uma URL DoQ (`doq://` / `quic://`) ou um carimbo DNS `sdns://`; nomes de usuário/senhas e localhost são rejeitados. DoH/DoT/DoQ usam por padrão a porta `853` para DoT/DoQ e exigem um caminho para DoH.
 
-### 3.2 DoH / DoH3
+### 3.2 DoH / DoH3 {#32-doh--doh3}
 
 `DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) executa DoH sobre `URLSession`. Toda requisição opta por HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`); o carregador da Apple recai nativamente para H2/H1, então isso nunca torna um resolvedor alcançável inalcançável. O protocolo negociado é lido de `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
 
 A interface anota **`DoH3` (sem barra)** — por exemplo, "Quad9 (DoH3)" — **somente quando uma negociação h3 é de fato observada** (`DoHHTTPVersion.dohAnnotation`); caso contrário, exibe `DoH`. DoH3 é preferido, nunca prometido: o rótulo é observacional e restrito ao resolvedor, nunca persistido (o carry-over de "DoH3 confirmado" entre reinícios foi revertido). As requisições enviam POST `application/dns-message`; as respostas são validadas por content-type e comprimento e o ID da transação é restaurado antes da gravação de volta.
 
-### 3.3 DoT
+### 3.3 DoT {#33-dot}
 
 `DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) usa `NWConnection`s em pool, **até 4 conexões por endpoint** (`maxConnectionsPerEndpoint = 4`), em round-robin, para que consultas paralelas evitem bloqueio de cabeça de fila. Ele lida com **obsolescência por ociosidade**: provedores como a Cloudflare fecham conexões DoT ociosas no lado do servidor (~10s) sem sinalizar uma mudança de estado, então uma conexão reutilizada que ficou ociosa por mais de **8 segundos** (`reusedConnectionMaxIdleInterval = 8`) é renovada antes do envio, e um timeout numa conexão reutilizada ganha **exatamente uma nova tentativa com conexão nova**.
 
-### 3.4 DoQ — conexão nova por consulta
+### 3.4 DoQ — conexão nova por consulta {#34-doq--fresh-connection-per-query}
 
 `DoQTransport` (`Sources/LavaSecCore/DoQTransport.swift`) mantém um pool limitado de **4 vias por endpoint**, mas **cada consulta abre uma conexão QUIC nova** — um handshake completo por consulta. O pool de 4 vias oferece **concorrência, não reúso de handshake**.
 
 **Status do reúso de conexão DoQ (Descartado / adiado).** O reúso foi revisado e medido em dispositivo (34 handshakes novos em 35 consultas ≈ sem reúso), então implementado como um caminho `NWConnectionGroup` multi-stream condicionado ao iOS 26, testado em dispositivo contra o DoQ da AdGuard, e **revertido como saldo negativo** (falhas de stream + erros de fallback contra um servidor real). A RFC 9250 mapeia cada consulta para seu próprio stream QUIC, então o reúso exige `NWConnectionGroup`/`openStream`, que é **apenas iOS 26.0+**; o piso de implantação atual é **iOS 17**. O reúso fica adiado até o piso chegar ao iOS 26. O DoQ personalizado é rejeitado em dispositivos que não o suportam ("DNS over QUIC is not supported on this device").
 
-### 3.5 Política de resolução
+### 3.5 Política de resolução {#35-resolution-policy}
 
 `ResolverOrchestrator` (`Sources/LavaSecCore/ResolverOrchestrator.swift`) é dono da política de upstream:
 
@@ -110,11 +110,11 @@ A interface anota **`DoH3` (sem barra)** — por exemplo, "Quad9 (DoH3)" — **s
 
 ---
 
-## 4. Orçamento de regras de filtro, teto da NE e mmap
+## 4. Orçamento de regras de filtro, teto da NE e mmap {#4-filter-rules-budget-ne-ceiling-and-mmap}
 
 A métrica de tier entregue é o **orçamento de regras de filtro**: o total de **regras** de domínio compiladas que um usuário pode habilitar. Isso substituiu o antigo limite de **contagem** de listas habilitadas (3 grátis / 10 pago), que era um proxy desonesto — uma lista pode ter 1 mil ou 1 milhão de regras. Há **duas camadas**: uma barreira de dispositivo para todos e um limite de monetização por tier abaixo dela.
 
-### 4.1 Limites por tier (Implementado)
+### 4.1 Limites por tier (Implementado) {#41-tier-limits-implemented}
 
 `FeatureLimits` (`Sources/LavaSecCore/SubscriptionPolicy.swift:29-45`) é a fonte da verdade:
 
@@ -125,7 +125,7 @@ A métrica de tier entregue é o **orçamento de regras de filtro**: o total de 
 
 O limite por tier é uma fronteira de monetização, **nunca um paywall sobre a barreira de dispositivo**. O **Lava Security Plus** desbloqueia apenas a personalização — nunca a segurança básica, nunca a barreira contra ameaças. As listas de bloqueio personalizadas (pagas) são buscadas diretamente do dispositivo do usuário, analisadas e armazenadas em cache localmente, e nunca passam por proxy nos servidores da Lava.
 
-### 4.2 Barreira de memória do dispositivo + teto da NE (Implementado)
+### 4.2 Barreira de memória do dispositivo + teto da NE (Implementado) {#42-device-memory-guardrail--ne-ceiling-implemented}
 
 O túnel de pacotes está sujeito ao **teto de memória de ~50 MiB por extensão** do iOS (um limite de design por tipo de extensão do SO para túneis de pacotes desde o iOS 15, não escalado pela RAM; ele vive num `com.apple.jetsamproperties.{Model}.plist` por modelo de dispositivo e pode ser menor em aparelhos mais antigos). Ultrapassá-lo dispara o jetsam. Não há API para esse teto, então o orçamento mantém uma margem abaixo do precipício.
 
@@ -140,22 +140,22 @@ O túnel de pacotes está sujeito ao **teto de memória de ~50 MiB por extensão
 
 Essa **barreira de dispositivo de ~3,26 mi de regras** é o piso de segurança rígido para *todo* usuário, ficando acima de qualquer tier de assinatura, e **nunca é um paywall**. Medição de referência (dispositivo "chimmy", 2026-06-13): **789.831 regras → 9,9 MB de `phys_footprint`**, ou seja, ≈ baseline + custo por regra.
 
-### 4.3 Estratégia de mmap (Implementado)
+### 4.3 Estratégia de mmap (Implementado) {#43-mmap-strategy-implemented}
 
 O snapshot compacto é carregado com `Data(contentsOf:options:[.mappedIfSafe])` (`LavaSecTunnel/PacketTunnelProvider.swift:4431`, `:4665`), e o `CompactBinaryReader` retorna fatias com cópia zero. O blob de texto de domínios de vários megabytes permanece **respaldado em arquivo/limpo** e é excluído do `phys_footprint` contado pelo jetsam; apenas as tabelas `[Entry]` decodificadas custam memória residente (~6 B/regra em disco, ~8,5 B residentes sujos). Isso eleva o teto de domínios no dispositivo: o custo residente são as tabelas de entradas, não o artefato inteiro.
 
-### 4.4 Aplicação em duas camadas (Implementado)
+### 4.4 Aplicação em duas camadas (Implementado) {#44-two-layer-enforcement-implemented}
 
 - **Autoritativa (em tempo de compilação).** `FilterSnapshotPreparationService` (`Sources/LavaSecCore/FilterSnapshotPreparationService.swift:146-176`) aplica o orçamento sobre a **união deduplicada** de todas as listas habilitadas. A barreira de dispositivo é verificada **primeiro** (o piso rígido); o limite por tier vincula abaixo dela. Configurações acima do orçamento são rejeitadas de forma determinística — `exceedsDeviceMemoryBudget` ou `exceedsTierFilterRuleLimit` — em vez de deixar o túnel sofrer jetsam. O erro nomeia as duas maiores listas contribuintes para que a correção seja óbvia.
 - **Consultiva (interface em tempo de seleção).** `FilterRuleBudget` (`Sources/LavaSecCore/FilterRuleBudget.swift:8-26`) move o medidor de seleção usando uma **soma** por lista com uma **margem de teto suave de 1,10** que compensa a sobrecontagem cruzada de ~7–10% entre listas (a soma por lista superestima a união deduplicada).
 
-### 4.5 O parser (Implementado)
+### 4.5 O parser (Implementado) {#45-the-parser-implemented}
 
 `BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) conta as regras literalmente: descarta comentários/linhas em branco/linhas inválidas, normaliza, deduplica strings exatas dentro de uma lista (via um `Set`) e limita em **`maxRules = 1,000,000`** por lista (padrão), com comprimento máximo de linha de 4.096 caracteres. Formatos suportados: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (o `auto` tenta hosts → dnsmasq → adblock → plain). Uma linha válida = uma regra = a unidade de memória.
 
 > **Linhas `hosts` com múltiplos hosts (parser rules versão 2).** Uma linha `hosts` que mapeia um IP para vários hosts (`0.0.0.0 a.com b.com c.com`) agora emite **cada** host como sua própria regra, não só o primeiro; o `maxRules` é aplicado **por regra** (não por linha), de modo que uma linha com muitos hosts perto do limite não pode ultrapassá-lo. Como os mesmos bytes de upstream agora podem render mais regras, a versão de regras do parser foi elevada de **1 → 2**, invalidando entradas obsoletas de `RuleSetCache` analisadas sob o antigo comportamento de só o primeiro host.
 
-### 4.6 Robustez de download e decodificação (Implementado)
+### 4.6 Robustez de download e decodificação (Implementado) {#46-download--decode-robustness-implemented}
 
 O túnel e a sincronização do catálogo rodam dentro do orçamento de memória da NE, então a ingestão de listas é endurecida contra entradas hostis ou malformadas:
 
@@ -166,9 +166,9 @@ O túnel e a sincronização do catálogo rodam dentro do orçamento de memória
 
 ---
 
-## 5. Catálogo de listas de bloqueio e fontes padrão
+## 5. Catálogo de listas de bloqueio e fontes padrão {#5-blocklist-catalog--default-sources}
 
-### 5.1 Modelo de catálogo (Implementado)
+### 5.1 Modelo de catálogo (Implementado) {#51-catalog-model-implemented}
 
 O **catálogo de listas de bloqueio** é a lista publicada de fontes disponíveis. O **Worker lavasec-api** serve os metadados JSON a partir de um bucket R2 em `GET /v1/catalog` (e `/v1/catalog/:version`); o dispositivo busca os **bytes** reais da lista diretamente de cada `source_url` upstream. Os endpoints de catálogo do iOS são `https://api.lavasecurity.app/v1/catalog` (`BlocklistCatalogSync.swift:4-15`).
 
@@ -182,7 +182,7 @@ No dispositivo, o `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`):
 
 O **conjunto de domínios protegidos** (filtrados antes da ativação): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (todos por correspondência de sufixo). O Worker aplica um filtro `PROTECTED_SUFFIXES` equivalente ao calcular os metadados; o dispositivo revalida de qualquer modo.
 
-### 5.2 Fontes curadas (Implementado)
+### 5.2 Fontes curadas (Implementado) {#52-curated-sources-implemented}
 
 `DefaultCatalog.curatedSources` (`BlocklistModels.swift:232-243`) lista **10** fontes:
 
@@ -201,7 +201,7 @@ O **conjunto de domínios protegidos** (filtrados antes da ativação): `apple.c
 
 `guardrailSources` está vazio. As fontes GPL (HaGeZi, OISD) são visíveis no catálogo, mas **opt-in / DESLIGADAS por padrão** à espera da aprovação jurídica; o Worker restringe a sincronização/publicação de lançamento a `source_url_only` mais os prefixos GPL permitidos (`hagezi-`/`oisd-`).
 
-### 5.3 Listas habilitadas por padrão para usuários grátis (Implementado)
+### 5.3 Listas habilitadas por padrão para usuários grátis (Implementado) {#53-default-enabled-lists-for-free-users-implemented}
 
 A configuração padrão grátis de fato é `OnboardingDefaults.lavaRecommendedDefaults` (`Sources/LavaSecCore/OnboardingDefaults.swift:7-10`), que habilita **Block List Project Phishing + Block List Project Scam**, com o preset de resolvedor DNS do dispositivo (`resolverPresetID = DNSResolverPreset.device.id`) e o fallback para o DNS do dispositivo ligado.
 
@@ -209,7 +209,7 @@ Esse padrão grátis é **produzido por `defaultEnabled`**, não fixado no códi
 
 > **Fonte da verdade do padrão (o código prevalece).** Qualquer texto de plano/catálogo que diga "Block List Basic é o único padrão" está errado para o dispositivo; o dispositivo entrega Phishing + Scam a partir de `defaultEnabled: true`, e a flag `BlocklistSource.defaultEnabled` do iOS é o mecanismo vivo autoritativo. A coluna `default_enabled` do catálogo do backend foi realinhada ao mesmo conjunto Phishing + Scam por uma migração, então os metadados servidos em `/v1/catalog` agora batem com o cliente. O texto "Listas de bloqueio habilitadas 3 → 10" do site público ainda está **obsoleto** — o gate real é o orçamento de regras de filtro de 500K/2M, não uma contagem de listas.
 
-### 5.4 Modelo de distribuição GPL baseado apenas em source-url (Implementado)
+### 5.4 Modelo de distribuição GPL baseado apenas em source-url (Implementado) {#54-source-url-only-gpl-distribution-model-implemented}
 
 **Source-url-only** é o modelo de distribuição de conformidade GPL/PI: a Lava publica apenas a URL de upstream + os hashes aceitos; o dispositivo busca e analisa as listas por conta própria. A Lava **nunca** armazena, espelha, transforma ou serve os bytes de listas de bloqueio de terceiros. Isso **substituiu o design abandonado de espelho em R2** (o plano original de "espelho R2 cru" foi revertido em 2026-05-25).
 
@@ -219,7 +219,7 @@ No lado do Worker, `syncOneBlocklist` busca cada fonte upstream e a normaliza+ha
 
 ---
 
-## 6. Resumo de status
+## 6. Resumo de status {#6-status-summary}
 
 | Área | Status |
 |---|---|
@@ -241,7 +241,7 @@ No lado do Worker, `syncOneBlocklist` busca cada fonte upstream e a normaliza+ha
 
 ---
 
-## Veja também
+## Veja também {#see-also}
 
 - [`../product/overview.md`](../product/overview.md) — resumo do produto em uma frase, promessa de privacidade, abas.
 - Tiers e monetização (referência interna) — o Lava Security Plus e o orçamento de regras de filtro como métrica de tier.

@@ -1,4 +1,4 @@
-# Paridad entre plataformas
+# Paridad entre plataformas {#platform-parity}
 
 El sistema de paridad entre plataformas de Lava lleva el registro de qué
 promesas del producto son compartidas entre iOS, Android y los futuros clientes.
@@ -20,7 +20,7 @@ hasta que se actualice la documentación. Cuando un plan y esta página no
 coinciden, considera esta página como el contrato del producto y el plan como la
 cola de trabajo.
 
-## Vocabulario de estados
+## Vocabulario de estados {#status-vocabulary}
 
 | Estado | Significado |
 |---|---|
@@ -32,7 +32,7 @@ cola de trabajo.
 | **No aplica** | No debería existir una función equivalente en esa plataforma. |
 | **Descartado** | Antes se consideró o se construyó, y luego se retiró de forma intencionada. |
 
-## Formato del registro de funciones
+## Formato del registro de funciones {#feature-record-format}
 
 Cada función con seguimiento de paridad debería tener un identificador de función
 estable. Usa nombres del tipo `area.capability` que sobrevivan a los cambios del
@@ -50,7 +50,7 @@ Un registro de función completo responde a lo siguiente:
 | Garantía | Tests, datos de prueba, archivos fuente o controles de revisión que mantienen el comportamiento fiel. |
 | Notas de plataforma | Diferencias específicas de cada sistema operativo que deben quedar explícitas, no redescubrirse más tarde. |
 
-## Flujo de actualización
+## Flujo de actualización {#update-workflow}
 
 1. Añade o actualiza el identificador de función cuando un cambio modifique una
    promesa del producto, una declaración de privacidad, el límite de un plan o el
@@ -65,7 +65,7 @@ Un registro de función completo responde a lo siguiente:
    de precios, de riesgo legal y operativos; aquí resume únicamente el contrato
    público.
 
-## Registro de paridad actual
+## Registro de paridad actual {#current-parity-ledger}
 
 | Identificador de función | Promesa del producto | iOS | Android | Requisito de paridad | Garantía / origen |
 |---|---|---:|---:|---|---|
@@ -84,7 +84,7 @@ Un registro de función completo responde a lo siguiente:
 | `design.calm-earned-depth` | La experiencia por defecto es tranquila, con superficies más técnicas o de celebración solo cuando se ganan o se solicitan. | Parcial | Planificado | Coincidir en intención de diseño mediante tokens y roles compartidos. | Documentación del sistema de diseño y plan de la base de portabilidad. |
 | `platform.ambient-presence` | El estado de protección puede aparecer fuera de la app cuando el sistema operativo admite una superficie ambiental nativa. | Nativo de la plataforma | Planificado | Paridad de intención, no paridad de superficie. | Documentación de Live Activity de iOS; decisión sobre notificación y Ajustes rápidos de Android pendiente. |
 
-## Uso para la preparación de Android
+## Uso para la preparación de Android {#android-readiness-use}
 
 Antes de que comience la implementación de Android, esta página debería revisarse
 junto con el plan de Android y el plan de portabilidad del sistema de diseño. El

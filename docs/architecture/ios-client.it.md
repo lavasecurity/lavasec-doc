@@ -5,7 +5,7 @@ source_repos: [lavasec-ios]
 grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
-# Architettura del client iOS
+# Architettura del client iOS {#ios-client-architecture}
 
 > Pubblico: ingegneri iOS che lavorano in `lavasec-ios`.
 
@@ -15,7 +15,7 @@ Per una visione dell'intero sistema (l'app, il Worker del catalogo e Supabase), 
 
 ---
 
-## 1. Target e responsabilità
+## 1. Target e responsabilità {#1-targets-responsibilities}
 
 Il client viene distribuito come tre target eseguibili più una libreria core condivisa. Tutti e tre i target fanno parte dello stesso **App Group** (`group.com.lavasec`) e collegano `LavaSecCore`.
 
@@ -38,7 +38,7 @@ I dettagli interni del tunnel di pacchetti (analisi DNS, snapshot compilato, tra
 
 L'app e l'estensione tunnel di pacchetti sono processi separati. Si coordinano tramite tre meccanismi, tutti ancorati all'App Group.
 
-### Container dell'App Group
+### Container dell'App Group {#app-group-container}
 
 `group.com.lavasec` è il container condiviso che consente all'app, al tunnel e al widget di leggere e scrivere lo stesso stato e la stessa configurazione di `LavaSecCore`. `LavaSecAppGroup` (`Shared/AppGroup.swift`) centralizza ogni chiave e nome file condivisi affinché i processi non possano mai divergere sulle costanti stringa, tra cui:
 
@@ -48,7 +48,7 @@ L'app e l'estensione tunnel di pacchetti sono processi separati. Si coordinano t
 
 L'URL del container è risolto tramite `FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:)`.
 
-### Messaggio di comando / provider (il percorso di controllo)
+### Messaggio di comando / provider (il percorso di controllo) {#command-provider-message-the-control-path}
 
 L'app pilota il tunnel con **`sendProviderMessage`** per tutti i comandi. `AppViewModel.sendTunnelMessage(_:)` (`AppViewModel.swift:7215`) ottiene la `NETunnelProviderSession` attiva dal manager in cache e chiama `session.sendProviderMessage(...)`. Il payload viene codificato da `LavaSecProviderMessageCodec` (`AppGroup.swift:55-79`) in una piccola busta JSON che trasporta un `kind` di messaggio e un `operationID` opzionale (usato per il tracciamento della latenza end-to-end).
 
@@ -65,7 +65,7 @@ Dal lato del tunnel, `PacketTunnelProvider.handleAppMessage(_:completionHandler:
 
 Gli helper `notifyTunnelSnapshotUpdated()` / `notifyTunnelProtectionPauseUpdated()` dell'app (`AppViewModel.swift:7062`/`7070`) sono sottili wrapper che inviano questi messaggi.
 
-### Perché i messaggi del provider per il controllo app→tunnel
+### Perché i messaggi del provider per il controllo app→tunnel {#why-provider-messages-for-apptunnel-control}
 
 **`sendProviderMessage` è l'unico percorso di controllo app→tunnel — non esiste un segnale Darwin app→tunnel.** Un progetto precedente pubblicava un segnale Darwin `CFNotificationCenter` in pausa e lo osservava all'interno dell'estensione, ma non si attivava mai in modo affidabile nel processo NetworkExtension ed è stato rimosso. Il command service non pubblica più `CFNotificationCenterPostNotification`, e il tunnel non aggiunge più un `CFNotificationCenterAddObserver` — entrambi vengono verificati come assenti dai test di introspezione del sorgente (`Tests/LavaSecCoreTests/LavaLiveActivitySourceTests.swift:574` per il post del command service; `Tests/LavaSecCoreTests/PacketTunnelDNSRuntimeSourceTests.swift:847` per l'observer del tunnel) per evitarne la reintroduzione. (Le righe `import Darwin` che restano nel command service e nel tunnel servono per le primitive `flock`/socket, non per le notifiche.)
 
@@ -73,7 +73,7 @@ Un percorso Darwin *esiste* ancora nella direzione opposta. Il tunnel pubblica a
 
 Per il controllo app→tunnel, la pausa viene consegnata scrivendo il `ProtectionPauseStore` condiviso e facendola seguire dal messaggio del provider `reload-protection-pause` affinché il tunnel esegua `refreshProtectionPauseStateOnly`. `AppViewModel.swift:4995-4996` documenta la regola direttamente: l'app "non si affida mai nemmeno all'observer Darwin dello snapshot, usando sempre `sendProviderMessage`." Considera la coppia App Group (stato condiviso) + `sendProviderMessage` (il segnale di risveglio/controllo) come il percorso di controllo app→tunnel.
 
-### Command service della Live Activity
+### Command service della Live Activity {#live-activity-command-service}
 
 `LavaProtectionCommandService.perform(_:)` (`Shared/LavaProtectionCommandService.swift`) è il punto di ingresso per le azioni Dynamic Island / Live Activity (`LavaLiveActivityActionRequest`: `pause-5-minutes` / `pause-10-minutes` / `pause-15-minutes`, `resume`, `reconnect`). I `LiveActivityIntent` in `LavaLiveActivityIntents.swift` vengono eseguiti nel processo dell'app (che detiene l'entitlement NetworkExtension), quindi:
 
@@ -86,24 +86,24 @@ Per il controllo app→tunnel, la pausa viene consegnata scrivendo il `Protectio
 
 `AppViewModel` (`@MainActor final class`, `AppViewModel.swift:723`) è la fonte di verità del ciclo di vita della VPN nell'app. Orchestra l'accensione/spegnimento, mette in cache il `NETunnelProviderManager` attivo e pubblica lo stato a SwiftUI.
 
-### Selezione del manager e matematica del ciclo di vita
+### Selezione del manager e matematica del ciclo di vita {#manager-selection-and-lifecycle-math}
 
 La logica di ciclo di vita riutilizzabile e priva di NetworkExtension vive in `VPNLifecycleController<Repository>` (`Sources/LavaSecCore/VPNLifecycleController.swift`). L'app fornisce le conformità supportate da `NETunnelProviderManager` di `VPNManagerControlling` / `VPNManagerRepositoryProtocol` / `VPNStatusChangeWaiting`; il controller gestisce:
 
 - **Selezione e deduplica** — `matchingManagers()` filtra ai manager di proprietà di Lava tramite `LavaTunnelConfigurationIdentity.matches(...)`, li ordina per `selectionPriority` (prima quelli attivi, poi per nome visualizzato canonico), e `removeDuplicateManagers(keeping:)` converge su un unico sopravvissuto.
 - **Attese di connessione/arresto** — `waitForConnect` / `waitForStop` sondano lo stato della connessione attiva con una tolleranza `startGraceInterval`, perché subito dopo `startVPNTunnel` la connessione può brevemente leggere uno stato non in attesa prima che iOS la faccia transitare a `.connecting`.
 
-### Accensione / spegnimento
+### Accensione / spegnimento {#turn-on-turn-off}
 
 `enableProtection(...)` (`AppViewModel.swift:5764`) è **cache-first**: quando esiste un artefatto preparato confermato come riutilizzabile per la configurazione corrente, la VPN può attivarsi immediatamente dalla cache mentre una sincronizzazione del catalogo in corso continua ad aggiornare in background, e `performCatalogSync` riconcilia il tunnel in esecuzione al completamento. Si blocca sulla sincronizzazione solo quando non c'è nulla di valido da cui partire (ad es. l'utente ha appena cambiato l'insieme di elenchi abilitati, invalidando l'identità dell'artefatto in cache).
 
 `disableProtection(...)` (`AppViewModel.swift:5972`) disattiva Connect-On-Demand *prima* di fermare il tunnel affinché iOS non lo riconnetta immediatamente. `setManagerOnDemand(_:on:)` (`AppViewModel.swift:6253`) installa un `NEOnDemandRuleConnect` (match dell'interfaccia `.any`) e salva le preferenze — il salvataggio (non il semplice setting) è necessario perché iOS rispetti la modifica.
 
-### Osservazione dello stato (e un'avvertenza sul calore)
+### Osservazione dello stato (e un'avvertenza sul calore) {#status-observation-and-a-heat-caveat}
 
 `AppViewModel` osserva `.NEVPNStatusDidChange` (`AppViewModel.swift:1034-1056`) e pubblica `vpnStatus`/`isVPNConfigurationInstalled`. Cosa fondamentale, quando un manager è già in cache, legge la connessione attiva del manager in cache anziché forzare un refresh `loadAllFromPreferences`: `loadAllFromPreferences` ripubblica esso stesso `NEVPNStatusDidChange`, e un refresh forzato nell'observer produceva una tempesta auto-sostenuta — il commento nel sorgente (`AppViewModel.swift:1046-1048`) registra i circa 370 eventi/s misurati e la regressione di calore con il 134% di CPU che ha causato. Le proprietà pubblicate cambiano solo su transizioni reali, così i tick a riposo smettono di invalidare SwiftUI.
 
-### Riconciliazione on-demand fail-closed
+### Riconciliazione on-demand fail-closed {#fail-closed-on-demand-reconcile}
 
 Connect-On-Demand può attivare il tunnel **a freddo** all'avvio (o dopo che iOS lo smonta a un cambio di rete) prima che l'app abbia inviato uno snapshot. Un tunnel a freddo senza uno snapshot persistito riutilizzabile si carica **fail-closed** — blocca tutto il traffico — e non si riprende mai da solo. `AppViewModel` gestisce questo in due percorsi di avvio, entrambi condizionati al completamento dell'onboarding (`hasCompletedOnboarding`, che rispecchia il flag `@AppStorage("hasSeenLavaOnboarding")`):
 
@@ -112,11 +112,11 @@ Connect-On-Demand può attivare il tunnel **a freddo** all'avvio (o dopo che iOS
 
 ---
 
-## 4. Guardian / modello di stato
+## 4. Guardian / modello di stato {#4-guardian-state-model}
 
 Esistono due vocabolari di stato correlati: una *valutazione* di connettività e uno stato del *mascotte* Guardian.
 
-### Valutazione della connettività
+### Valutazione della connettività {#connectivity-assessment}
 
 `ProtectionConnectivityPolicy.assessment(isConnected:health:now:)` (`Sources/LavaSecCore/ProtectionConnectivityPolicy.swift`) mappa un `TunnelHealthSnapshot` su un `ProtectionConnectivityAssessment` con una delle **sei gravità** e **due azioni**:
 
@@ -127,7 +127,7 @@ Questa singola valutazione pilota sia la superficie Guard in-app sia (mappata ul
 
 **Soglia di onestà (v1.0).** Un fallimento attuale e non coperto del probe smoke DNS non può mai essere letto come `.healthy` — la valutazione mostra `.recovering` finché un probe non riesce davvero, così il traffico portato da fallback su un primario incastrato non viene più dipinto come "Protetto." La logica di riconnessione si basa su `consecutiveDNSSmokeProbeFailureCount` e `lastPrimaryUpstreamSuccessAt` (solo primario) anziché sui contatori upstream generici, e un resolver che resta raggiungibile ma continua a **rifiutare** il probe noto come buono (hijack/captive/stale) viene escalato a livello di riavvio tramite un `consecutiveRejectedSmokeResponseCount` con ambito all'identità del resolver (LAV-87), anche quando la serie generica continua a resettarsi su reti in roaming instabili.
 
-### Notifiche di connettività
+### Notifiche di connettività {#connectivity-notifications}
 
 `ProtectionConnectivityNotificationPolicy` (`Sources/LavaSecCore/ProtectionConnectivityNotificationPolicy.swift`) trasforma la valutazione in al massimo una notifica locale in sospeso, con throttling (600s) e deduplica. La v1.0 aggiunge:
 
@@ -135,11 +135,11 @@ Questa singola valutazione pilota sia la superficie Guard in-app sia (mappata ul
 - **Escalation/sostituzione** — un problema decisamente più urgente (solo `reconnectNeeded` supera gli altri) può sostituire un banner in essere di rango inferiore, aggirando sia la guardia "problema già in sospeso" sia il throttle, così un incaglio dopo un fallback su Device-DNS fa emergere il prompt "Riconnetti" azionabile invece di lasciare in piedi un banner rassicurante.
 - Una **migrazione di persistenza** (`ProtectionConnectivityNotificationStore`, schema v2, collegata tramite `LavaSecAppGroup.migrateProtectionNotificationStateIfNeeded`) declassa un marker legacy `reconnect-needed` in sospeso a `dnsSlow` affinché l'escalation funzioni attraverso l'aggiornamento.
 
-### Retry della cattura Device-DNS
+### Retry della cattura Device-DNS {#device-dns-capture-retry}
 
 Quando la configurazione attiva dipende dal resolver del dispositivo (come primario o come fallback), un handoff/risveglio di rete può lasciare il tunnel con una cattura del resolver di sistema vuota — un incaglio silenzioso. `DeviceDNSFallbackPolicy` pilota un **retry limitato** (`shouldRetryDeviceDNSCapture`, `deviceDNSCaptureRetryInterval` 1s, `deviceDNSCaptureMaxRetryAttempts` 5): il tunnel rilegge i resolver di sistema ogni secondo per un massimo di cinque tentativi finché la cattura non è non vuota, quindi la adotta sul posto — auto-ripristinandosi senza un riavvio del tunnel (eventi `device-dns-capture-retry` / `-exhausted`). È un no-op per configurazioni DoH/DoT/DoQ pure (`currentConfigurationDependsOnDeviceDNS()`).
 
-### Stati del mascotte Guardian
+### Stati del mascotte Guardian {#guardian-mascot-states}
 
 Il mascotte Soft Shield Guardian ha esattamente **sette** stati emotivi — `GuardianMascotState` (`GuardianMascotAnimation.swift:3`): `sleeping`, `waking`, `awake`, `paused`, `retrying`, `concerned`, `grateful`. Ogni stato dichiara i propri `allowedNextStates` così che le transizioni siano vincolate (ad es. `grateful` torna solo a `awake`; `GuardianMascotAnimation.swift:12-29`). Semantica:
 
@@ -149,7 +149,7 @@ Il mascotte Soft Shield Guardian ha esattamente **sette** stati emotivi — `Gua
 
 `GuardianMascotAnimation` è il core dell'animazione procedurale in `LavaSecCore`; `SoftShieldGuardian` (`Shared/SoftShieldGuardian.swift`) è il rendering SwiftUI e supporta gli skin di personalizzazione selezionati da `GuardianShieldStyle` (nomi visualizzati Original, Fire Opal, Amethyst, Obsidian, Cherry Quartz, Emerald, Kiwi Crème — `LavaActivityAttributes.swift:5-56`, con il mapping del `displayName` alle righe 18-35). Alcuni valori grezzi divergono dai loro nomi visualizzati (ad es. `fireOpal = "emberObsidian"`, `cherryQuartz = "strawberryObsidian"`, e `purpleObsidian` viene reso come "Amethyst"), quindi persisti il valore grezzo, non l'etichetta.
 
-### Come i due si collegano
+### Come i due si collegano {#how-the-two-connect}
 
 Il `LavaActivityAttributes.ProtectionState` della Live Activity (`Shared/LavaActivityAttributes.swift`) collega la valutazione a uno stato del mascotte tramite `guardianState`: `on → awake`, `paused → paused`, `reconnecting`/`networkUnavailable → retrying`, `needsReconnect → concerned` (`LavaActivityAttributes.swift:95-105`). `AppViewModel` sceglie lo stato di protezione per la Dynamic Island dallo stesso `protectionConnectivityAssessment` (`AppViewModel.swift:3131-3147`): una gravità `networkUnavailable` diventa `.networkUnavailable`, `recovering` diventa `.reconnecting`, un'azione primaria `reconnect` diventa `.needsReconnect`, e altrimenti `.on`.
 
@@ -157,7 +157,7 @@ Il `LavaActivityAttributes.ProtectionState` della Live Activity (`Shared/LavaAct
 
 ---
 
-## 5. Live Activity e widget
+## 5. Live Activity e widget {#5-live-activity-widget}
 
 Il target widget esegue il rendering solo della Live Activity e della Dynamic Island. `LavaSecWidgetBundle` (`LavaSecWidget/LavaSecWidget.swift`) espone un singolo `LavaProtectionLiveActivityWidget`, un `ActivityConfiguration(for: LavaActivityAttributes.self)` con:
 
@@ -169,7 +169,7 @@ Dal lato app, `LavaLiveActivityController` (`LavaSecApp/LavaLiveActivityControll
 
 ---
 
-## 6. Flusso di onboarding
+## 6. Flusso di onboarding {#6-onboarding-flow}
 
 L'onboarding è presentato da `LavaOnboardingView` (`LavaSecApp/OnboardingFlowView.swift`) ed è regolato dal flag `@AppStorage("hasSeenLavaOnboarding")` dichiarato in `RootView` (`RootView.swift:32`). Il flusso è una sequenza di `OnboardingPage` (`OnboardingFlowView.swift:403-409`): `lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`.
 
@@ -179,7 +179,7 @@ Impostare `hasSeenLavaOnboarding = true` alla fine è ciò che fa scattare `hasC
 
 ---
 
-## 7. Stato dell'app: `AppViewModel`
+## 7. Stato dell'app: `AppViewModel` {#7-app-state-appviewmodel}
 
 `AppViewModel` (`@MainActor final class AppViewModel: ObservableObject`, `AppViewModel.swift:723`) è il responsabile centrale dello stato lato app. Oltre al ciclo di vita della VPN, pubblica le superfici a cui la UI si lega, tra cui:
 
@@ -195,7 +195,7 @@ Delega la serializzazione del ciclo di vita a un `protectionActionOrchestrator` 
 
 ---
 
-## Documenti correlati
+## Documenti correlati {#related-docs}
 
 - [Panoramica del sistema](./system-overview.md) — l'intero sistema su una sola schermata: l'app, il Worker del catalogo e Supabase, oltre ai confini di fiducia e alla legenda di stato usata ovunque.
 - [Filtraggio DNS e blocklist](./dns-filtering-and-blocklists.md) — i dettagli interni del tunnel di pacchetti qui richiamati solo al confine di controllo: il motore di filtraggio compilato, i transport cifrati del resolver (DoH / DoH3 / DoT / DoQ), il budget delle regole di filtro, il catalogo delle blocklist e il modello di ridistribuzione basato solo su source-url.

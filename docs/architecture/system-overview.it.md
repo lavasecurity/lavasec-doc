@@ -5,25 +5,25 @@ source_repos: [lavasec-ios]
 grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
-# Panoramica del sistema
+# Panoramica del sistema {#system-overview}
 
 > **Pubblico:** ingegneri. Questa è tutta Lava Security in una sola pagina: quali sono le parti, come si muovono i dati tra di esse e dove si trovano i confini di fiducia. I documenti dei singoli componenti vanno più in profondità; questo esiste perché tu possa avere il sistema bene in mente prima di leggerli.
 >
 > **Autorità:** dove questo documento e un piano non concordano, **vince il codice**. Lo stato riflette la realtà confermata dal codice, non le aspirazioni del piano. Vedi la [Legenda degli stati](#8-status-legend) in fondo alla pagina.
 
-## 1. Il prodotto in una riga
+## 1. Il prodotto in una riga {#1-product-one-liner}
 
 Lava Security è un'app iOS che mette la privacy al primo posto e filtra il DNS **localmente sul dispositivo** attraverso un tunnel a pacchetti NetworkExtension, bloccando i domini dannosi e indesiderati per le persone non tecniche (genitori, persone anziane): con la protezione di base gratuita per sempre e senza bisogno di alcun account.
 
-## 2. La promessa sulla privacy (canonica)
+## 2. La promessa sulla privacy (canonica) {#2-the-privacy-promise-canonical}
 
 > Tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i suoi server e non riceve mai il flusso dei domini che visiti: il backend conserva solo i metadati del catalogo, un backup cifrato opaco per ogni utente e le diagnostiche anonime che scegli di inviare.
 
 Tutto ciò che segue è al servizio di mantenere vera quella frase. L'architettura è volutamente ridotta sul lato server: il dispositivo fa il lavoro e il backend non vede mai una query.
 
-## 3. Componenti
+## 3. Componenti {#3-components}
 
-### Client iOS (tre target eseguibili + codice condiviso, un solo App Group `group.com.lavasec`)
+### Client iOS (tre target eseguibili + codice condiviso, un solo App Group `group.com.lavasec`) {#ios-client-three-executable-targets-shared-code-one-app-group-groupcomlavasec}
 
 | Componente | Bundle / posizione | Ruolo | Stato |
 |---|---|---|---|
@@ -53,7 +53,7 @@ Tutto ciò che segue è al servizio di mantenere vera quella frase. L'architettu
 - **ZeroKnowledgeBackupEnvelope / BackupConfigurationPayload / BackupRecoveryPhrase** — crittografia + payload del backup.
 - **SupabaseIDTokenAuth** — autenticazione `id_token` con URLRequest grezza (senza SDK).
 
-### Backend
+### Backend {#backend}
 
 | Componente | Ruolo | Stato |
 |---|---|---|
@@ -63,7 +63,7 @@ Tutto ciò che segue è al servizio di mantenere vera quella frase. L'architettu
 | **Cloudflare R2** (il bucket R2 di produzione, un bucket di anteprima separato per lo staging) | Snapshot del catalogo + il cursore di sincronizzazione round-robin. **Mai** i byte delle blocklist di terze parti; la rotta di caricamento degli allegati delle segnalazioni di bug è stata rimossa (gli oggetti legacy vengono eliminati solo all'eliminazione dell'account). | Implementato |
 | **Cloudflare D1** (il database del feedback di aiuto) | Voti di feedback anonimi sugli articoli di aiuto, solo in aggiunta. | Implementato |
 
-## 4. Diagramma del flusso di dati
+## 4. Diagramma del flusso di dati {#4-data-flow-diagram}
 
 La proprietà di gran lunga più importante: **il percorso del resolver DNS cifrato (lato destro) non tocca mai il backend di Lava (in basso).** Il dispositivo recupera i *metadati* del catalogo dal Worker, ma i *byte* delle liste e il flusso effettivo delle query vanno direttamente a terze parti.
 
@@ -118,9 +118,9 @@ La proprietà di gran lunga più importante: **il percorso del resolver DNS cifr
        └──── from LavaSecApp, only when the user opts in
 ```
 
-## 5. Flussi di dati
+## 5. Flussi di dati {#5-data-flows}
 
-### A. Il percorso DNS (per ogni query, tutto sul dispositivo) — Implementato
+### A. Il percorso DNS (per ogni query, tutto sul dispositivo) — Implementato {#a-the-dns-path-per-query-all-on-device-implemented}
 
 Questo è il percorso caldo e il cuore della privacy. Si svolge interamente all'interno di `LavaSecTunnel`; nulla qui raggiunge i server di Lava.
 
@@ -133,7 +133,7 @@ Questo è il percorso caldo e il cuore della privacy. Si svolge interamente all'
 
 Note sul trasporto (convenzioni testuali): `DoH3` (senza barra) viene annotato **solo quando una negoziazione h3 viene effettivamente osservata**: preferito, mai promesso. **`DoT`** usa un pool fino a 4 NWConnection per endpoint con aggiornamento per inattività + un nuovo tentativo su connessione fresca. **`DoQ`** apre una **nuova connessione QUIC per ogni query** (nessun riutilizzo); il pool a 4 corsie offre concorrenza, non riutilizzo dell'handshake — il riutilizzo della connessione è stato realizzato, testato sul dispositivo e **annullato** (rinviato fino al pavimento di distribuzione iOS-26). Vedi [Filtraggio DNS e blocklist](./dns-filtering-and-blocklists.md).
 
-### B. Recupero del catalogo + caricamento delle blocklist (solo source-url) — Implementato
+### B. Recupero del catalogo + caricamento delle blocklist (solo source-url) — Implementato {#b-catalog-fetch-blocklist-load-source-url-only-implemented}
 
 Come le regole di filtro arrivano sul dispositivo. Lava è un distributore **solo source-url**: pubblica solo l'URL dell'origine + gli hash accettati e **non memorizza, replica, trasforma o serve mai i byte delle blocklist di terze parti.**
 
@@ -152,7 +152,7 @@ Il lato Worker rispecchia tutto questo: la sua sincronizzazione admin/cron recup
 
 > **Avvertenza sui valori abilitati per default (vince il codice):** i default gratuiti distribuiti sono **Block List Project Phishing + Scam** (`OnboardingDefaults.lavaRecommendedDefaults`). Vengono derivati sul dispositivo dal flag `defaultEnabled` di ogni origine curata (`BlocklistSource.recommendedDefaultSourceIDs`), che è la fonte di verità sul dispositivo e rispecchia la colonna `default_enabled` del catalogo backend. I testi di piano/catalogo che dicono "Block List Basic è l'unico default" sono errati per il dispositivo (tracciato internamente).
 
-### C. Backup (a conoscenza zero, su consenso) — Implementato
+### C. Backup (a conoscenza zero, su consenso) — Implementato {#c-backup-zero-knowledge-opt-in-implemented}
 
 Facoltativo, vincolato all'account, e gli unici dati utente che arrivano nel backend — come **testo cifrato opaco**.
 
@@ -164,7 +164,7 @@ Facoltativo, vincolato all'account, e gli unici dati utente che arrivano nel bac
 
 Vedi [Account e backup](./accounts-and-backup.md).
 
-### D. Piano di controllo app ↔ estensione — Implementato
+### D. Piano di controllo app ↔ estensione — Implementato {#d-app-extension-control-plane-implemented}
 
 Tre processi (app, tunnel, widget) si coordinano attraverso l'App Group `group.com.lavasec`:
 
@@ -175,7 +175,7 @@ Tre processi (app, tunnel, widget) si coordinano attraverso l'App Group `group.c
 
 Vedi [Client iOS](./ios-client.md).
 
-## 6. Confini di fiducia e progettazione a tutela della privacy
+## 6. Confini di fiducia e progettazione a tutela della privacy {#6-trust-boundaries-privacy-preserving-design}
 
 | # | Confine | Cosa lo attraversa | Cosa volutamente NON lo fa |
 |---|---|---|---|
@@ -195,7 +195,7 @@ Vedi [Client iOS](./ios-client.md).
 - **Isolamento del ruolo di servizio.** `bug_reports`, `mirror_events` e `qa_developers` sono revocati ai ruoli PostgREST anon/authenticated; solo il Worker (ruolo di servizio) li tocca.
 - **La sicurezza non è mai in vendita.** Il pagamento sblocca **solo la personalizzazione**. Non aggira mai il **guardrail contro le minacce** non eludibile, la cui integrità è garantita dagli hash SHA256 accettati delle origini (non da una firma del server). La precedenza è coerente ovunque: **guardrail contro le minacce > allowlist locale (eccezioni consentite) > blocklist > consenti-per-default.**
 
-## 7. Documenti dei singoli componenti
+## 7. Documenti dei singoli componenti {#7-per-component-docs}
 
 > Questi sono i documenti fratelli nell'insieme di documenti sull'architettura. Il motore di filtraggio DNS e il catalogo delle blocklist sono documentati insieme in un unico file.
 

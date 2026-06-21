@@ -5,7 +5,7 @@ source_repos: [lavasec-ios]
 grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
-# Catalogo delle funzionalità
+# Catalogo delle funzionalità {#feature-catalog}
 
 > Pubblico: PM / sviluppo. Questo catalogo copre solo l'insieme di funzionalità **attuali e già realizzate**. Tutto ciò che è progettato ma non ancora costruito si trova nella roadmap privata, non qui.
 
@@ -15,7 +15,7 @@ La promessa sulla privacy che sta dietro a ogni funzionalità qui sotto:
 
 > Tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i propri server e non riceve mai il flusso dei domini che visiti — il backend conserva solo i metadati del catalogo, un backup cifrato e opaco per ciascun utente e le diagnostiche anonimizzate che scegli di inviare.
 
-## Come leggere questo catalogo
+## Come leggere questo catalogo {#how-to-read-this-catalog}
 
 - **Free** — disponibile per tutti, senza account, senza acquisto.
 - **Plus** — sbloccato da Lava Security Plus, l'unico livello a pagamento opzionale. Plus sblocca **solo la personalizzazione**; non limita mai la sicurezza di base e non consente mai a un utente pagante di aggirare la barriera di protezione dalle minacce.
@@ -25,7 +25,7 @@ I tetti dei livelli che fanno fede si trovano in `lavasec-ios: Sources/LavaSecCo
 
 ---
 
-## 1. Protezione e VPN
+## 1. Protezione e VPN {#1-protection-vpn}
 
 Il cuore del prodotto: un tunnel a pacchetti locale solo per il DNS e il modello di stati sereno che lo circonda.
 
@@ -47,7 +47,7 @@ Il cuore del prodotto: un tunnel a pacchetti locale solo per il DNS e il modello
 
 ---
 
-## 2. Liste di blocco e filtraggio
+## 2. Liste di blocco e filtraggio {#2-blocklists-filtering}
 
 Cosa viene bloccato, come si scelgono le liste e il confine tra i livelli.
 
@@ -71,7 +71,7 @@ Cosa viene bloccato, come si scelgono le liste e il confine tra i livelli.
 
 ---
 
-## 3. DNS cifrato
+## 3. DNS cifrato {#3-encrypted-dns}
 
 Trasporti del resolver e instradamento per le query non bloccate.
 
@@ -88,7 +88,7 @@ Trasporti del resolver e instradamento per le query non bloccate.
 
 ---
 
-## 4. Account e backup a conoscenza zero
+## 4. Account e backup a conoscenza zero {#4-accounts-zero-knowledge-backup}
 
 Accesso opzionale all'account e backup cifrato delle impostazioni. Niente di tutto questo è richiesto per usare la protezione.
 
@@ -104,7 +104,7 @@ Accesso opzionale all'account e backup cifrato delle impostazioni. Niente di tut
 
 ---
 
-## 5. Widget e Live Activity
+## 5. Widget e Live Activity {#5-widget-live-activity}
 
 Presenza sulla schermata di blocco e nella Dynamic Island.
 
@@ -118,7 +118,7 @@ Presenza sulla schermata di blocco e nella Dynamic Island.
 
 ---
 
-## 6. Onboarding
+## 6. Onboarding {#6-onboarding}
 
 Flusso al primo avvio che installa la configurazione VPN locale e imposta valori predefiniti sensati.
 
@@ -131,7 +131,7 @@ Flusso al primo avvio che installa la configurazione VPN locale e imposta valori
 
 ---
 
-## 7. Impostazioni
+## 7. Impostazioni {#7-settings}
 
 Superfici di configurazione, sicurezza, diagnostica e feedback.
 
@@ -152,7 +152,7 @@ Superfici di configurazione, sicurezza, diagnostica e feedback.
 
 ---
 
-## Architettura dell'app (per orientarsi)
+## Architettura dell'app (per orientarsi) {#app-architecture-for-orientation}
 
 Tre bundle condividono un unico App Group `group.com.lavasec`, insieme a una cartella di sorgenti `lavasec-ios: Shared/` compilata al loro interno:
 
@@ -165,7 +165,7 @@ Il controllo tra app ↔ estensione usa i **provider message** di `NETunnelProvi
 
 ---
 
-## Documenti correlati
+## Documenti correlati {#related-docs}
 
 - Roadmap — le funzionalità pianificate e scartate (posizionamento dei prezzi/StoreKit di Plus, port Android, protezione a livello di URL, disponibilità di Associated-Domain per le passkey, mini-gioco easter-egg, rilascio open-source GPL-3.0, ecc.) si trovano nella roadmap privata, non in questo catalogo pubblico.
 - [Decisione di conformità GPL "solo URL di origine"](../legal/gpl-source-url-only-compliance-decision.md)

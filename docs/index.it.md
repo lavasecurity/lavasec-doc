@@ -19,7 +19,7 @@ Questo sito è il manuale pubblico che spiega come funziona Lava: la sua
 architettura, il suo comportamento e le scelte che ci stanno dietro. Segue il
 [client iOS](https://github.com/lavasecurity/lavasec-ios) open source.
 
-## Inizia da qui
+## Inizia da qui {#start-here}
 
 <div class="grid cards" markdown>
 
@@ -54,7 +54,7 @@ architettura, il suo comportamento e le scelte che ci stanno dietro. Segue il
 
 </div>
 
-## Come leggere questa documentazione
+## Come leggere questa documentazione {#how-to-read-this}
 
 Ogni affermazione qui presente è basata sul codice sorgente. Lo stato è indicato
 ovunque:

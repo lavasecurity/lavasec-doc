@@ -24,7 +24,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 1. Filtrado de DNS en el dispositivo mediante `NEPacketTunnelProvider`
+## 1. Filtrado de DNS en el dispositivo mediante `NEPacketTunnelProvider` {#1-on-device-dns-filtering-via-nepackettunnelprovider}
 
 **Decisión.** Filtrar el DNS **localmente en el dispositivo** a través de un túnel de paquetes `NEPacketTunnelProvider` (`LavaSecTunnel`, `com.lavasec.app.tunnel`), en lugar de `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager` o un bloqueador de contenido de Safari.
 
@@ -36,7 +36,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 2. Distribución de la lista de bloqueo solo por URL de origen
+## 2. Distribución de la lista de bloqueo solo por URL de origen {#2-source-url-only-blocklist-distribution}
 
 **Decisión.** Lava publica únicamente la **URL** de la lista de bloqueo original **más los hashes aceptados**; el dispositivo descarga los **bytes** de la lista directamente desde cada `source_url`, y luego los analiza, normaliza, deduplica y filtra localmente. Lava **nunca** almacena, replica, transforma ni sirve los bytes de listas de bloqueo de terceros. El Worker escribe en R2 solo los **metadatos** del catálogo en JSON (`raw_r2_key`/`normalized_r2_key` son null).
 
@@ -48,7 +48,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 3. Transportes de resolutor cifrados (DoH / DoH3 / DoT / DoQ)
+## 3. Transportes de resolutor cifrados (DoH / DoH3 / DoT / DoQ) {#3-encrypted-resolver-transports-doh--doh3--dot--doq}
 
 **Decisión.** Incluir cuatro transportes ascendentes cifrados junto con el DNS plano y un respaldo de DNS del dispositivo, extraídos a LavaSecCore: **DoH** (URLSession), **DoH3** (DoH que prefiere HTTP/3), **DoT** (`NWConnection`s agrupadas, hasta 4 por endpoint, con renovación por inactividad y un reintento de conexión nueva) y **DoQ** (DNS-over-QUIC). El enrutamiento, la degradación a DNS plano, la conmutación por error por endpoint con una compuerta de retroceso y el respaldo de DNS del dispositivo viven en `ResolverOrchestrator`.
 
@@ -60,7 +60,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 4. Reutilización de conexiones DoQ — construida, probada en dispositivo, revertida
+## 4. Reutilización de conexiones DoQ — construida, probada en dispositivo, revertida {#4-doq-connection-reuse--built-device-tested-reverted}
 
 **Decisión.** **No** reutilizar conexiones QUIC para DoQ. `DoQTransport` abre una **conexión QUIC nueva por consulta**; el grupo de 4 carriles aporta concurrencia, no reutilización del handshake.
 
@@ -72,7 +72,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 5. Rechazar un protocolo unificador `DNSResolvingTransport`
+## 5. Rechazar un protocolo unificador `DNSResolvingTransport` {#5-reject-a-unifying-dnsresolvingtransport-protocol}
 
 **Decisión.** **No** unificar los transportes del resolutor bajo un único protocolo `DNSResolvingTransport`; mantener la costura basada en clausuras `ResolverOrchestrator.Executors`.
 
@@ -84,7 +84,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 6. Copia de seguridad cifrada de conocimiento cero (sin contraseña, con la excepción de la passkey señalada)
+## 6. Copia de seguridad cifrada de conocimiento cero (sin contraseña, con la excepción de la passkey señalada) {#6-zero-knowledge-encrypted-backup-passwordless-passkey-exception-noted}
 
 **Decisión.** Respaldar una carga de configuración **minimizada** del lado del cliente: AES-256-GCM la sella bajo una clave de carga aleatoria de 32 bytes, que se envuelve en **ranuras de clave** por secreto mediante PBKDF2-HMAC-SHA256 (**210.000** iteraciones en producción). Solo el texto cifrado más los metadatos no secretos se suben a la tabla `user_backups` de Supabase (RLS por usuario). El flujo publicado es **sin contraseña**: ranura de secreto del dispositivo (Keychain local del dispositivo) + ranura de recuperación asistida + ranura opcional de passkey.
 
@@ -96,7 +96,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 7. Connect-On-Demand con falla cerrada
+## 7. Connect-On-Demand con falla cerrada {#7-fail-closed-connect-on-demand}
 
 **Decisión.** Agregar una regla `NEOnDemandRuleConnect` para que un túnel detenido por el sistema operativo se reinicie automáticamente, con **falla cerrada** como valor seguro por defecto: cuando no hay una instantánea de filtro reutilizable, el túnel bloquea todo el tráfico en lugar de dejarlo pasar sin filtrar. La función bajo demanda se **desactiva antes de cualquier detención** para que la VPN siga siendo apagable.
 
@@ -108,7 +108,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 8. Refactorización modular de la VPN y la disciplina de regresión térmica
+## 8. Refactorización modular de la VPN y la disciplina de regresión térmica {#8-modular-vpn-refactor-and-the-heat-regression-discipline}
 
 **Decisión.** Reestructurar la ruta de la VPN (VPNLifecycleController, ProtectionActionOrchestrator, ResolverOrchestrator, FilterArtifactStore, DNSResponseCache, RuleSetCache, FilterSnapshotPreparationService) para un encendido que prioriza la caché, descargas en paralelo acotado y agrupación de fluctuaciones — tratando la batería/latencia como requisitos de producto con objetivos explícitos p50/p95 y perfilado **en el dispositivo** (no en el simulador).
 
@@ -120,7 +120,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 9. Presupuesto de reglas de filtrado en lugar de un tope por número de listas
+## 9. Presupuesto de reglas de filtrado en lugar de un tope por número de listas {#9-filter-rules-budget-instead-of-a-list-count-cap}
 
 **Decisión.** Limitar los niveles por un **presupuesto de reglas de filtrado** — **Free 500K / Plus 2M** reglas de dominio compiladas — no por la cantidad de listas habilitadas. Una **barrera de protección del dispositivo de ~3,26M de reglas** (`maxResidentMegabytes 32.0`, `baselineMegabytes 4.0`, `estimatedBytesPerRule 9.0` → `maxFilterRuleCount = 3,262,236`) se aplica a **todos** y **nunca es un muro de pago**. El blob de dominios compacto se mapea con `mmap` (`.mappedIfSafe`) para que permanezca respaldado por archivo y fuera del `phys_footprint` contabilizado por jetsam; solo las tablas de entradas decodificadas consumen memoria residente.
 
@@ -132,7 +132,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 10. Planes como markdown + sincronización unidireccional con Linear
+## 10. Planes como markdown + sincronización unidireccional con Linear {#10-plans-as-markdown--one-way-linear-sync}
 
 **Decisión.** Los archivos markdown en `plans/<lane>/` son la **fuente de verdad**; la **carpeta del carril es el estado autoritativo** (`implemented`, `inflight`, `under_review`, `backlog`, `dropped`). Un push a `main` sincroniza los planes de forma **unidireccional** con Linear (equipo LAV), refrescando solo título/descripción tras la creación; un tramo de retorno **manual y revisado** separado trae de vuelta el estado/prioridad/carril de Linear al frontmatter del plan.
 
@@ -144,7 +144,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## 11. División del repositorio + apertura del cliente con copyleft
+## 11. División del repositorio + apertura del cliente con copyleft {#11-repo-split--copyleft-open-source-of-the-client}
 
 **Decisión.** Dividir el monorepo en repositorios por componente (`lavasec-ios`, `-android`, `-web`, `-infra`, `-doc`, `-runner`) y **abrir el código del cliente propio bajo AGPL-3.0** en lugar de Apache-2.0, siguiendo el precedente copyleft de Mullvad/ProtonVPN.
 
@@ -156,7 +156,7 @@ Lecturas relacionadas: modelo de distribución del catálogo en [`../legal/gpl-s
 
 ---
 
-## Apéndice — otras reversiones y rechazos registrados
+## Apéndice — otras reversiones y rechazos registrados {#appendix--other-recorded-reversals-and-rejections}
 
 Estos son más pequeños pero fueron decisiones genuinas con un giro registrado; se enumeran por completitud.
 

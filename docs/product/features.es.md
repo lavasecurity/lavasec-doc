@@ -5,7 +5,7 @@ source_repos: [lavasec-ios]
 grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
-# Catálogo de funciones
+# Catálogo de funciones {#feature-catalog}
 
 > Público: PM / ingeniería. Este catálogo cubre únicamente el conjunto de funciones **actual e implementado**. Cualquier cosa diseñada pero no construida vive en la hoja de ruta privada, no aquí.
 
@@ -15,7 +15,7 @@ La promesa de privacidad detrás de cada función a continuación:
 
 > Todo el filtrado de DNS ocurre en el dispositivo; Lava nunca enruta tu navegación a través de sus servidores y nunca recibe el flujo de dominios que visitas — el backend solo guarda metadatos del catálogo, una copia de seguridad cifrada y opaca por usuario, y diagnósticos anonimizados que tú decides enviar.
 
-## Cómo leer este catálogo
+## Cómo leer este catálogo {#how-to-read-this-catalog}
 
 - **Free** — disponible para todos, sin cuenta, sin compra.
 - **Plus** — desbloqueado por Lava Security Plus, el único nivel de pago opcional. Plus desbloquea **solo personalización**; nunca limita la seguridad básica y nunca permite que un usuario de pago eluda la barrera de protección frente a amenazas.
@@ -25,7 +25,7 @@ Los topes de nivel que sirven como fuente de verdad viven en `lavasec-ios: Sourc
 
 ---
 
-## 1. Protección y VPN
+## 1. Protección y VPN {#1-protection-vpn}
 
 El producto principal: un túnel de paquetes local solo para DNS y el modelo de estados calmado a su alrededor.
 
@@ -47,7 +47,7 @@ El producto principal: un túnel de paquetes local solo para DNS y el modelo de 
 
 ---
 
-## 2. Listas de bloqueo y filtrado
+## 2. Listas de bloqueo y filtrado {#2-blocklists-filtering}
 
 Qué se bloquea, cómo se eligen las listas y el límite entre niveles.
 
@@ -71,7 +71,7 @@ Qué se bloquea, cómo se eligen las listas y el límite entre niveles.
 
 ---
 
-## 3. DNS cifrado
+## 3. DNS cifrado {#3-encrypted-dns}
 
 Transportes del resolver y enrutamiento de las consultas no bloqueadas.
 
@@ -88,7 +88,7 @@ Transportes del resolver y enrutamiento de las consultas no bloqueadas.
 
 ---
 
-## 4. Cuentas y copia de seguridad de conocimiento cero
+## 4. Cuentas y copia de seguridad de conocimiento cero {#4-accounts-zero-knowledge-backup}
 
 Inicio de sesión opcional de cuenta y copia de seguridad cifrada de la configuración. Nada de esto es necesario para usar la protección.
 
@@ -104,7 +104,7 @@ Inicio de sesión opcional de cuenta y copia de seguridad cifrada de la configur
 
 ---
 
-## 5. Widget y Live Activity
+## 5. Widget y Live Activity {#5-widget-live-activity}
 
 Presencia en la pantalla de bloqueo y en la Dynamic Island.
 
@@ -118,7 +118,7 @@ Presencia en la pantalla de bloqueo y en la Dynamic Island.
 
 ---
 
-## 6. Incorporación
+## 6. Incorporación {#6-onboarding}
 
 Flujo de primer uso que instala la configuración local de VPN y establece valores por defecto sensatos.
 
@@ -131,7 +131,7 @@ Flujo de primer uso que instala la configuración local de VPN y establece valor
 
 ---
 
-## 7. Ajustes
+## 7. Ajustes {#7-settings}
 
 Superficies de configuración, seguridad, diagnósticos y comentarios.
 
@@ -152,7 +152,7 @@ Superficies de configuración, seguridad, diagnósticos y comentarios.
 
 ---
 
-## Arquitectura de la app (para orientarse)
+## Arquitectura de la app (para orientarse) {#app-architecture-for-orientation}
 
 Tres paquetes comparten un App Group `group.com.lavasec`, junto con una carpeta de fuentes `lavasec-ios: Shared/` compilada en ellos:
 
@@ -165,7 +165,7 @@ El control App ↔ extensión usa **mensajes de proveedor** de `NETunnelProvider
 
 ---
 
-## Documentos relacionados
+## Documentos relacionados {#related-docs}
 
 - Hoja de ruta — las funciones planificadas y descartadas (posicionamiento de precios/StoreKit de Plus, port a Android, protección a nivel de URL, preparación de Associated-Domain para passkey, minijuego de huevo de pascua, lanzamiento de código abierto bajo GPL-3.0, etc.) viven en la hoja de ruta privada, no en este catálogo público.
 - [Decisión de cumplimiento de GPL solo por URL de origen](../legal/gpl-source-url-only-compliance-decision.md)

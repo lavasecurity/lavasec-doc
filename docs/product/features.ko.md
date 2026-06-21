@@ -5,7 +5,7 @@ source_repos: [lavasec-ios]
 grounded_at: {lavasec-ios: "e1e4fe9"}
 ---
 
-# 기능 카탈로그
+# 기능 카탈로그 {#feature-catalog}
 
 > 대상 독자: PM / 엔지니어링. 이 카탈로그는 **현재 구현된** 기능만 다뤄요. 설계만 되고 아직 만들어지지 않은 것은 여기가 아니라 비공개 로드맵에 있어요.
 
@@ -15,7 +15,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 > 모든 DNS 필터링은 기기에서 이뤄져요. Lava는 여러분의 브라우징을 자사 서버로 절대 우회시키지 않으며, 여러분이 방문하는 도메인의 흐름도 절대 받지 않아요. 백엔드는 카탈로그 메타데이터, 사용자별 불투명 암호화 백업, 그리고 여러분이 보내기로 선택한 익명화된 진단 정보만 보관해요.
 
-## 이 카탈로그를 읽는 법
+## 이 카탈로그를 읽는 법 {#how-to-read-this-catalog}
 
 - **Free** — 모든 사람이 사용할 수 있어요. 계정도, 구매도 필요 없어요.
 - **Plus** — 단 하나뿐인 선택적 유료 등급인 Lava Security Plus로 잠금 해제돼요. Plus는 **맞춤 설정만** 해제해 줘요. 기본 안전 기능을 절대 막지 않으며, 유료 사용자가 위협 가드레일을 우회하게 두지도 않아요.
@@ -25,7 +25,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 1. 보호 및 VPN
+## 1. 보호 및 VPN {#1-protection-vpn}
 
 핵심 제품: 로컬 DNS 전용 패킷 터널과 그것을 둘러싼 차분한 상태 모델이에요.
 
@@ -47,7 +47,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 2. 차단 목록 및 필터링
+## 2. 차단 목록 및 필터링 {#2-blocklists-filtering}
 
 무엇이 차단되는지, 목록이 어떻게 선택되는지, 그리고 등급 경계예요.
 
@@ -71,7 +71,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 3. 암호화된 DNS
+## 3. 암호화된 DNS {#3-encrypted-dns}
 
 차단되지 않은 쿼리에 대한 리졸버 전송 방식과 라우팅이에요.
 
@@ -88,7 +88,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 4. 계정 및 제로 지식 백업
+## 4. 계정 및 제로 지식 백업 {#4-accounts-zero-knowledge-backup}
 
 선택적 계정 로그인과 암호화된 설정 백업이에요. 보호를 사용하는 데 이 중 무엇도 필요하지 않아요.
 
@@ -104,7 +104,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 5. 위젯 및 Live Activity
+## 5. 위젯 및 Live Activity {#5-widget-live-activity}
 
 잠금 화면과 Dynamic Island 존재감이에요.
 
@@ -118,7 +118,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 6. 온보딩
+## 6. 온보딩 {#6-onboarding}
 
 로컬 VPN 구성을 설치하고 합리적인 기본값을 설정하는 첫 실행 흐름이에요.
 
@@ -131,7 +131,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 7. 설정
+## 7. 설정 {#7-settings}
 
 구성, 보안, 진단, 피드백 표면이에요.
 
@@ -152,7 +152,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 앱 아키텍처(방향 잡기용)
+## 앱 아키텍처(방향 잡기용) {#app-architecture-for-orientation}
 
 세 개의 번들이 하나의 App Group `group.com.lavasec`을 공유하며, 이들에 컴파일되는 `lavasec-ios: Shared/` 소스 폴더가 함께 있어요.
 
@@ -165,7 +165,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기 내부에서 
 
 ---
 
-## 관련 문서
+## 관련 문서 {#related-docs}
 
 - 로드맵 — 계획되었거나 폐기된 기능(Plus 가격/StoreKit 포지셔닝, Android 포팅, URL 수준 보호, 패스키 Associated-Domain 준비, 이스터에그 미니 게임, GPL-3.0 오픈소스 공개 등)은 이 공개 카탈로그가 아니라 비공개 로드맵에 있어요.
 - [GPL 소스 URL 전용 준수 결정](../legal/gpl-source-url-only-compliance-decision.md)

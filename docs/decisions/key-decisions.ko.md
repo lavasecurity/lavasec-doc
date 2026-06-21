@@ -24,7 +24,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 1. `NEPacketTunnelProvider`를 통한 온디바이스 DNS 필터링
+## 1. `NEPacketTunnelProvider`를 통한 온디바이스 DNS 필터링 {#1-on-device-dns-filtering-via-nepackettunnelprovider}
 
 **결정.** `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager`, 또는 Safari 콘텐츠 차단기가 아니라, `NEPacketTunnelProvider` 패킷 터널(`LavaSecTunnel`, `com.lavasec.app.tunnel`)을 통해 DNS를 **기기에서 로컬로** 필터링합니다.
 
@@ -36,7 +36,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 2. 소스 URL만 제공하는 차단 목록 배포
+## 2. 소스 URL만 제공하는 차단 목록 배포 {#2-source-url-only-blocklist-distribution}
 
 **결정.** Lava는 업스트림 차단 목록의 **URL과 허용된 해시**만 게시합니다; 기기는 각 `source_url`에서 목록의 **바이트**를 직접 가져온 뒤, 로컬에서 파싱, 정규화, 중복 제거, 필터링합니다. Lava는 제3자 차단 목록 바이트를 **결코** 저장, 미러링, 변환, 제공하지 않습니다. Worker는 카탈로그 **메타데이터** JSON만 R2에 기록합니다(`raw_r2_key`/`normalized_r2_key`는 null).
 
@@ -48,7 +48,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 3. 암호화된 리졸버 전송(DoH / DoH3 / DoT / DoQ)
+## 3. 암호화된 리졸버 전송(DoH / DoH3 / DoT / DoQ) {#3-encrypted-resolver-transports-doh--doh3--dot--doq}
 
 **결정.** 평문 DNS 및 기기 DNS 폴백과 함께 네 가지 암호화된 업스트림 전송을 출시하며, 이를 LavaSecCore로 추출합니다: **DoH**(URLSession), **DoH3**(HTTP/3를 우선하는 DoH), **DoT**(풀링된 `NWConnection`, 엔드포인트당 최대 4개, 유휴 노후화 갱신 및 신규 연결 1회 재시도 포함), **DoQ**(DNS-over-QUIC). 라우팅, 평문 DNS 강등, 백오프 게이트가 있는 엔드포인트별 페일오버, 기기 DNS 폴백은 `ResolverOrchestrator`에 있습니다.
 
@@ -60,7 +60,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 4. DoQ 연결 재사용 — 만들고, 기기에서 테스트하고, 되돌림
+## 4. DoQ 연결 재사용 — 만들고, 기기에서 테스트하고, 되돌림 {#4-doq-connection-reuse--built-device-tested-reverted}
 
 **결정.** DoQ용 QUIC 연결을 **재사용하지 않습니다**. `DoQTransport`는 **쿼리마다 새 QUIC 연결**을 엽니다; 4레인 풀은 핸드셰이크 재사용이 아니라 동시성을 제공합니다.
 
@@ -72,7 +72,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 5. 통합 `DNSResolvingTransport` 프로토콜 거부
+## 5. 통합 `DNSResolvingTransport` 프로토콜 거부 {#5-reject-a-unifying-dnsresolvingtransport-protocol}
 
 **결정.** 리졸버 전송들을 단일 `DNSResolvingTransport` 프로토콜로 **통합하지 않습니다**; 클로저 기반의 `ResolverOrchestrator.Executors` 이음새를 유지합니다.
 
@@ -84,7 +84,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 6. 제로 지식 암호화 백업(비밀번호 없음, 패스키 예외 명시)
+## 6. 제로 지식 암호화 백업(비밀번호 없음, 패스키 예외 명시) {#6-zero-knowledge-encrypted-backup-passwordless-passkey-exception-noted}
 
 **결정.** **최소화된** 설정 페이로드를 클라이언트 측에서 백업합니다: AES-256-GCM이 임의의 32바이트 페이로드 키로 봉인하고, 그 키는 PBKDF2-HMAC-SHA256(프로덕션에서 **210,000**회 반복)을 통해 비밀별 **키 슬롯**으로 감쌉니다. 암호문과 비비밀 메타데이터만 Supabase `user_backups` 테이블(사용자별 RLS)에 업로드됩니다. 출시된 플로우는 **비밀번호가 없습니다**: 기기 비밀 슬롯(기기 로컬 Keychain) + 보조 복구 슬롯 + 선택적 패스키 슬롯.
 
@@ -96,7 +96,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 7. 닫힘 실패(Fail-closed) Connect-On-Demand
+## 7. 닫힘 실패(Fail-closed) Connect-On-Demand {#7-fail-closed-connect-on-demand}
 
 **결정.** OS가 중단한 터널이 자동 재시작되도록 `NEOnDemandRuleConnect` 규칙을 추가하되, 안전한 기본값으로 **닫힘 실패**를 둡니다: 재사용 가능한 필터 스냅샷이 없을 때 터널은 트래픽을 필터링 없이 통과시키는 대신 모두 차단합니다. 온디맨드는 **모든 중단에 앞서 비활성화**되므로 VPN은 계속 끌 수 있는 상태로 유지됩니다.
 
@@ -108,7 +108,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 8. 모듈식 VPN 리팩터와 발열 회귀 규율
+## 8. 모듈식 VPN 리팩터와 발열 회귀 규율 {#8-modular-vpn-refactor-and-the-heat-regression-discipline}
 
 **결정.** VPN 경로(VPNLifecycleController, ProtectionActionOrchestrator, ResolverOrchestrator, FilterArtifactStore, DNSResponseCache, RuleSetCache, FilterSnapshotPreparationService)를 캐시 우선 켜기, 경계 있는 병렬 가져오기, 플랩 합치기를 위해 재구조화하며 — 배터리/지연을 명시적 p50/p95 목표가 있는 제품 요구사항으로 다루고 (Simulator가 아닌) **기기에서** 프로파일링합니다.
 
@@ -120,7 +120,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 9. 목록 개수 상한 대신 필터 규칙 예산
+## 9. 목록 개수 상한 대신 필터 규칙 예산 {#9-filter-rules-budget-instead-of-a-list-count-cap}
 
 **결정.** 등급을 활성화된 목록 개수가 아니라 **필터 규칙 예산** — **무료 500K / Plus 2M** 컴파일된 도메인 규칙 — 으로 제한합니다. 단단한 **~3.26M 규칙 기기 가드레일**(`maxResidentMegabytes 32.0`, `baselineMegabytes 4.0`, `estimatedBytesPerRule 9.0` → `maxFilterRuleCount = 3,262,236`)이 **모두에게** 적용되며 **결코 유료 장벽이 아닙니다**. 컴팩트 도메인 블롭은 `mmap`(`.mappedIfSafe`)되므로 파일 기반으로 유지되고 jetsam이 계산하는 `phys_footprint` 밖에 있습니다; 디코드된 엔트리 테이블만 상주 메모리를 차지합니다.
 
@@ -132,7 +132,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 10. 마크다운 계획 + 단방향 Linear 동기화
+## 10. 마크다운 계획 + 단방향 Linear 동기화 {#10-plans-as-markdown--one-way-linear-sync}
 
 **결정.** `plans/<lane>/`의 마크다운 파일이 **진실의 원천**입니다; **레인 폴더가 권위 있는 상태**입니다(`implemented`, `inflight`, `under_review`, `backlog`, `dropped`). `main`으로의 푸시는 계획을 Linear(팀 LAV)로 **단방향** 동기화하며, 생성 후에는 제목/설명만 갱신합니다; 별도의 **수동, 검토된** 역방향은 Linear의 상태/우선순위/레인을 계획 프런트매터로 다시 가져옵니다.
 
@@ -144,7 +144,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 11. 저장소 분할 + 클라이언트의 카피레프트 오픈소스화
+## 11. 저장소 분할 + 클라이언트의 카피레프트 오픈소스화 {#11-repo-split--copyleft-open-source-of-the-client}
 
 **결정.** 모노레포를 컴포넌트별 저장소(`lavasec-ios`, `-android`, `-web`, `-infra`, `-doc`, `-runner`)로 분할하고, Apache-2.0 대신 Mullvad/ProtonVPN 카피레프트 선례에 따라 **퍼스트파티 클라이언트를 AGPL-3.0로 오픈소스화**합니다.
 
@@ -156,7 +156,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ---
 
-## 부록 — 그 밖에 기록된 되돌림과 거부
+## 부록 — 그 밖에 기록된 되돌림과 거부 {#appendix--other-recorded-reversals-and-rejections}
 
 이들은 더 작지만 기록된 전환이 있는 진짜 결정이었습니다; 완전성을 위해 나열합니다.
 

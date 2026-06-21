@@ -18,7 +18,7 @@ DNS를 기기에서 직접 필터링하는 **프라이버시 우선 iOS 앱**이
 결정들을 담은 공개 매뉴얼이에요. 오픈소스
 [iOS 클라이언트](https://github.com/lavasecurity/lavasec-ios)를 기준으로 해요.
 
-## 여기서 시작하세요
+## 여기서 시작하세요 {#start-here}
 
 <div class="grid cards" markdown>
 
@@ -53,7 +53,7 @@ DNS를 기기에서 직접 필터링하는 **프라이버시 우선 iOS 앱**이
 
 </div>
 
-## 이 문서를 읽는 법
+## 이 문서를 읽는 법 {#how-to-read-this}
 
 여기 적힌 모든 내용은 소스 코드에 근거를 두고 있어요. 곳곳에 상태를 표시해 두었어요.
 

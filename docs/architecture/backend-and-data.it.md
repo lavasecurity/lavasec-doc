@@ -11,7 +11,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 >
 > **Riferimento autorevole:** quando un piano e il codice non concordano, **vince il codice** — le divergenze sono segnalate direttamente nel testo. Le etichette di stato usano la legenda del set di documenti: **Implementato** (rilasciato e confermato nel codice), **In corso** (parzialmente realizzato), **Pianificato** (progettato, non realizzato), **Abbandonato** (rifiutato o annullato).
 
-## 1. La forma del backend
+## 1. La forma del backend {#1-the-shape-of-the-backend}
 
 Il backend è volutamente piccolo e rispettoso della privacy. È un margine per metadati e account, non un servizio di filtraggio. **Tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i suoi server e non riceve mai il flusso dei domini che visiti — il backend conserva solo i metadati del catalogo, un backup cifrato opaco per ciascun utente e diagnostiche anonimizzate che scegli di inviare.** Non ci sono tabelle per le query DNS di routine o per la telemetria per dominio, e l'accesso all'account è facoltativo e non è mai richiesto per la protezione.
 
@@ -29,11 +29,11 @@ Il Worker raggiunge Supabase tramite PostgREST (`/rest/v1`) e Auth (`/auth/v1`) 
 
 Stato: **Implementato**.
 
-## 2. Worker lavasec-api
+## 2. Worker lavasec-api {#2-lavasec-api-worker}
 
 `wrangler.toml`: `name = "lavasec-api"`, `main = "src/index.ts"`, un binding R2 → il bucket di produzione (un bucket di anteprima separato per lo staging), un binding D1 → il database del feedback di aiuto, e **due trigger cron**: uno che scatta ogni 6 ore (sincronizzazione blocklist + pubblicazione catalogo) e uno che scatta ogni 2 minuti (promozione del triage delle segnalazioni di bug). È servito su `api.lavasecurity.app`.
 
-### 2.1 Superficie dell'API
+### 2.1 Superficie dell'API {#21-api-surface}
 
 Il routing è un dispatcher `route()` piatto. Tutto è **Implementato** salvo dove indicato.
 
@@ -70,7 +70,7 @@ Il routing è un dispatcher `route()` piatto. Tutto è **Implementato** salvo do
 
 **Host di sonda QA** — le richieste ai quattro host `*.qa-probe.lavasecurity.app` (`allowed`/`blocked`/`exception`/`guardrail`) vengono intercettate prima del routing e restituiscono un PNG 1×1 `no-store` tramite `getQAProbePixel`. Questi non vengono scritti su Supabase o R2.
 
-### 2.2 Binding e cron
+### 2.2 Binding e cron {#22-bindings--cron}
 
 - **Binding R2** — `catalog/latest.json`, `catalog/{version}.json` e il cursore round-robin `catalog/scheduled-sync-cursor.json`. **Non memorizza mai byte di blocklist di terze parti.** (Gli oggetti allegati legacy delle segnalazioni di bug vengono solo *eliminati* — con il massimo impegno durante l'eliminazione dell'account — mai scritti.)
 - **Binding D1** — righe anonime `article_id` / `locale` / `vote` / `path` solo in aggiunta; tenute separate da Supabase per scelta progettuale.
@@ -78,11 +78,11 @@ Il routing è un dispatcher `route()` piatto. Tutto è **Implementato** salvo do
   - **Ogni 6 ore** — sincronizza **una sola** sorgente per esecuzione, a rotazione round-robin tramite il cursore R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), poi ripubblica il catalogo. Distribuire il carico evita di tempestare tutte le sorgenti a monte contemporaneamente.
   - **Ogni 2 minuti** — esegue un percorso interno di triage delle segnalazioni di bug che promuove le nuove segnalazioni anonime in una coda interna di issue-tracker, facendo avanzare il proprio cursore watermark. Si tratta di strumentazione operativa interna; gli identificatori dell'issue-tracker/delle notifiche sono configurazione, non parte dell'API pubblica.
 
-## 3. Catalogo e applicazione della regola "solo URL della sorgente"
+## 3. Catalogo e applicazione della regola "solo URL della sorgente" {#3-catalog--source-url-only-enforcement}
 
 Questa è la parte del backend più specifica della postura di conformità di Lava, perciò ottiene un controllo lato server.
 
-### 3.1 Il modello "solo URL della sorgente"
+### 3.1 Il modello "solo URL della sorgente" {#31-the-source-url-only-model}
 
 > **Solo URL della sorgente:** modello di distribuzione conforme a GPL/proprietà intellettuale: Lava pubblica solo l'URL a monte + gli hash accettati; il dispositivo scarica/analizza le liste da sé. Lava **non** memorizza, replica, trasforma o serve mai byte di blocklist di terze parti.
 
@@ -90,7 +90,7 @@ Ogni riga `blocklist_sources` porta `redistribution_mode`, il cui unico valore c
 
 > **Abbandonato:** un progetto precedente replicava in R2 i file di lista GPL con byte preservati (il piano di conformità GPL-raw-R2). È stato **sostituito il 2026-05-25** dalla regola "solo URL della sorgente". Lava non memorizza né serve più byte di blocklist di terze parti. Il nome della tabella `mirror_events` è un residuo legacy di quel progetto abbandonato — ora è semplicemente il log di audit di sincronizzazione/pubblicazione.
 
-### 3.2 Come il Worker la applica in scrittura
+### 3.2 Come il Worker la applica in scrittura {#32-how-the-worker-enforces-it-on-writes}
 
 Il percorso di sincronizzazione (`syncOneBlocklist`, admin e cron) scarica ogni `source_url` a monte, normalizza/valida **localmente nel Worker solo per calcolare i metadati** (`entry_count`, `source_hash`, `normalized_hash`, `byte_size`), scrive una riga `blocklist_versions` e ripubblica. Le chiavi di archiviazione dei byte sono impostate fisse a null:
 
@@ -101,28 +101,28 @@ normalized_r2_key: null,
 
 Una migrazione (`20260525000000_add_blocklist_distribution_mode.sql`) ha reso queste colonne nullable e ha impostato i valori esistenti a null, così la posizione "nessun mirror" è applicata anche a livello di schema. Il catalogo pubblicato viene scritto **sia** in `catalog/{version}.json` sia in `catalog/latest.json` su R2 (`publishCatalog`).
 
-### 3.3 Guardrail di normalizzazione (solo metadati)
+### 3.3 Guardrail di normalizzazione (solo metadati) {#33-normalization-guardrails-metadata-only}
 
 La normalizzazione lato Worker (`normalizeBlocklist`) filtra i domini protetti, applica i limiti e deduplica+ordina. Serve esclusivamente a calcolare metadati affidabili; il **dispositivo riconvalida gli hash accettati** quando scarica la lista reale, quindi di per sé questo non è un confine di sicurezza. Costanti chiave:
 
 - `PROTECTED_SUFFIXES` — rimuove qualsiasi regola che corrisponda ai domini di Apple/iCloud/`mzstatic`/Lava Security/Supabase/Cloudflare/Google/GitHub, così una sorgente a monte compromessa non può bloccare l'infrastruttura di Lava né i provider di accesso.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.
 
-### 3.4 Cosa è pubblicabile
+### 3.4 Cosa è pubblicabile {#34-what-is-publishable}
 
 `isPublicBlocklistSource` pubblica una sorgente solo quando `status` è `sync` o `nosync`, `redistribution_mode === "source_url_only"`, **e** `isAllowedLaunchGPLSource` passa. Il gate GPL di lancio (`isAllowedLaunchGPLSource`) consente liberamente le sorgenti non GPL ma limita le sorgenti GPL-3.0 ai prefissi di `list_id` `hagezi-` o `oisd-`.
 
-### 3.5 Sorgenti precaricate e abilitate per impostazione predefinita
+### 3.5 Sorgenti precaricate e abilitate per impostazione predefinita {#35-seeded-sources--default-enabled}
 
 Le sorgenti curate vengono precaricate come metadati "solo URL della sorgente" tramite migrazioni (HaGeZi, OISD, Block List Project, Phishing.Database, AdGuard). La migrazione a basso rischio (`20260526000000_low_risk_blocklist_sources.sql`) inizialmente precaricava `blocklistproject-basic` (Unlicense) con `default_enabled = true`, forzava **tutte le sorgenti GPL (HaGeZi/OISD) a `default_enabled = false`** in attesa del parere legale, e parcheggiava AdGuard DNS Filter in `license_review`. **Quel precaricamento iniziale con Basic come predefinita è stato poi sostituito** — la migrazione di allineamento qui sotto porta Basic a `false` e Phishing + Scam a `true` (l'attuale predefinita servita). Stato: **Implementato**.
 
 > **I valori predefiniti del catalogo coincidono con il client.** L'insieme `default_enabled` del catalogo è ora **{Block List Project Phishing, Block List Project Scam}**, in linea con la predefinita consigliata di iOS (`AppConfiguration.lavaRecommendedDefaults`, in `lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift`). Una migrazione imposta `blocklistproject-basic default_enabled = false` e `blocklistproject-phishing` / `blocklistproject-scam default_enabled = true`, così che i metadati serviti siano veritieri. (la decisione di allineamento è ora rilasciata.) Nota che `default_enabled` è informativo: il vero limite di livello è il **budget delle regole di filtro (Free 500K / Plus 2M)**, non il numero di liste. La motivazione legale per pubblicare gli URL (non i byte) è in [Decisione di conformità GPL "solo URL della sorgente"](../legal/gpl-source-url-only-compliance-decision.md).
 
-## 4. Supabase Postgres
+## 4. Supabase Postgres {#4-supabase-postgres}
 
 Un progetto Supabase Postgres. RLS è abilitato su **ogni** tabella pubblica.
 
-### 4.1 Schema di base
+### 4.1 Schema di base {#41-core-schema}
 
 `20260516034033_backend_core.sql` crea le fondamenta (RLS abilitato su tutte le 7 tabelle pubbliche):
 
@@ -133,7 +133,7 @@ Un progetto Supabase Postgres. RLS è abilitato su **ogni** tabella pubblica.
 
 Migrazioni successive aggiungono **`user_backups`** (§4.3) e **`qa_developers`** (`20260608000000_qa_developers_allowlist.sql`).
 
-### 4.2 Modello RLS
+### 4.2 Modello RLS {#42-rls-model}
 
 | Tabella/e | Policy | Effetto |
 |---|---|---|
@@ -145,7 +145,7 @@ Migrazioni successive aggiungono **`user_backups`** (§4.3) e **`qa_developers`*
 
 La distinzione conta: le segnalazioni di bug anonime devono essere *inseribili* dal Worker senza essere *leggibili* dai client, e la allowlist QA deve poter essere letta solo dal ruolo di servizio.
 
-### 4.3 Auth e la busta di backup cifrata
+### 4.3 Auth e la busta di backup cifrata {#43-auth--the-encrypted-backup-envelope}
 
 L'**Auth** è facoltativa. L'accesso è **solo Apple + Google** (email/password è **Abbandonato**). Entrambi usano il grant nativo `id_token` scambiato su Supabase Auth `auth/v1/token?grant_type=id_token` con un nonce sottoposto a hash; l'app memorizza solo la sessione risultante in locale sul dispositivo nel Keychain. Il flusso lato client risiede nell'app iOS (`lavasec-ios: LavaSecApp/AccountAuthService.swift`, `lavasec-ios: Sources/LavaSecCore/SupabaseIDTokenAuth.swift`) — vedi [Account e Backup](./accounts-and-backup.md) per il modello completo di account/backup.
 
@@ -155,17 +155,17 @@ Il fatto cruciale per il backend: **il client iOS legge/scrive `user_backups` di
 
 `user_backups` memorizza solo testo cifrato opaco + metadati di busta non segreti (parametri/salt KDF, nonce, etichette degli slot di chiave, suggerimenti sullo schema del client). Limiti di dimensione (`20260605000000_tighten_backup_envelope_constraints.sql`): testo cifrato ≤ 262144 byte (256 KiB) / ≤ 349528 caratteri, metadati ≤ 32768 byte (32 KiB). Il database non memorizza mai impostazioni in chiaro, password, frasi o chiavi.
 
-### 4.4 Eliminazione dell'account
+### 4.4 Eliminazione dell'account {#44-account-deletion}
 
 `POST /v1/account/delete` valida l'access token dell'utente, poi elimina le sue righe `bug_reports` (e qualsiasi oggetto allegato R2 legacy corrispondente), `user_backups`, `entitlements`, `user_settings` e `profiles`, e infine elimina l'utente di Supabase Auth tramite l'endpoint `/admin/users` del ruolo di servizio. Restituisce solo uno stato di eliminazione + i provider collegati. Stato: **Implementato** (il frontmatter del piano riporta `status: Done` e il file è in `plans/implemented/`; un'annotazione **nel corpo** ormai obsoleta dice ancora "Backlog", ma la cartella della corsia + la presenza del codice lo rendono rilasciato).
 
-### 4.5 Mirroring dei diritti dell'App Store
+### 4.5 Mirroring dei diritti dell'App Store {#45-app-store-entitlement-mirroring}
 
 `POST /v1/account/entitlements/app-store-sync` esegue l'upsert di una riga `entitlements` (piano `lava_security_plus`) da un JWS di transazione StoreKit verificato dal client, in conflitto su `user_id`. Il `verification_status` memorizzato è letteralmente `"client_verified_storekit"` — il server **non** riverifica il JWS. ID prodotto consentiti: `lava_security_plus_{monthly,yearly,lifetime}`.
 
 > Il mirroring è **Implementato**; la **verifica lato server del JWS è Pianificata** (non ancora realizzata). Il JWS firmato viene memorizzato per una verifica successiva. Nota il modello di livelli altrove: il diritto dell'app è locale (`isPaid`) **senza ancora alcuna sincronizzazione backend** come fonte di verità — questa riga è un mirror, non il controllo di accesso.
 
-## 5. Recupero assistito da passkey (zero-knowledge)
+## 5. Recupero assistito da passkey (zero-knowledge) {#5-passkey-assisted-recovery-zero-knowledge}
 
 Il recupero del backup assistito da passkey è **zero-knowledge** e interamente lato client. Il materiale della chiave di recupero è derivato sul dispositivo dall'output **WebAuthn PRF / hmac-secret** della passkey; il server non memorizza **alcun** segreto di recupero, non registra **alcuna** passkey e non emette **alcuna** sfida WebAuthn. Non esiste alcun percorso di escrow controllato dal server.
 
@@ -173,11 +173,11 @@ Le tabelle di escrow che un progetto precedente utilizzava (`backup_passkey_reco
 
 Il lato client risiede nell'app iOS: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` guida la creazione/asserzione della passkey con supporto PRF, e `lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` deriva lo slot dall'output hmac-secret. L'output PRF viene letto solo durante l'asserzione e non lascia mai il dispositivo. Un provider di passkey non PRF non può sostenere uno slot zero-knowledge, perciò la configurazione fallisce subito e l'utente ricade su una frase di recupero. Stato: **Implementato**.
 
-## 6. Worker lavasec-email
+## 6. Worker lavasec-email {#6-lavasec-email-worker}
 
 Solo ricezione e inoltro. Inoltra `support@` / `hello@` / `jimmy@` / `legal@lavasecurity.app` a una casella di posta dell'operatore verificata, rifiuta i destinatari sconosciuti e la posta oltre 10 MiB, e **non memorizza i corpi delle email**. Le risposte automatiche di supporto sono codificate ma bloccate dietro l'invio email in uscita a pagamento di Cloudflare (rinviato). Le costanti di routing risiedono in `email-service.ts:9` (`ROUTED_RECIPIENTS`); l'handler in entrata è `handleInboundEmail`. Stato: **Implementato** (percorso di risposta automatica **Pianificato**/rinviato).
 
-## 7. Configurazione e deploy
+## 7. Configurazione e deploy {#7-config--deploy}
 
 - **La configurazione è `wrangler.toml`, che è in gitignore**; `wrangler.toml.example` è il modello incluso nel repository. Tratta il `wrangler.toml` locale come canonico per i valori specifici dell'ambiente.
 - **Var** (non segrete, in `[vars]`): l'URL di Supabase, l'origine API pubblica (`https://api.lavasecurity.app`), il TTL della cache del catalogo (predefinito 300s), un limite di dimensione delle segnalazioni di bug, un interruttore di audit per l'eliminazione account e un flag di accelerazione del runtime di Workers. Il triage interno delle segnalazioni di bug aggiunge una chiave della coda di triage interna e un'origine di dashboard usata nella composizione dei link di triage.
@@ -188,7 +188,7 @@ Solo ricezione e inoltro. Inoltra `support@` / `hello@` / `jimmy@` / `legal@lava
 
 > `CBOR_NATIVE_ACCELERATION_DISABLED = "true"` è impostato nelle var ma non è referenziato dal codice del Worker; è un flag di accelerazione del runtime di Workers piuttosto che un'impostazione dell'applicazione.
 
-## 8. Invarianti di privacy (cosa c'è e cosa non c'è qui)
+## 8. Invarianti di privacy (cosa c'è e cosa non c'è qui) {#8-privacy-invariants-what-is-and-isnt-here}
 
 Una lista di controllo rapida per chiunque estenda il backend — nessuna di queste può essere infranta in sordina:
 
@@ -198,7 +198,7 @@ Una lista di controllo rapida per chiunque estenda il backend — nessuna di que
 4. **Isolamento del ruolo di servizio** per `bug_reports`, `mirror_events`, `qa_developers` (§4.2).
 5. **Tutti i percorsi di backup sono zero-knowledge** — incluso il recupero assistito da passkey, il cui materiale di chiave è derivato lato client dall'output WebAuthn PRF/hmac-secret. Il server non memorizza alcun segreto di recupero e non esegue alcun WebAuthn (§5).
 
-## Vedi anche
+## Vedi anche {#see-also}
 
 - [Panoramica del sistema](./system-overview.md) — l'intero sistema in una pagina, inclusi i confini di fiducia.
 - [Client iOS](./ios-client.md) — il lato dispositivo che consuma questo backend.

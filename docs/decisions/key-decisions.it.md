@@ -24,7 +24,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 1. Filtraggio DNS sul dispositivo tramite `NEPacketTunnelProvider`
+## 1. Filtraggio DNS sul dispositivo tramite `NEPacketTunnelProvider` {#1-on-device-dns-filtering-via-nepackettunnelprovider}
 
 **Decisione.** Filtrare il DNS **localmente sul dispositivo** tramite un tunnel a pacchetti `NEPacketTunnelProvider` (`LavaSecTunnel`, `com.lavasec.app.tunnel`), anziché `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager` o un content blocker di Safari.
 
@@ -36,7 +36,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 2. Distribuzione della blocklist solo tramite source-url
+## 2. Distribuzione della blocklist solo tramite source-url {#2-source-url-only-blocklist-distribution}
 
 **Decisione.** Lava pubblica soltanto l'**URL** della blocklist upstream **più gli hash accettati**; il dispositivo scarica i **byte** della lista direttamente da ciascun `source_url`, poi li analizza, normalizza, deduplica e filtra localmente. Lava **non** archivia, replica, trasforma o serve **mai** i byte delle blocklist di terze parti. Il Worker scrive su R2 soltanto i **metadati** del catalogo in JSON (`raw_r2_key`/`normalized_r2_key` sono null).
 
@@ -48,7 +48,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 3. Trasporti resolver cifrati (DoH / DoH3 / DoT / DoQ)
+## 3. Trasporti resolver cifrati (DoH / DoH3 / DoT / DoQ) {#3-encrypted-resolver-transports-doh--doh3--dot--doq}
 
 **Decisione.** Rilasciare quattro trasporti upstream cifrati accanto al DNS in chiaro e a un fallback sul DNS del dispositivo, estratti in LavaSecCore: **DoH** (URLSession), **DoH3** (DoH che preferisce HTTP/3), **DoT** (`NWConnection` in pool, fino a 4 per endpoint, con aggiornamento per inattività e un nuovo tentativo su connessione fresca) e **DoQ** (DNS-over-QUIC). Routing, degradazione al DNS in chiaro, failover per endpoint con un gate di backoff e fallback sul DNS del dispositivo vivono in `ResolverOrchestrator`.
 
@@ -60,7 +60,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 4. Riuso delle connessioni DoQ — costruito, testato su dispositivo, annullato
+## 4. Riuso delle connessioni DoQ — costruito, testato su dispositivo, annullato {#4-doq-connection-reuse--built-device-tested-reverted}
 
 **Decisione.** **Non** riusare le connessioni QUIC per DoQ. `DoQTransport` apre una **nuova connessione QUIC per ogni query**; il pool a 4 corsie fornisce concorrenza, non riuso dell'handshake.
 
@@ -72,7 +72,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 5. Rifiuto di un protocollo unificante `DNSResolvingTransport`
+## 5. Rifiuto di un protocollo unificante `DNSResolvingTransport` {#5-reject-a-unifying-dnsresolvingtransport-protocol}
 
 **Decisione.** **Non** unificare i trasporti del resolver sotto un unico protocollo `DNSResolvingTransport`; mantenere la giunzione `ResolverOrchestrator.Executors` basata su closure.
 
@@ -84,7 +84,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 6. Backup cifrato a conoscenza zero (senza password, con l'eccezione passkey segnalata)
+## 6. Backup cifrato a conoscenza zero (senza password, con l'eccezione passkey segnalata) {#6-zero-knowledge-encrypted-backup-passwordless-passkey-exception-noted}
 
 **Decisione.** Effettuare il backup di un payload di impostazioni **minimizzato** lato client: AES-256-GCM lo sigilla con una chiave di payload casuale di 32 byte, che viene avvolta in **slot di chiave** per segreto tramite PBKDF2-HMAC-SHA256 (**210.000** iterazioni in produzione). Sulla tabella `user_backups` di Supabase (RLS per utente) carica solo il testo cifrato più i metadati non segreti. Il flusso rilasciato è **senza password**: slot del segreto del dispositivo (Keychain locale al dispositivo) + slot di recupero assistito + slot passkey opzionale.
 
@@ -96,7 +96,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 7. Connect-On-Demand fail-closed
+## 7. Connect-On-Demand fail-closed {#7-fail-closed-connect-on-demand}
 
 **Decisione.** Aggiungere una regola `NEOnDemandRuleConnect` affinché un tunnel fermato dal sistema operativo si riavvii automaticamente, con **fail-closed** come impostazione predefinita sicura: quando non c'è uno snapshot del filtro riutilizzabile, il tunnel blocca tutto il traffico anziché farlo passare senza filtro. L'on-demand viene **disabilitato prima di ogni arresto** così che la VPN resti spegnibile.
 
@@ -108,7 +108,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 8. Refactor modulare della VPN e la disciplina sulla regressione termica
+## 8. Refactor modulare della VPN e la disciplina sulla regressione termica {#8-modular-vpn-refactor-and-the-heat-regression-discipline}
 
 **Decisione.** Ristrutturare il percorso della VPN (VPNLifecycleController, ProtectionActionOrchestrator, ResolverOrchestrator, FilterArtifactStore, DNSResponseCache, RuleSetCache, FilterSnapshotPreparationService) per un'attivazione cache-first, un fetch a parallelismo limitato e la coalescenza dei flap — trattando batteria/latenza come requisiti di prodotto con obiettivi espliciti p50/p95 e profilazione **sul dispositivo** (non sul Simulator).
 
@@ -120,7 +120,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 9. Budget di regole-filtro invece di un tetto al numero di liste
+## 9. Budget di regole-filtro invece di un tetto al numero di liste {#9-filter-rules-budget-instead-of-a-list-count-cap}
 
 **Decisione.** Vincolare i piani tramite un **budget di regole-filtro** — **Free 500K / Plus 2M** regole di dominio compilate — anziché tramite il numero di liste abilitate. Un rigido **guardrail del dispositivo di ~3,26M regole** (`maxResidentMegabytes 32.0`, `baselineMegabytes 4.0`, `estimatedBytesPerRule 9.0` → `maxFilterRuleCount = 3.262.236`) si applica a **tutti** e **non è mai un paywall**. Il blob compatto dei domini è mappato con `mmap` (`.mappedIfSafe`) così da restare basato su file e fuori dal `phys_footprint` conteggiato da jetsam; solo le tabelle delle voci decodificate consumano memoria residente.
 
@@ -132,7 +132,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 10. Piani come markdown + sincronizzazione a senso unico verso Linear
+## 10. Piani come markdown + sincronizzazione a senso unico verso Linear {#10-plans-as-markdown--one-way-linear-sync}
 
 **Decisione.** I file markdown in `plans/<lane>/` sono la **fonte di verità**; la **cartella della corsia è lo stato autorevole** (`implemented`, `inflight`, `under_review`, `backlog`, `dropped`). Un push su `main` sincronizza i piani **a senso unico** verso Linear (team LAV), aggiornando solo titolo/descrizione dopo la creazione; una tratta di ritorno separata, **manuale e revisionata** riporta stato/priorità/corsia di Linear nel frontmatter del piano.
 
@@ -144,7 +144,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## 11. Suddivisione del repo + open-source copyleft del client
+## 11. Suddivisione del repo + open-source copyleft del client {#11-repo-split--copyleft-open-source-of-the-client}
 
 **Decisione.** Suddividere il monorepo in repo per componente (`lavasec-ios`, `-android`, `-web`, `-infra`, `-doc`, `-runner`) e **rendere open-source il client di prima parte sotto AGPL-3.0** al posto di Apache-2.0, sul precedente copyleft di Mullvad/ProtonVPN.
 
@@ -156,7 +156,7 @@ Letture correlate: modello di distribuzione del catalogo in [`../legal/gpl-sourc
 
 ---
 
-## Appendice — altre inversioni e rifiuti registrati
+## Appendice — altre inversioni e rifiuti registrati {#appendix--other-recorded-reversals-and-rejections}
 
 Queste sono più piccole ma erano decisioni genuine con un'inversione registrata; elencate per completezza.
 

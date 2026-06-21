@@ -1,4 +1,4 @@
-# Parità tra piattaforme
+# Parità tra piattaforme {#platform-parity}
 
 Il sistema di parità tra piattaforme di Lava tiene traccia di quali promesse del
 prodotto sono condivise tra iOS, Android e i client futuri. È il contratto
@@ -19,7 +19,7 @@ documenti non vengono aggiornati. Quando un piano e questa pagina non coincidono
 considera questa pagina come il contratto del prodotto e il piano come la coda dei
 lavori da fare.
 
-## Vocabolario degli stati
+## Vocabolario degli stati {#status-vocabulary}
 
 | Stato | Significato |
 |---|---|
@@ -31,7 +31,7 @@ lavori da fare.
 | **Non applicabile** | Su quella piattaforma non dovrebbe esistere una funzione equivalente. |
 | **Abbandonato** | In passato preso in considerazione o realizzato, poi rimosso di proposito. |
 
-## Formato della scheda funzione
+## Formato della scheda funzione {#feature-record-format}
 
 Ogni funzione tracciata per la parità dovrebbe avere un identificatore stabile.
 Usa nomi nella forma `area.capability` che restino validi anche quando cambia il
@@ -49,7 +49,7 @@ Una scheda funzione completa risponde a queste domande:
 | Verifica | Test, fixture, file sorgente o controlli di revisione che mantengono onesto il comportamento. |
 | Note sulla piattaforma | Differenze legate al sistema operativo che devono essere esplicite, non riscoperte in seguito. |
 
-## Procedura di aggiornamento
+## Procedura di aggiornamento {#update-workflow}
 
 1. Aggiungi o aggiorna l'identificatore della funzione quando una modifica cambia
    una promessa del prodotto, una garanzia sulla privacy, un confine tra i piani o
@@ -64,7 +64,7 @@ Una scheda funzione completa risponde a queste domande:
    riservatezza, ai prezzi, ai rischi legali e alle operazioni; qui riassumi solo
    il contratto pubblico.
 
-## Registro attuale della parità
+## Registro attuale della parità {#current-parity-ledger}
 
 | Identificatore funzione | Promessa del prodotto | iOS | Android | Requisito di parità | Verifica / sorgente |
 |---|---|---:|---:|---|---|
@@ -83,7 +83,7 @@ Una scheda funzione completa risponde a queste domande:
 | `design.calm-earned-depth` | L'esperienza predefinita è tranquilla, con superfici tecniche più approfondite o celebrative solo quando ce n'è motivo o quando vengono richieste. | Parziale | Pianificato | Corrispondenza per intento di design tramite token/ruoli condivisi. | Documenti del design system e piano per le basi della portabilità. |
 | `platform.ambient-presence` | Lo stato della protezione può comparire fuori dall'app quando il sistema operativo offre una superficie ambientale nativa. | Specifico della piattaforma | Pianificato | Parità di intento, non di superficie. | Documenti sulle Live Activity di iOS; decisione su notifica/Impostazioni rapide di Android in sospeso. |
 
-## Uso per la preparazione di Android
+## Uso per la preparazione di Android {#android-readiness-use}
 
 Prima di iniziare l'implementazione su Android, questa pagina va riesaminata
 insieme al piano per Android e al piano di portabilità del design system. Il
