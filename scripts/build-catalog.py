@@ -178,10 +178,11 @@ def render_page(categories: list[dict], sources: list[dict]) -> str:
     lines.append("# Blocklist Catalog")
     lines.append("")
     lines.append(
-        "This is the canonical index of the curated blocklist sources Lava offers. "
-        "It is generated from a single machine-readable spec that every Lava client "
-        "(iOS, Android) and the backend catalog API are built from, so the lists you "
-        "see in the app match this page exactly."
+        "This is the canonical index of the curated blocklist sources Lava offers — "
+        "the single machine-readable spec that every Lava client (iOS, Android) and the "
+        "backend catalog API are generated from. It is the source of truth each platform "
+        "is built to match as it adopts the catalog; a given app build reflects this list "
+        "as of the catalog version it shipped with."
     )
     lines.append("")
     lines.append("## How Lava uses these lists")
