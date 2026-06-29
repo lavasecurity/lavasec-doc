@@ -80,6 +80,16 @@ For app→tunnel control, pause is delivered by writing the shared `ProtectionPa
 - **Pause / resume** flow through a cross-process file lock (`protection-command.lock`, `flock`) and the `LavaSecCore` `ProtectionPauseStore` / `ProtectionSessionStore`, which own revision minting and duplicate-command dedup (the `commandID` threads the caller's operation id so a re-delivered command can't mint a second revision). The outcome schedules a revision-guarded Live Activity update.
 - **Reconnect** is handled directly (`performReconnect`, `LavaProtectionCommandService.swift:112-135`): it calls `loadAllFromPreferences` and starts the first installed tunnel manager via `startVPNTunnel()` (because `loadAllFromPreferences` is already scoped to this app's NE configurations, that first manager is Lava's — unlike `VPNLifecycleController.matchingManagers()`, it does not do an explicit identity match). Connect-On-Demand is already enabled, so this just forces an immediate connect; the app's status reconcile then returns the Live Activity to `.on` once connected.
 
+### Focus auto-switch (closed-app filter switching)
+
+iOS **Focus** modes can switch the active filter automatically — including while the app is **closed** — via a dedicated App Intents extension (`LavaSecIntents`) that hosts a `SetFocusFilterIntent`. When a Focus activates, the extension's `perform()` runs the switch cross-process with no `AppViewModel`: it shares the `LavaSecCore` commit engine and the cross-process CAS writer (`SharedFilterStatePersistence`), writing configuration + library and flipping the artifact pointer. Available to all tiers.
+
+**Enforcement latency.** How quickly the change takes effect depends on the app's state:
+
+- **App terminated or foreground** — prompt: iOS launches the extension promptly, and a foregrounded app adopts the committed on-disk switch directly.
+- **App suspended** — iOS may **defer the extension launch by several minutes** (a platform behavior, not fixable in-app); the filter-switch notification surfaces the change when it lands.
+- **Tunnel pickup while the app isn't running** — the packet tunnel adopts a committed switch by polling the on-disk configuration generation roughly **every ~60 s**, so enforcement can lag up to ~60 s after the commit (an app→tunnel Darwin signal is contraindicated in the NetworkExtension process — see [§2 above](#2-app--extension-ipc)).
+
 ---
 
 ## 3. VPN lifecycle & control
