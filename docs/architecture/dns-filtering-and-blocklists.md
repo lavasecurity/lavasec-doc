@@ -81,7 +81,7 @@ Unblocked queries are forwarded to the configured upstream resolver. `DNSResolve
 | DNS-over-TLS | `dns-over-tls` | `DoT` |
 | DNS-over-QUIC | `dns-over-quic` | `DoQ` |
 
-Built-in presets are Google, Cloudflare, Quad9, Mullvad (each in IP / DoH / DoT variants) plus Device DNS and Custom. Custom resolvers accept a plain IPv4/IPv6 server, a DoH URL, a DoT URL (`tls://` / `dot://`), a DoQ URL (`doq://` / `quic://`), or an `sdns://` DNS stamp; usernames/passwords and localhost are rejected. DoH/DoT/DoQ default to port `853` for DoT/DoQ and require a path for DoH.
+Built-in presets are Google, Cloudflare, Quad9, Mullvad (each in IP / DoH / DoT variants) plus Device DNS and Custom. Custom resolvers accept a plain IPv4/IPv6 server, a DoH URL, a DoT URL (`tls://` / `dot://`), a DoQ URL (`doq://` / `quic://`), or an `sdns://` DNS stamp; usernames/passwords and localhost are rejected. DoT/DoQ default to port `853`; DoH requires a path.
 
 ### 3.2 DoH / DoH3
 
@@ -190,7 +190,7 @@ The **protected-domain set** (filtered out before activation): `apple.com`, `icl
 
 ### 5.3 Default-enabled lists for free users (Implemented)
 
-The free default config is `OnboardingDefaults.lavaRecommendedDefaults`, which enables **Block List Basic** — a broad, permissively licensed combined list (ads + tracking + malware + phishing/scam) — with the device-DNS resolver preset (`resolverPresetID = DNSResolverPreset.device.id`) and device-DNS fallback on. This supersedes the earlier Block List Project Phishing + Scam pair: Basic's combined coverage subsumes them, and both remain selectable opt-in lists.
+The free default config is `OnboardingDefaults.lavaRecommendedDefaults`, which enables **Block List Basic** — a broad, permissively licensed combined list (ads + tracking + malware + phishing/scam) — with the device-DNS resolver preset (`resolverPresetID = DNSResolverPreset.device.id`) and the encrypted Device-DNS fallback **on** (`usesEncryptedDeviceDNSFallback = true`), routing to **Mullvad DoH** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`): if the device's own DNS wedges, allowed lookups are carried transiently over Mullvad DoH and then return to the device's DNS automatically. (The bare `AppConfiguration()` initializer defaults this fallback **off** — it is enabled only by accepting the recommended onboarding defaults.) This supersedes the earlier Block List Project Phishing + Scam pair: Basic's combined coverage subsumes them, and both remain selectable opt-in lists.
 
 That free default is **produced by `defaultEnabled`**, not hardcoded. `blockListProjectBasic` sets `defaultEnabled: true`, and `DefaultCatalog.recommendedDefaultSourceIDs` is derived from `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` is "the single source of truth for the fresh-install default," mirroring the backend catalog's `default_enabled` column. Flowing through `recommendedDefaultSourceIDs` into `OnboardingDefaults`, it is the live mechanism — flip the flag on a source to change the default.
 
