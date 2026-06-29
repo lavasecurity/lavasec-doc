@@ -9,6 +9,8 @@ on:
     paths:
       - 'docs/**'
       - 'overrides/**'
+      - 'data/**'
+      - 'scripts/**'
       - 'mkdocs.yml'
       - 'requirements.txt'
       - '.github/workflows/ci.yml'
@@ -58,6 +60,9 @@ jobs:
 
       - name: Guard — translation completeness (locales not silently drifting)
         run: bash scripts/check-translations.sh
+
+      - name: Guard — canonical blocklist catalog in sync (+ legal invariants)
+        run: python3 scripts/build-catalog.py --check
 
       - name: Build (strict — fails on broken links)
         run: mkdocs build --strict

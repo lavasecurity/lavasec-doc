@@ -147,7 +147,7 @@ The single most-broken rule here is the **no-slash `DoH3`** — write `DoH3`, ne
 
 ### 4.3 Do-Not-Translate terms
 
-Brand and protocol terms are pinned verbatim in **all** locales. The localization glossary's Do-Not-Translate list is the authority, and it pins: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD.**
+Brand and protocol terms are pinned verbatim in **all** locales. The localization glossary's Do-Not-Translate list is the authority, and it pins: **Lava Security, Lava Security LLC, lavasecurity.app, support@lavasecurity.app, legal@lavasecurity.app, DNS, VPN, DoH, TCP, Apple, Google, Cloudflare, Quad9, The Block List Project, Phishing.Database, HaGeZi, OISD, AdGuard, 1Hosts, StevenBlack.**
 
 Of the DNS transports, only **DoH** is a glossary Do-Not-Translate entry; `DoH3`, `DoT`, and `DoQ` are transport labels (see §4.2), not glossary terms. They are still written verbatim, but do not cite the glossary as their source.
 
@@ -180,7 +180,7 @@ Design decisions baked into the flow:
 
 The first-run defaults the flow installs: **Device DNS** resolver (`DNSResolverPreset.device`), **Device DNS fallback ON**, logging on (counts + history + activity), and "Continue without account."
 
-> **Default-blocklist divergence (code wins).** The onboarding plan copy lists HaGeZi Multi Light as the default blocklist, but the shipped code default is **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. Tracked internally. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
+> **Default-blocklist source of truth.** The shipped code default is **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
 
 ---
 

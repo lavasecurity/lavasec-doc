@@ -139,7 +139,7 @@ How the filter rules get onto the device. Lava is a **source-url-only** distribu
 
 1. The device fetches catalog **metadata** from the Worker: `GET https://api.lavasecurity.app/v1/catalog` → JSON served straight from R2 (`catalog/latest.json`), split into `sources[]` + `guardrails[]`, each entry carrying `source_url` + `accepted_source_hashes`.
 2. For each enabled source, the device downloads the list **bytes directly from `source_url`** (the upstream — HaGeZi, OISD, Block List Project, etc.), **not** from Lava.
-3. The device computes SHA256 and only accepts bytes whose checksum is in `accepted_source_hashes`; on mismatch it falls back to last-good cache or fails closed (`checksumMismatch`).
+3. The device parses the fetched bytes locally under size/rule caps. Community lists are accepted as served over TLS — the catalog's `accepted_source_hashes` are advisory (cache identity + audit), not a hard gate — so a rotated list is never rejected for drifting from a pinned hash. Lava's threat-guardrail tier stays hash-pinned.
 4. **`BlocklistParser`** parses/normalizes/dedups locally (auto / plain / hosts / adblock / dnsmasq formats), then **`DomainRuleSet.lavaSecProtectedDomains`** strips protected domains (apple.com, icloud.com, lavasecurity.com/.app, google.com, accounts.google.com, …) so an upstream list can never block Lava/Apple/identity-provider domains.
 5. **`FilterSnapshotPreparationService`** merges the deduped union and runs **authoritative budget enforcement** (device cap first, then tier), then writes `filter-snapshot.compact` into the App Group.
 6. `AppViewModel` sends a `reload-snapshot` provider message; the tunnel reloads.
@@ -150,7 +150,7 @@ The Worker side mirrors this: its admin/cron sync fetches each upstream, hashes/
 - **Device guardrail (everyone, never a paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 rules** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — a 32 MB target under the ~50 MiB NE ceiling. Over-budget configs are rejected deterministically rather than letting the tunnel jetsam.
 - **Tier ceiling (`FeatureLimits`):** **Free 500K rules / Plus 2M rules**, which binds below the device guardrail. This replaced the old enabled-list **count** cap (free 3 / paid 10) — list-count caps are obsolete.
 
-> **Default-enabled caveat (code wins):** the shipped free defaults are **Block List Project Phishing + Scam** (`OnboardingDefaults.lavaRecommendedDefaults`). They are derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which is the on-device source of truth and mirrors the backend catalog `default_enabled` column. Plan/catalog copy that says "Block List Basic is the only default" is wrong for the device (tracked internally).
+> **Default-enabled source of truth:** the shipped free default is **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). It is derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which mirrors the backend catalog `default_enabled` column generated from the same canonical catalog spec.
 
 ### C. Backup (zero-knowledge, opt-in) — Implemented
 
