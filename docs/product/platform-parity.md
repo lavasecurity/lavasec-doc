@@ -54,7 +54,7 @@ A complete feature record answers:
 4. When a platform ships the behavior, update the status here and refresh the
    relevant feature or architecture page.
 5. Keep implementation-only, private, pricing, legal-risk, and operational
-   internal details stay private; summarize only the public contract here.
+   internal details private; summarize only the public contract here.
 
 ## Current parity ledger
 

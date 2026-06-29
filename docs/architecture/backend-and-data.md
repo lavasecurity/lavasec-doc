@@ -161,7 +161,7 @@ The crucial backend fact: **the iOS client reads/writes `user_backups` directly 
 
 ### 4.5 App Store entitlement mirroring
 
-`POST /v1/account/entitlements/app-store-sync` upserts an `entitlements` row (plan `lava_security_plus`) from a client-verified StoreKit transaction JWS, on conflict by `user_id`. The stored `verification_status` is literally `"client_verified_storekit"` — the server does **not** re-verify the JWS. Allowed product IDs: `lava_security_plus_{monthly,yearly,lifetime}`.
+`POST /v1/account/entitlements/app-store-sync` upserts an `entitlements` row (plan `lava_security_plus`) from a client-verified StoreKit transaction JWS, on conflict by `user_id`. The stored `verification_status` is literally `"client_verified_storekit"` — the server does **not** re-verify the JWS. Allowed product IDs: `lava_security_plus_{monthly,yearly}`.
 
 > Mirroring is **Implemented**; **server-side JWS verification is Planned** (not yet built). The signed JWS is stored for later verification. Note the tier model elsewhere: app entitlement is local (`isPaid`) with **no backend sync yet** as the source of truth — this row is a mirror, not the gate.
 

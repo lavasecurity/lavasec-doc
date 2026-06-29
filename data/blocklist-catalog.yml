@@ -78,7 +78,7 @@ categories:
 # --- Sources --------------------------------------------------------------
 # Ordered for readability; the generator sorts by category order then name.
 #
-# provider           : hagezi | blocklistproject | stevenblack | oisd | phishing_database
+# provider           : hagezi | blocklistproject | stevenblack | oisd | phishing_database | adguard | onehosts
 # license            : GPL-3.0 | MIT | Unlicense
 # parse_format       : domain_list | hosts | adblock   (canonical; consumers map)
 # warning_level      : normal | advanced | aggressive  (== iOS WarningLevel)
@@ -199,7 +199,7 @@ sources:
     size_hint: small
     counsel_status: not_reviewed
 
-  # ========================  ADS & TRACKERS  ========================
+  # ========================  MULTI-PURPOSE  =========================
 
   - id: hagezi-multi-light
     name: "HaGeZi Multi Light"
@@ -366,6 +366,7 @@ sources:
     size_hint: medium
     counsel_status: required
 
+  # ========================  ADS & TRACKERS  ========================
 
   - id: blocklistproject-ads
     name: "Block List Ads"

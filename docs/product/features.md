@@ -36,7 +36,7 @@ The core product: a local DNS-only packet tunnel and the calm state model around
 | **Query precedence (bootstrap-first)** | Free | `resolver-bootstrap > temporary-pause > filter` — the resolver's own hostname is never blocked. (`DNSQueryDispatcher`.) |
 | **Fail-closed cold start** | Free | A cold tunnel with no reusable snapshot installs a `FailClosedRuntimeSnapshot` that blocks all traffic rather than leaking unfiltered DNS. |
 | **Connect-On-Demand** | Free | `NEOnDemandRuleConnect` keeps protection up / auto-restarts it — enabled **only after** a confirmed connection, never at profile install, and neutralized during incomplete onboarding so a fresh install can't bring up an un-turn-off-able tunnel. |
-| **Temporary pause (5 / 10 min) + resume** | Free | Pause/resume run through `LavaProtectionCommandService` under a flock file lock with revision dedup. |
+| **Temporary pause (configurable 1–30 min, default 5) + resume** | Free | Pause/resume run through `LavaProtectionCommandService` under a flock file lock with revision dedup. |
 | **Authentication-required pause** | Free | Opt-in per-surface gate (`SecurityProtectedSurface.protectionPause`): pause requires local device auth; the command service denies an unauthenticated pause and the Live Activity hides the pause buttons. |
 | **Reconnect** | Free | Restarts the tunnel directly (bypasses the command-service pause pipeline). |
 | **Soft Shield Guardian state model** | Free | 7 expression states — `sleeping, waking, awake, paused, retrying, concerned, grateful` (`GuardianMascotAnimation.swift`, LavaSecCore). 6 connectivity severities collapse to 4 faces; rendered identically in-app, in onboarding, and in the Live Activity. |
@@ -112,7 +112,7 @@ Lock screen and Dynamic Island presence.
 |---|---|---|
 | **Live Activity** | Free | `LavaSecWidget` (`com.lavasec.app.widget`): a single `Activity<LavaActivityAttributes>` on the lock screen and in the Dynamic Island (expanded center / compactLeading guardian / compactTrailing + minimal status glyph). |
 | **5-state protection display** | Free | `ProtectionState`: `on, paused, reconnecting, needsReconnect, networkUnavailable` — each maps to a guardian pose, SF Symbol, and title. |
-| **Live Activity action buttons** | Free | Pause 5 / 10 min, Resume, Reconnect — `LiveActivityIntent`s that run in the app process via `LavaProtectionCommandService`. Authenticated pause variants require local device auth. |
+| **Live Activity action buttons** | Free | Pause for N min (configured length, default 5), Resume, Reconnect — `LiveActivityIntent`s that run in the app process via `LavaProtectionCommandService`. Authenticated pause variants require local device auth. |
 | **Single deduped, revision-gated reconcile** | Free | `LavaLiveActivityController` keeps one Activity, updates only on real id/content change, and gates updates by `ProtectionPauseStore` revision so stale intent retries can't regress state. |
 | **Live Activities toggle** | Free | User-toggleable in Settings (`setUsesLiveActivities`), available on iPhone/iPad only. |
 
@@ -147,7 +147,7 @@ Configuration, security, diagnostics, and feedback surfaces.
 | **Filter (Guard detail)** | Free | Single unified filter screen reached from the Guard tab. A "My filter" hub opens one consolidated **My filter** screen with two shelves — **"Lava blocks these"** (blocklists + individually blocked domains) and **"Lava lets these through"** (allowed exceptions) — under one Edit/Save draft flow. A "Phone → Lava → Internet" flow diagram leads the tab, and opening My filter auto-refreshes the catalog. |
 | **Network Activity (Settings → Advanced)** | Free | Bounded local-only event stream of network/runtime/user transitions, shared via App Group (`NetworkActivityLog`). Moved off the Activity surface into **Settings → Advanced** (after "Nerd Stats", `SettingsRoute.networkActivity`), behind the `.activityViewing` lock, with its own privacy panel ("Stays on this iPhone", kept 7 days). |
 | **Bug report** | Free | User-triggered wizard sending an anonymized bundle to `POST /v1/bug-reports`; no domain history in v1. The bundle now also carries build provenance (`appVersion`/`appBuild`/`sourceRevision`) and connectivity honesty counters. Also reachable via shake-to-report (`RageShakeDetector`). |
-| **Subscription management** | Plus | For active subscribers the Upgrade screen shows Manage Subscription (auto-renewable plans, via `AppStore.showManageSubscriptions`), Restore Purchase, and the entitlement expiration date; a lifetime unlock shows no Manage row. |
+| **Subscription management** | Plus | For active subscribers the Upgrade screen shows Manage Subscription (auto-renewable plans, via `AppStore.showManageSubscriptions`), Restore Purchase, and the entitlement expiration date. |
 | **Legal Notices + Version** | Free | Settings surfaces third-party legal notices (see [Third-party notices](../legal/third-party-notices.md)) and a version/build page. |
 
 ---
