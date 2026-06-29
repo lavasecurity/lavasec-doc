@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > 適用對象：在 `lavasec-ios` 中工作的 iOS 工程師。
 
-Lava Security 是一款隱私優先的 iOS 應用程式，透過裝置上的 NetworkExtension 封包通道在本機篩選 DNS，封鎖已知的高風險與不受歡迎的網域，而不會將你的瀏覽流量導向 Lava Security 的伺服器。本文件說明 iOS 用戶端的結構：各個 target、應用程式如何與其通道擴充功能通訊、VPN 生命週期、Guardian 狀態模型、Live Activity 與小工具、引導流程，以及應用程式端的狀態擁有者（`AppViewModel`）。
+Lava Security 是一款隱私優先的 iOS 應用程式，透過裝置上的 NetworkExtension 封包通道在本機篩選 DNS，封鎖已知的高風險與不受歡迎的網域，而不會將你的瀏覽流量導向 Lava 的伺服器。本文件說明 iOS 用戶端的結構：各個 target、應用程式如何與其通道擴充功能通訊、VPN 生命週期、Guardian 狀態模型、Live Activity 與小工具、引導流程，以及應用程式端的狀態擁有者（`AppViewModel`）。
 
 如需整體系統的全貌（應用程式、catalog Worker 與 Supabase），請參閱 [系統總覽](./system-overview.md)。
 
@@ -75,10 +75,10 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過裝置上的 Net
 
 ### Live Activity 命令服務 {#live-activity-command-service}
 
-`LavaProtectionCommandService.perform(_:)`（`Shared/LavaProtectionCommandService.swift`）是 Dynamic Island／Live Activity 動作的進入點（`LavaLiveActivityActionRequest`：`pause-5-minutes`／`pause-10-minutes`／`pause-15-minutes`、`resume`、`reconnect`）。`LavaLiveActivityIntents.swift` 中的 `LiveActivityIntent` 在應用程式 process（持有 NetworkExtension entitlement）中執行，因此：
+`LavaProtectionCommandService.perform(_:)`（`Shared/LavaProtectionCommandService.swift`）是 Dynamic Island／Live Activity 動作的進入點（`LavaLiveActivityActionRequest`：`pause-5-minutes`／`pause-10-minutes`／`pause-15-minutes`／`pause-configured`（Live Activity 的單一暫停按鈕，其長度為使用者設定的值）、`resume`、`reconnect`）。`LavaLiveActivityIntents.swift` 中的 `LiveActivityIntent` 在應用程式 process（持有 NetworkExtension entitlement）中執行，因此：
 
 - **暫停／恢復**會流經一個跨 process 檔案鎖（`protection-command.lock`、`flock`），以及 `LavaSecCore` 的 `ProtectionPauseStore`／`ProtectionSessionStore`，這些負責版本鑄造與重複命令去重複（`commandID` 將呼叫者的 operation id 串接起來，使重新送達的命令無法鑄造出第二個版本）。其結果會排程一次受版本守護的 Live Activity 更新。
-- **重新連線**則直接處理（`performReconnect`、`LavaProtectionCommandService.swift:112-135`）：它呼叫 `loadAllFromPreferences` 並透過 `startVPNTunnel()` 啟動第一個已安裝的通道 manager（由於 `loadAllFromPreferences` 已限定在本應用程式的 NE 設定範圍內，第一個 manager 即為 Lava Security 的——這點與 `VPNLifecycleController.matchingManagers()` 不同，它不做明確的身分比對）。Connect-On-Demand 已啟用，因此這只是強制立即連線；應用程式的狀態調和接著會在連線完成後使 Live Activity 回到 `.on`。
+- **重新連線**則直接處理（`performReconnect`、`LavaProtectionCommandService.swift:112-135`）：它呼叫 `loadAllFromPreferences` 並透過 `startVPNTunnel()` 啟動第一個已安裝的通道 manager（由於 `loadAllFromPreferences` 已限定在本應用程式的 NE 設定範圍內，第一個 manager 即為 Lava 的——這點與 `VPNLifecycleController.matchingManagers()` 不同，它不做明確的身分比對）。Connect-On-Demand 已啟用，因此這只是強制立即連線；應用程式的狀態調和接著會在連線完成後使 Live Activity 回到 `.on`。
 
 ---
 
@@ -90,7 +90,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過裝置上的 Net
 
 可重用、不依賴 NetworkExtension 的生命週期邏輯位於 `VPNLifecycleController<Repository>`（`Sources/LavaSecCore/VPNLifecycleController.swift`）。應用程式提供以 `NETunnelProviderManager` 為基礎的 `VPNManagerControlling`／`VPNManagerRepositoryProtocol`／`VPNStatusChangeWaiting` conformance；該 controller 負責：
 
-- **選取與去重複**——`matchingManagers()` 透過 `LavaTunnelConfigurationIdentity.matches(...)` 篩選出 Lava Security 所擁有的 manager，依 `selectionPriority` 排序（使用中者優先，其次為標準顯示名稱），並由 `removeDuplicateManagers(keeping:)` 收斂至單一倖存者。
+- **選取與去重複**——`matchingManagers()` 透過 `LavaTunnelConfigurationIdentity.matches(...)` 篩選出 Lava 所擁有的 manager，依 `selectionPriority` 排序（使用中者優先，其次為標準顯示名稱），並由 `removeDuplicateManagers(keeping:)` 收斂至單一倖存者。
 - **連線／停止等待**——`waitForConnect`／`waitForStop` 以 `startGraceInterval` 的容許度輪詢即時連線狀態，因為在 `startVPNTunnel` 之後不久，連線可能會短暫讀到非 pending 的狀態，之後 iOS 才將其轉換為 `.connecting`。
 
 ### 開啟／關閉 {#turn-on-turn-off}
@@ -123,7 +123,7 @@ Connect-On-Demand 可能在啟動時（或在 iOS 因網路變更而拆除通道
 - 嚴重程度：`healthy`、`recovering`、`usingDeviceDNSFallback`、`dnsSlow`、`networkUnavailable`、`needsReconnect`。
 - 主要動作：`turnOff` 或 `reconnect`。
 
-這一個單一評估同時驅動應用程式內的防護介面以及（進一步對映後的）Dynamic Island 狀態，因此兩者永不矛盾。
+這一個單一評估同時驅動應用程式內的 Guard 介面以及（進一步對映後的）Dynamic Island 狀態，因此兩者永不矛盾。
 
 **誠實底線（v1.0）。** 一次當前、未被涵蓋的 DNS smoke-probe 失敗永遠不能被讀為 `.healthy`——評估會浮現 `.recovering`，直到某次探測真正成功為止，因此在卡住的主要上游上由後援承載的流量，不再被描繪為「已保護」。重新連線邏輯所依據的是 `consecutiveDNSSmokeProbeFailureCount` 與 `lastPrimaryUpstreamSuccessAt`（僅限主要），而非通用的上游計數器；而一個保持可連線卻持續**拒絕**那個已知良好探測的解析器（劫持／captive／過時），會透過一個以解析器身分為範疇的 `consecutiveRejectedSmokeResponseCount` 被升級為值得重啟（LAV-87），即使通用連敗計數在不穩定的漫遊網路上不斷被重設。
 
@@ -173,7 +173,7 @@ Live Activity 的 `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 引導由 `LavaOnboardingView`（`LavaSecApp/OnboardingFlowView.swift`）呈現，並由宣告於 `RootView`（`RootView.swift:32`）的 `@AppStorage("hasSeenLavaOnboarding")` 旗標把關。此流程是一連串 `OnboardingPage`（`OnboardingFlowView.swift:403-409`）：`lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`。
 
-發行版的起始設定來自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 只啟用較寬鬆的建議來源（Block List Project Phishing + Scam）、選擇 **Device DNS** 作為解析器——`DNSResolverPreset.device`（id `device-dns`），即網路自身的 DNS；像 Google DoH 這類加密預設為選擇性加入（opt-in），不會被提升為預設——啟用 device-DNS 後援，並保持本機記錄開啟——同時 `protectionEnabled: false`，因此防護只有在使用者選擇時才會開啟。`OnboardingDefaultsSummary` 會將這些選擇格式化以供顯示（「Continue without account」為帳號預設）。
+發行版的起始設定來自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 只啟用較寬鬆的建議來源（Block List Basic）、選擇 **Device DNS** 作為解析器——`DNSResolverPreset.device`（id `device-dns`），即網路自身的 DNS；像 Google DoH 這類加密預設為選擇性加入（opt-in），不會被提升為預設——啟用 device-DNS 後援，並保持本機記錄開啟——同時 `protectionEnabled: false`，因此防護只有在使用者選擇時才會開啟。`OnboardingDefaultsSummary` 會將這些選擇格式化以供顯示（「Continue without account」為帳號預設）。
 
 在最後設定 `hasSeenLavaOnboarding = true`，正是翻轉 `hasCompletedOnboarding` 的動作，而後者接著會啟動 [§3](#3-vpn-lifecycle-control) 中所述的啟動調和路徑。在那之前，引導進行中的中性化路徑會避免任何繼承的 fail-closed 通道封鎖流量。
 
@@ -191,7 +191,7 @@ Live Activity 的 `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 它將生命週期序列化委派給一個 `protectionActionOrchestrator`（如此一來背景復原不會與使用者的開啟動作交錯），持有快取的 `tunnelManager`，並透過 [§2](#2-app-extension-ipc) 中的 provider 訊息輔助函式，將所有快照／設定／暫停變更驅動至擴充功能。
 
-> **隱私框架。** DNS 篩選會在本裝置上於本機完成。`AppViewModel` 所發佈的診斷與網路活動介面僅儲存於本機——Lava Security 永遠不會收到你的日常 DNS 查詢、瀏覽歷史或逐網域遙測資料。任何選用的帳號備份皆為**零知識**（在裝置上加密；Lava Security 至多只能儲存密文），包括基於通行密鑰的復原——其金鑰在裝置上以 PRF 衍生，沒有伺服器持有的密鑰。伺服器邊界請參見 [系統總覽](./system-overview.md)。
+> **隱私框架。** DNS 篩選會在本裝置上於本機完成。`AppViewModel` 所發佈的診斷與網路活動介面僅儲存於本機——Lava 永遠不會收到你的日常 DNS 查詢、瀏覽歷史或逐網域遙測資料。任何選用的帳號備份皆為**零知識**（在裝置上加密；Lava 至多只能儲存密文），包括基於通行密鑰的復原——其金鑰在裝置上以 PRF 衍生，沒有伺服器持有的密鑰。伺服器邊界請參見 [系統總覽](./system-overview.md)。
 
 ---
 

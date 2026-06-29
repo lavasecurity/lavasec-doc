@@ -42,7 +42,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **脈絡。** 較早的設計把原始封鎖清單位元組鏡像到 R2，好讓法務審查散布行為。許多上游清單（HaGeZi、OISD）採 GPL-3.0，因此託管其位元組會讓 Lava Security 成為 GPL 資料的再散布者。
 
-**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會以目錄的 `accepted_source_hashes` 驗證下載的位元組，並在不相符時退回到上一筆可用快取，或以失敗即封閉的方式處理，藉此恢復鏡像管線原本提供的安全特性。每一組解析後的規則集也會通過一個受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
+**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會直接從各清單經策展的 `source_url` 以 TLS 抓取，並在嚴格的大小／規則上限下於本機解析；社群清單會依其提供的內容照單接受（目錄的 `accepted_source_hashes` 是建議性質，而非硬性閘門——單一固定的雜湊值無法追蹤快速輪替的上游，只會產生誤拒），而 Lava Security 的威脅防護欄分級則維持雜湊固定。出處在目錄層強制（`source_url` 變更必須使用新的 `list_id`），而非靠用戶端的雜湊閘門。每一組解析後的規則集也會通過一個受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
 
 **狀態。** **採用**，並且**取代**了被放棄的 R2 原始鏡像計畫（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，標頭為「Superseded by the source-url-only implementation」）。見 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 

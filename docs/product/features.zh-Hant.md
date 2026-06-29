@@ -18,7 +18,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 ## 如何閱讀本目錄 {#how-to-read-this-catalog}
 
 - **免費**——人人皆可使用，無需帳號、無需購買。
-- **Plus**——由 Lava Security Plus 解鎖，這是唯一可選的付費層級。Plus 僅解鎖**自訂功能**；它絕不會限制基本安全，也絕不會讓付費使用者繞過安全防護欄。
+- **Plus**——由 Lava Security Plus 解鎖，這是唯一可選的付費層級。Plus **僅解鎖自訂功能**；它絕不會限制基本安全，也絕不會讓付費使用者繞過安全防護欄。
 - 每一列皆為**已實作**，除非另有標示。狀態圖例：**已實作**＝已發佈並在程式碼中確認；**規劃中**＝已設計、尚未建置；**已捨棄**＝遭否決或還原。規劃中／已捨棄的項目記錄於私有藍圖，而非此處。
 
 各層級上限的真實來源位於 `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift`（`FeatureLimits.free` / `FeatureLimits.paid`，別名為 `.plus`）。Plus 權益的**閘門**是一個本機旗標（`isPaid`）——即真實來源。後端**鏡像** App Store 權益（`POST /v1/account/entitlements/app-store-sync` 會更新插入一筆 `entitlements` 記錄），但該記錄只是鏡像，並非閘門；目前尚無後端同步驅動閘門控制。
@@ -36,7 +36,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | **查詢優先序（bootstrap 優先）** | 免費 | `resolver-bootstrap > temporary-pause > filter`——解析器自身的主機名稱絕不會被封鎖。（`DNSQueryDispatcher`。） |
 | **失敗即封閉的冷啟動** | 免費 | 沒有可重用快照的冷通道會安裝一個 `FailClosedRuntimeSnapshot`，封鎖所有流量，而非洩漏未篩選的 DNS。 |
 | **Connect-On-Demand** | 免費 | `NEOnDemandRuleConnect` 讓防護持續運作／自動重啟——**僅在**確認連線**之後**啟用，絕不在描述檔安裝時啟用，並在引導尚未完成時停用，使全新安裝無法啟動一個無法關閉的通道。 |
-| **暫時暫停（5／10 分鐘）＋恢復** | 免費 | 暫停／恢復透過 `LavaProtectionCommandService`，在 flock 檔案鎖下執行，並對修訂進行去重。 |
+| **暫時暫停（可設定 1–30 分鐘，預設 5）＋恢復** | 免費 | 暫停／恢復透過 `LavaProtectionCommandService`，在 flock 檔案鎖下執行，並對修訂進行去重。 |
 | **需驗證的暫停** | 免費 | 可選的逐介面閘門（`SecurityProtectedSurface.protectionPause`）：暫停需要本機裝置驗證；命令服務會拒絕未經驗證的暫停，且 Live Activity 會隱藏暫停按鈕。 |
 | **重新連線** | 免費 | 直接重啟通道（繞過命令服務的暫停管線）。 |
 | **Soft Shield Guardian 狀態模型** | 免費 | 7 種表情狀態——`sleeping, waking, awake, paused, retrying, concerned, grateful`（`GuardianMascotAnimation.swift`，LavaSecCore）。6 種連線嚴重度收斂為 4 種面孔；在應用程式內、引導流程中與 Live Activity 中皆以相同方式呈現。 |
@@ -54,17 +54,17 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | 功能 | 層級 | 備註 |
 |---|---|---|
 | **僅來源 URL 的封鎖清單** | 免費 | Lava Security 只發佈上游 URL ＋ 接受的雜湊值；裝置自行擷取／解析清單**位元組**。Lava Security **絕不**儲存、鏡像、轉換或提供第三方封鎖清單位元組。請參閱 [GPL 僅來源 URL 合規決策](../legal/gpl-source-url-only-compliance-decision.md)。 |
-| **精選目錄（10 個來源）** | 免費可啟用 | `lavasec-ios: Sources/LavaSecCore/BlocklistModels.swift`（`DefaultCatalog.curatedSources`）：Block List Basic、Block List Project Phishing／Scam／Ransomware、Phishing.Database Active Domains、HaGeZi Multi Light／Normal／PRO mini／PRO、OISD Small。 |
-| **免費預設封鎖清單** | 免費 | 全新安裝會啟用 **Block List Project Phishing ＋ Scam**（兩個標示為 `defaultEnabled: true` 的來源；`DefaultCatalog.recommendedDefaultSourceIDs`）。 |
+| **精選目錄（已分類）** | 免費可啟用 | 精選來源依縱深防禦類別組織——Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent——來自 HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts 與 Phishing.Database。完整且目前的清單發佈於 [封鎖清單目錄](../legal/blocklist-catalog.md)；各平台反映其隨附的目錄版本。 |
+| **免費預設封鎖清單** | 免費 | 全新安裝會啟用 **Block List Basic**——一份廣泛、寬鬆的合併清單（標示為 `defaultEnabled: true` 的來源；`DefaultCatalog.recommendedDefaultSourceIDs`）。其他一切皆為選擇性加入。 |
 | **裝置端解析／正規化／去重** | 免費 | `BlocklistParser` 支援 auto/plain/hosts/adblock/dnsmasq，捨棄註解／空白／無效項，對完全相同的字串去重，每份清單上限 1,000,000 條規則。多主機的 `hosts` 行現在會發出該行上的**每一個**主機，而不只是第一個（解析器規則版本 2）。 |
-| **上游位元組驗證** | 免費 | 擷取的位元組會計算 SHA-256，僅當校驗碼存在於目錄的 `accepted_source_hashes` 時才接受；不符時 Lava Security 會回退至上次良好的快取或失敗即封閉。 |
+| **上游完整性（TLS ＋ 精選 URL）** | 免費 | 社群清單位元組會直接透過 TLS 從精選的上游 `source_url` 擷取，並在符合大小＋格式＋規則數量上限的前提下接受；目錄的 `accepted_source_hashes` 屬於**建議性質**（快取身分＋稽核），並非硬性閘門——快速輪替的清單絕不會因偏離釘選的雜湊值而被拒絕。Lava Security 的**威脅防護欄**層級（Lava Security 精選、不可被允許）則維持嚴格的雜湊釘選。 |
 | **受保護網域篩選** | 免費 | 每個解析後的來源都會剝除受保護的 Lava Security／Apple／身分提供者網域（apple.com、icloud.com、lavasecurity.app、google.com、accounts.google.com 等），使上游清單無法破壞應用程式、通道或登入。 |
 | **允許例外（允許清單）** | 免費 | 使用者管理的允許清單，可在封鎖清單之外允許網域。免費上限：25 個允許／25 個封鎖網域（`FeatureLimits.free`）。 |
 | **篩選規則預算（層級量度）** | 免費／Plus | 已發佈的層級量度為已編譯網域**規則**總數：**免費 500K／Plus 2M**（`lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` 中的 `maxFilterRules`）。取代舊有的清單數量上限。超出層級的設定會呈現 `exceedsTierFilterRuleLimit`。 |
 | **更高的網域上限** | Plus | 1,000 個允許／1,000 個封鎖網域（`FeatureLimits.plus`）。 |
 | **自訂封鎖清單** | Plus | `allowsCustomBlocklists`。自訂清單在裝置上擷取與解析，於本機快取，絕不代理至 Lava Security 伺服器。 |
 | **熱啟動成品重用** | 免費 | 一份資訊清單＋身分指紋讓通道得以重用磁碟上的精簡快照而無需重新編譯；當輸入變更時，重用會被拒絕（並附上僅含欄位名稱、保護隱私的原因）。 |
-| **智慧儲存（僅在削弱時確認）** | 免費 | 對你的篩選所做、僅會*強化*或屬中性的編輯（新增封鎖清單或一個封鎖網域）會直接套用；而*削弱*防護的編輯——移除封鎖清單、移除封鎖網域，或新增允許例外——則會先經過一張審查確認表單，並在新增例外時顯示「請格外小心」面板（`FiltersView.saveChanges()`、`weakensProtection`）。 |
+| **智慧儲存（僅在削弱時確認）** | 免費 | 對你的篩選器所做、僅會*強化*或屬中性的編輯（新增封鎖清單或一個封鎖網域）會直接套用；而*削弱*防護的編輯——移除封鎖清單、移除封鎖網域，或新增允許例外——則會先經過一張審查確認表單，並在新增例外時顯示「請格外小心」面板（`FiltersView.saveChanges()`、`weakensProtection`）。 |
 | **預算量度（可儲存選取）** | 免費／Plus | 選取量度會縮寫計數（500K／1.2M／2M），並使用 1.10 的軟性上限餘裕（逐清單加總會高估去重後的聯集約 ~7–10%）；仍在容差範圍內的計數會被夾制顯示為例如「500K of 500K」，直到它超過軟性上限為止（`FilterRuleBudget`）。 |
 
 > 權威性的預算強制執行在編譯時針對去重後的聯集進行（`FilterSnapshotPreparationService`）；先檢查裝置上限，再檢查層級限制。選取時的 UI 計量表使用逐清單加總，並帶有 1.10 的軟性上限餘裕。
@@ -112,7 +112,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 |---|---|---|
 | **Live Activity** | 免費 | `LavaSecWidget`（`com.lavasec.app.widget`）：鎖定畫面與動態島上的單一 `Activity<LavaActivityAttributes>`（展開置中／compactLeading guardian／compactTrailing ＋ minimal 狀態字符）。 |
 | **5 狀態防護顯示** | 免費 | `ProtectionState`：`on, paused, reconnecting, needsReconnect, networkUnavailable`——每一種對應到一個 guardian 姿態、SF Symbol 與標題。 |
-| **Live Activity 動作按鈕** | 免費 | 暫停 5／10 分鐘、恢復、重新連線——`LiveActivityIntent` 透過 `LavaProtectionCommandService` 在應用程式行程中執行。需驗證的暫停變體需要本機裝置驗證。 |
+| **Live Activity 動作按鈕** | 免費 | 暫停 N 分鐘（設定的長度，預設 5）、恢復、重新連線——`LiveActivityIntent` 透過 `LavaProtectionCommandService` 在應用程式行程中執行。需驗證的暫停變體需要本機裝置驗證。 |
 | **單一去重、受修訂閘控的調和** | 免費 | `LavaLiveActivityController` 維持單一 Activity，只在實際 id／內容變更時更新，並依 `ProtectionPauseStore` 修訂閘控更新，使過時的意圖重試無法讓狀態倒退。 |
 | **Live Activities 開關** | 免費 | 可在設定中由使用者切換（`setUsesLiveActivities`），僅在 iPhone／iPad 上可用。 |
 
@@ -125,9 +125,9 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | 功能 | 層級 | 備註 |
 |---|---|---|
 | **多頁首次執行流程** | 免費 | `OnboardingFlowView`——6 頁：`lava, guardIntro, features, vpn, notifications, done`。（描述檔安裝與通知提示會在適當步驟發生，而非一開始。） |
-| **本機 VPN 描述檔安裝** | 免費 | 在引導期間安裝本機 VPN 設定，但**不**啟用 Connect-On-Demand，因此防護絕不會在完成時悄悄自動開啟——防護介面維持權威地位。 |
+| **本機 VPN 描述檔安裝** | 免費 | 在引導期間安裝本機 VPN 設定，但**不**啟用 Connect-On-Demand，因此防護絕不會在完成時悄悄自動開啟——Guard 介面維持權威地位。 |
 | **通知權限提示** | 免費 | 在通知步驟於流程中請求。 |
-| **套用建議的預設值** | 免費 | 裝置 DNS 解析器、裝置 DNS 後援開啟、本機記錄開啟（計數＋歷史＋活動）、啟用 Block List Project Phishing ＋ Scam、不使用帳號繼續（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
+| **套用建議的預設值** | 免費 | 裝置 DNS 解析器、裝置 DNS 後援開啟、本機記錄開啟（計數＋歷史＋活動）、啟用 Block List Basic、不使用帳號繼續（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
 
 ---
 
@@ -144,10 +144,10 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | **外觀** | 免費 | 淺色／深色／系統配色方案。 |
 | **僅本機的記錄控制** | 免費 | 篩選計數、網域歷史記錄（診斷）與網路活動的開關——皆儲存於裝置上。細粒度記錄（網域歷史記錄＋網路活動）會被修剪至 **7 天**的視窗（`LocalLogRetention.fineGrainedDays = 7`）；計數與 Lava Guard 進度則保留更久。 |
 | **活動／網域記錄（Guard 詳細）** | 免費 | 動態的僅本機診斷，從 Guard 分頁進入（`GuardDestination.activity`）。摘要是一條請求**流程**——「已處理的請求」總數拆分為允許／封鎖量的長條，並附上「於本機保護的 %」（誠實取整：極小比例顯示為 `<1%`，近乎全部的比例顯示為 `>99%`）。一個**網域記錄**區段含有 **Top Domains**（最常封鎖與允許者，依查詢數排序）與**網域歷史記錄**（近期查詢與決策）；網域列僅在歷史記錄選擇加入開啟時出現。 |
-| **篩選（Guard 詳細）** | 免費 | 從 Guard 分頁進入的單一統一篩選畫面。一個「我的篩選」入口會開啟一個整合的**我的篩選**畫面，含兩個層架——**「Lava 封鎖這些」**（封鎖清單＋個別封鎖的網域）與**「Lava 放行這些」**（允許例外）——皆在同一套編輯／儲存草稿流程之下。一張「Phone → Lava → Internet」流程圖位於該分頁頂端，而開啟「我的篩選」會自動刷新目錄。 |
+| **篩選（Guard 詳細）** | 免費 | 從 Guard 分頁進入的單一統一篩選畫面。一個「我的篩選器」入口會開啟一個整合的**我的篩選器**畫面，含兩個層架——**「Lava 封鎖這些」**（封鎖清單＋個別封鎖的網域）與**「Lava 放行這些」**（允許例外）——皆在同一套編輯／儲存草稿流程之下。一張「Phone → Lava → Internet」流程圖位於該分頁頂端，而開啟「我的篩選器」會自動刷新目錄。 |
 | **網路活動（設定 → 進階）** | 免費 | 有界的僅本機事件串流，記錄網路／執行時／使用者轉換，透過 App Group 共享（`NetworkActivityLog`）。已從活動介面移至**設定 → 進階**（位於「Nerd Stats」之後，`SettingsRoute.networkActivity`），受 `.activityViewing` 鎖把關，並有自己的隱私面板（「保留在這支 iPhone 上」，保留 7 天）。 |
-| **錯誤回報** | 免費 | 由使用者觸發的精靈，會將匿名化套件傳送至 `POST /v1/bug-reports`；v1 中沒有網域歷史記錄。也可透過搖晃回報（`RageShakeDetector`）進入。該套件現在還會夾帶組建來源資訊（`appVersion`／`appBuild`／`sourceRevision`）以及連線誠實度計數器。 |
-| **訂閱管理** | Plus | 對使用中的訂閱者，升級畫面會顯示「管理訂閱」（自動續訂方案，透過 `AppStore.showManageSubscriptions`）、「還原購買」，以及權益到期日；終身解鎖則不顯示「管理」列。 |
+| **錯誤回報** | 免費 | 由使用者觸發的精靈，會將匿名化套件傳送至 `POST /v1/bug-reports`；v1 中沒有網域歷史記錄。該套件現在還會夾帶組建來源資訊（`appVersion`／`appBuild`／`sourceRevision`）以及連線誠實度計數器。也可透過搖晃回報（`RageShakeDetector`）進入。 |
+| **訂閱管理** | Plus | 對使用中的訂閱者，升級畫面會顯示「管理訂閱」（自動續訂方案，透過 `AppStore.showManageSubscriptions`）、「還原購買」，以及權益到期日。 |
 | **法律聲明＋版本** | 免費 | 設定中會呈現第三方法律聲明（請參閱 [第三方聲明](../legal/third-party-notices.md)）以及版本／組建頁面。 |
 
 ---
@@ -156,7 +156,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 
 三個套件共享一個 App Group `group.com.lavasec`，並與一個編譯進它們的 `lavasec-ios: Shared/` 來源資料夾並存：
 
-- **LavaSecApp**（`com.lavasec.app`）——SwiftUI 應用程式外殼；在此組建中，根層是一個雙分頁 `TabView`（**防護** ＋ **設定**），篩選與活動則作為防護分頁下的詳細畫面進入（網路活動現在位於設定 → 進階之下）。
+- **LavaSecApp**（`com.lavasec.app`）——SwiftUI 應用程式外殼；在此組建中，根層是一個雙分頁 `TabView`（**Guard** ＋ **設定**），篩選與活動則作為 Guard 分頁下的詳細畫面進入（網路活動現在位於設定 → 進階之下）。
 - **LavaSecTunnel**（`.tunnel`）——裝置端的 DNS 篩選／解析引擎。
 - **LavaSecWidget**（`.widget`）——WidgetKit Live Activity。
 - **Shared/**——跨目標來源（並非套件）：App Group、命令服務、吉祥物、Live Activity 屬性／意圖。

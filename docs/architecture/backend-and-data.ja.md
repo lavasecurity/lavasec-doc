@@ -103,20 +103,20 @@ normalized_r2_key: null,
 
 ### 3.3 正規化のガードレール（メタデータのみ） {#33-normalization-guardrails-metadata-only}
 
-Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。 **端末は本物のリストをダウンロードするときに承認済みハッシュを再検証する** ので、これ自体はセキュリティ境界ではありません。主要な定数:
+Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。 **コミュニティリスト** については、端末はダウンロードを **ハッシュゲートしません** — 端末は厳選された `source_url` から TLS 越しに取得し、上限の下で解析します（カタログの承認済みハッシュは参考情報です）。したがって、この Worker 側の正規化はそれ自体がセキュリティ境界ではありません。（Lava の脅威ガードレール層は端末側でハッシュにピン留めされたままで、`source_url` の出所は公開時に強制されます — URL の変更は新しい `list_id` を使わなければなりません。）主要な定数:
 
 - `PROTECTED_SUFFIXES` — Apple/iCloud/`mzstatic`/Lava Security のドメイン/Supabase/Cloudflare/Google/GitHub にマッチするルールをすべて取り除きます。これにより、毒入りの上流が Lava 自身のインフラやサインインプロバイダをブロックできないようにします。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。
 
 ### 3.4 何が公開可能か {#34-what-is-publishable}
 
-`isPublicBlocklistSource` がソースを公開するのは、`status` が `sync` または `nosync` で、`redistribution_mode === "source_url_only"`、 **かつ** `isAllowedLaunchGPLSource` を通過したときだけです。ローンチ用 GPL ゲート（`isAllowedLaunchGPLSource`）は、非 GPL のソースは自由に許可しますが、GPL-3.0 のソースは `list_id` のプレフィックスが `hagezi-` または `oisd-` のものに制限します。
+`isPublicBlocklistSource` がソースを公開するのは、`status` が `sync` または `nosync` で、`redistribution_mode === "source_url_only"`、 **かつ** `isAllowedLaunchGPLSource` を通過したときだけです。ローンチ用 GPL ゲート（`isAllowedLaunchGPLSource`）は、非 GPL のソースは自由に許可し、確認済みの GPL-3.0 のソースファミリーを `list_id` のプレフィックスで許可します: `hagezi-`、`oisd-`、`adguard-`。
 
 ### 3.5 シードされたソースとデフォルト有効 {#35-seeded-sources--default-enabled}
 
-用意されたソースは、マイグレーション経由で source-url-only のメタデータとしてシードされます（HaGeZi、OISD、Block List Project、Phishing.Database、AdGuard）。低リスクのマイグレーション（`20260526000000_low_risk_blocklist_sources.sql`）は、最初は `blocklistproject-basic`（Unlicense）を `default_enabled = true` でシードし、 **すべての GPL（HaGeZi/OISD）ソースを弁護士の確認待ちで `default_enabled = false`** に強制し、AdGuard DNS Filter を `license_review` に留め置きました。 **その最初の Basic デフォルトのシードは後で置き換えられました** — 下記の整合マイグレーションが Basic を `false` に、Phishing ＋ Scam を `true` に切り替えます（これが現在配信されているデフォルト）。ステータス: **実装済み**。
+用意されたソースは、正典の [ブロックリストカタログ](../legal/blocklist-catalog.md) 仕様（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）から生成され、マイグレーション経由で source-url-only のメタデータとしてシードされます。カテゴリ拡張のマイグレーションは、多層防御のカテゴリ（nsfw／social／gambling／piracy）を追加し、新規インストールのデフォルトを **Block List Basic** に整え直し、AdGuard DNS Filter を弁護士フラグ付き・デフォルト無効の選択肢として再有効化します。ステータス: **実装済み**。
 
-> **カタログのデフォルトはクライアントと一致。** カタログの `default_enabled` 集合は今や **{Block List Project Phishing, Block List Project Scam}** で、iOS の推奨デフォルト（`AppConfiguration.lavaRecommendedDefaults`、`lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift`）と一致します。あるマイグレーションが `blocklistproject-basic default_enabled = false` と、`blocklistproject-phishing` / `blocklistproject-scam default_enabled = true` を設定するので、配信されるメタデータは正直なものになります。（整合の判断はもう出荷済みです。）注意: `default_enabled` は参考情報です。本当のプランのゲートはリストの数ではなく、 **filter-rules budget（無料プラン 500K / Plus 2M）** です。バイト列ではなく URL を公開する法的根拠は [GPL source-url-only コンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md) にあります。
+> **カタログのデフォルトはクライアントと一致。** カタログの `default_enabled` 集合は **{Block List Basic}** で、これは以前の Phishing ＋ Scam のペアを置き換える、幅広く寛容な統合リストであり、iOS の推奨デフォルト（`AppConfiguration.lavaRecommendedDefaults`）と一致します。配信される `default_enabled` カラムと、同梱される iOS の `DefaultCatalog` は、どちらも同じ正典の仕様から生成されるので、構造上一致します（これにより、以前のクライアント↔バックエンドのデフォルトの食い違いが解消されます）。注意: `default_enabled` は参考情報です。本当のプランのゲートはリストの数ではなく、 **filter-rules budget（無料プラン 500K / Plus 2M）** です。バイト列ではなく URL を公開する法的根拠は [GPL source-url-only コンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md) にあります。
 
 ## 4. Supabase Postgres {#4-supabase-postgres}
 
@@ -161,7 +161,7 @@ Supabase Postgres プロジェクトです。RLS は **すべての** public テ
 
 ### 4.5 App Store エンタイトルメントのミラーリング {#45-app-store-entitlement-mirroring}
 
-`POST /v1/account/entitlements/app-store-sync` は、クライアント検証済みの StoreKit トランザクション JWS から `entitlements` 行（プラン `lava_security_plus`）を、`user_id` で衝突したらアップサートします。保存される `verification_status` は文字どおり `"client_verified_storekit"` です — サーバーは JWS を **再検証しません**。許可される product ID: `lava_security_plus_{monthly,yearly,lifetime}`。
+`POST /v1/account/entitlements/app-store-sync` は、クライアント検証済みの StoreKit トランザクション JWS から `entitlements` 行（プラン `lava_security_plus`）を、`user_id` で衝突したらアップサートします。保存される `verification_status` は文字どおり `"client_verified_storekit"` です — サーバーは JWS を **再検証しません**。許可される product ID: `lava_security_plus_{monthly,yearly}`。
 
 > ミラーリングは **実装済み**。 **サーバー側の JWS 検証は予定**（まだ作っていません）。署名済みの JWS は後で検証するために保存されます。他のところでのプランモデルにも注意: アプリのエンタイトルメントはローカル（`isPaid`）で、真実の源としての **バックエンド同期はまだありません** — この行はミラーであって、ゲートではありません。
 
@@ -171,7 +171,7 @@ Supabase Postgres プロジェクトです。RLS は **すべての** public テ
 
 以前の設計が使っていたエスクローテーブル（`backup_passkey_recovery`、`backup_passkey_challenges`）はローンチ前に削除され、Worker には `/v1/backup/*` ルートも WebAuthn／パスキーのコードもありません。（Worker の `package.json` には `@simplewebauthn/server` のエントリが、使われていない残りものの依存として残っています。）
 
-クライアント側は iOS アプリにあります: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` が PRF 対応のパスキーの作成／アサーションを駆動し、`lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` が hmac-secret 出力からスロットを導出します。PRF 出力はアサーションの間だけ読まれ、端末から決して出ません。PRF 非対応のパスキープロバイダはゼロ知識スロットを支えられないので、セットアップは早い段階で失敗し、ユーザーはリカバリーコードにフォールバックします。ステータス: **実装済み**。
+クライアント側は iOS アプリにあります: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` が PRF 対応のパスキーの作成／アサーションを駆動し、`lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` が hmac-secret 出力からスロットを導出します。PRF 出力はアサーションの間だけ読まれ、端末から決して出ません。PRF 非対応のパスキープロバイダはゼロ知識スロットを支えられないので、セットアップは早い段階で失敗し、ユーザーはリカバリーフレーズにフォールバックします。ステータス: **実装済み**。
 
 ## 6. lavasec-email Worker {#6-lavasec-email-worker}
 
@@ -202,7 +202,7 @@ Supabase Postgres プロジェクトです。RLS は **すべての** public テ
 
 - [システム概要](./system-overview.md) — システム全体を1ページで。信頼境界も含みます。
 - [iOS クライアント](./ios-client.md) — このバックエンドを利用する端末側。
-- [アカウントとバックアップ](./accounts-and-backup.md) — クライアント側の認証、AES-256-GCM エンベロープ、key slot、リカバリーコード。
+- [アカウントとバックアップ](./accounts-and-backup.md) — クライアント側の認証、AES-256-GCM エンベロープ、key slot、リカバリーフレーズ。
 - [DNS フィルタリングとブロックリスト](./dns-filtering-and-blocklists.md) — カタログの端末側: 上流からの直接ダウンロード、解析／正規化、そして filter-rules budget。
 - [GPL source-url-only コンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md) — なぜカタログがバイト列ではなく URL を公開するのか。
 - **プランと収益化**（内部） — 本当の無料プラン／Plus のゲートである filter-rules budget（無料プラン 500K / Plus 2M）。
