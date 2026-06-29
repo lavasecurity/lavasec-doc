@@ -75,7 +75,7 @@ App 的 `notifyTunnelSnapshotUpdated()` / `notifyTunnelProtectionPauseUpdated()`
 
 ### Live Activity 命令服务 {#live-activity-command-service}
 
-`LavaProtectionCommandService.perform(_:)`（`Shared/LavaProtectionCommandService.swift`）是灵动岛 / Live Activity 操作（`LavaLiveActivityActionRequest`：`pause-5-minutes` / `pause-10-minutes` / `pause-15-minutes`、`resume`、`reconnect`）的入口。`LavaLiveActivityIntents.swift` 里的那些 `LiveActivityIntent` 跑在 App 进程里（App 进程持有 NetworkExtension 权限），所以：
+`LavaProtectionCommandService.perform(_:)`（`Shared/LavaProtectionCommandService.swift`）是灵动岛 / Live Activity 操作（`LavaLiveActivityActionRequest`：`pause-5-minutes` / `pause-10-minutes` / `pause-15-minutes` / `pause-configured`（Live Activity 上那个唯一的暂停按钮，时长取用户自定义的值）、`resume`、`reconnect`）的入口。`LavaLiveActivityIntents.swift` 里的那些 `LiveActivityIntent` 跑在 App 进程里（App 进程持有 NetworkExtension 权限），所以：
 
 - **暂停 / 恢复** 会流经一把跨进程的文件锁（`protection-command.lock`，`flock`）以及 `LavaSecCore` 的 `ProtectionPauseStore` / `ProtectionSessionStore`，由它们来负责铸造修订号和重复命令的去重（`commandID` 把调用方的操作 id 串了进来，这样一条被重发的命令就没法铸出第二个修订号）。结果会排上一个带修订号保护的 Live Activity 更新。
 - **重新连接** 是直接处理的（`performReconnect`，`LavaProtectionCommandService.swift:112-135`）：它调 `loadAllFromPreferences`，再通过 `startVPNTunnel()` 启动第一个已安装的隧道 manager（因为 `loadAllFromPreferences` 本就已经限定在这个 App 自己的 NE 配置范围内，那第一个 manager 就是 Lava 的——这一点跟 `VPNLifecycleController.matchingManagers()` 不一样，它不做显式的身份匹配）。Connect-On-Demand 本来就开着，所以这步只是逼它立刻连上；连上之后，App 的状态对齐会把 Live Activity 拉回到 `.on`。
@@ -173,7 +173,7 @@ Live Activity 的 `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 上手引导由 `LavaOnboardingView`（`LavaSecApp/OnboardingFlowView.swift`）呈现，并由 `RootView`（`RootView.swift:32`）里声明的 `@AppStorage("hasSeenLavaOnboarding")` 标志来把关。整个流程是一串 `OnboardingPage`（`OnboardingFlowView.swift:403-409`）：`lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`。
 
-打包好的起始配置来自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 只启用那些宽松的推荐来源（Block List Project 的 钓鱼 + 诈骗），把解析器选为 **Device DNS**——`DNSResolverPreset.device`（id `device-dns`），也就是网络自带的 DNS；像 Google DoH 这类加密预设是选择性开启的，不会被提为默认值——它会启用 device-DNS 回落，并保持本地日志开着——同时 `protectionEnabled: false`，所以防护只有在用户主动选择时才会打开。`OnboardingDefaultsSummary` 会把这些选择格式化出来给人看（账户的默认值是「不使用账户继续」）。
+打包好的起始配置来自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 只启用那个宽松的推荐来源（Block List Basic），把解析器选为 **Device DNS**——`DNSResolverPreset.device`（id `device-dns`），也就是网络自带的 DNS；像 Google DoH 这类加密预设是选择性开启的，不会被提为默认值——它会启用 device-DNS 回落，并保持本地日志开着——同时 `protectionEnabled: false`，所以防护只有在用户主动选择时才会打开。`OnboardingDefaultsSummary` 会把这些选择格式化出来给人看（账户的默认值是「不使用账户继续」）。
 
 在最后把 `hasSeenLavaOnboarding = true` 设上，就是它翻动了 `hasCompletedOnboarding`，进而把 [§3](#3-vpn-lifecycle-control) 里讲的启动对齐路径武装起来。在那之前，引导进行中的中和路径会一直挡着，不让任何继承来的故障即关闭隧道拦掉流量。
 

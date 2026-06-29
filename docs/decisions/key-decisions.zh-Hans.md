@@ -42,7 +42,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **背景。** 早先的设计会把拦截列表的原始字节镜像进 R2，好让法务审查分发情况。很多上游列表（HaGeZi、OISD）是 GPL-3.0 的，所以托管它们的字节就会让 Lava 成为 GPL 数据的再分发方。
 
-**理由。** 把 Lava 当作一个本地过滤引擎 / 用户代理——而不是拦截列表分发方——能把 GPLv3 再分发和 App 审核的风险降到最低。设备会拿下载下来的字节对照目录里的 `accepted_source_hashes` 做校验，对不上时回退到上一次的有效缓存、或干脆"失败即拦截"，把镜像流水线原本提供的那份安全特性给找了回来。每一组解析出来的规则集还会再过一道受保护域名过滤器，这样上游列表就没法拦掉 Lava/Apple/身份提供方的域名。这套模式由 CI 中的 `check-gpl-blocklist-distribution.sh` 强制执行（不许有镜像代码、不许有 Lava 托管的产物 URL、不许默认启用 GPL 来源、不许往 R2 写字节）。
+**理由。** 把 Lava 当作一个本地过滤引擎 / 用户代理——而不是拦截列表分发方——能把 GPLv3 再分发和 App 审核的风险降到最低。设备通过 TLS 直接从每个列表精心策划的 `source_url` 拉取它，并在严格的大小/规则上限下本地解析；社区列表按其提供的样子接受（目录里的 `accepted_source_hashes` 是参考性的，不是硬性闸门——一个固定的哈希值跟不上快速轮换的上游，只会产生误拒），而 Lava 的威胁护栏档位则保持哈希钉死。来源凭证在目录层面强制执行（`source_url` 的变更必须用一个新的 `list_id`），而不是靠客户端的哈希闸门。每一组解析出来的规则集还会再过一道受保护域名过滤器，这样上游列表就没法拦掉 Lava/Apple/身份提供方的域名。这套模式由 CI 中的 `check-gpl-blocklist-distribution.sh` 强制执行（不许有镜像代码、不许有 Lava 托管的产物 URL、不许默认启用 GPL 来源、不许往 R2 写字节）。
 
 **状态。** **已采纳**，并且它**替代**了那个被放弃的 R2 原始镜像计划（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，标题写着"已被 source-url-only 实现替代"）。见 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 

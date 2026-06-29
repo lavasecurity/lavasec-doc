@@ -81,7 +81,7 @@ Les requêtes non bloquées sont transmises au résolveur en amont configuré. `
 | DNS-over-TLS | `dns-over-tls` | `DoT` |
 | DNS-over-QUIC | `dns-over-quic` | `DoQ` |
 
-Les préréglages intégrés sont Google, Cloudflare, Quad9, Mullvad (chacun en variantes IP / DoH / DoT) plus le DNS de l'appareil et le mode personnalisé. Les résolveurs personnalisés acceptent un serveur IPv4/IPv6 simple, une URL DoH, une URL DoT (`tls://` / `dot://`), une URL DoQ (`doq://` / `quic://`), ou un DNS stamp `sdns://` ; les noms d'utilisateur/mots de passe et localhost sont refusés. DoH/DoT/DoQ utilisent par défaut le port `853` pour DoT/DoQ et exigent un chemin pour DoH.
+Les préréglages intégrés sont Google, Cloudflare, Quad9, Mullvad (chacun en variantes IP / DoH / DoT) plus le DNS de l'appareil et le mode personnalisé. Les résolveurs personnalisés acceptent un serveur IPv4/IPv6 simple, une URL DoH, une URL DoT (`tls://` / `dot://`), une URL DoQ (`doq://` / `quic://`), ou un DNS stamp `sdns://` ; les noms d'utilisateur/mots de passe et localhost sont refusés. DoT/DoQ utilisent par défaut le port `853` ; DoH exige un chemin.
 
 ### 3.2 DoH / DoH3 {#32-doh--doh3}
 
@@ -184,30 +184,17 @@ L'**ensemble des domaines protégés** (filtrés avant l'activation) : `apple.co
 
 ### 5.2 Sources sélectionnées (Implémenté) {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` (`BlocklistModels.swift:232-243`) liste **10** sources :
+`DefaultCatalog.curatedSources` est généré à partir du [Catalogue de listes de blocage](../legal/blocklist-catalog.md) canonique, et compte actuellement **32** sources réparties sur sept catégories : Sécurité et renseignement sur les menaces, Multi-usage, Publicités et traceurs, Réseaux sociaux, Contenu pour adultes, Jeux d'argent, et Piratage et torrents. Les familles de sources comprennent The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard et 1Hosts.
 
-| Source | Licence |
-|---|---|
-| Block List Basic | Unlicense |
-| Block List Project Phishing | Unlicense |
-| Block List Project Scam | Unlicense |
-| Block List Project Ransomware | Unlicense |
-| Phishing.Database Active Domains | MIT |
-| HaGeZi Multi Light | GPL-3.0 |
-| HaGeZi Multi Normal | GPL-3.0 |
-| HaGeZi Multi PRO mini | GPL-3.0 |
-| HaGeZi Multi PRO | GPL-3.0 |
-| OISD Small | GPL-3.0 |
-
-`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** en attendant l'aval du service juridique ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL autorisés (`hagezi-` / `oisd-`).
+`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD, AdGuard) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL autorisés (`hagezi-`, `oisd-`, `adguard-`).
 
 ### 5.3 Listes activées par défaut pour les utilisateurs gratuits (Implémenté) {#53-default-enabled-lists-for-free-users-implemented}
 
-La vraie config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults` (`Sources/LavaSecCore/OnboardingDefaults.swift:7-10`), qui active **Block List Project Phishing + Block List Project Scam**, avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli sur le DNS de l'appareil activé.
+La config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic** — une liste combinée large et permissivement licenciée (publicités + traçage + malware + phishing/scam) — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli chiffré sur le DNS de l'appareil **activé** (`usesEncryptedDeviceDNSFallback = true`), routant vers le **DoH de Mullvad** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`) : si le DNS propre à l'appareil se coince, les résolutions autorisées sont transportées de façon transitoire via le DoH de Mullvad, puis reviennent automatiquement au DNS de l'appareil. (L'initialiseur nu `AppConfiguration()` met ce repli **désactivé** par défaut — il n'est activé qu'en acceptant les valeurs par défaut recommandées de l'onboarding.) Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture combinée de Basic les englobe, et les deux restent des listes optionnelles sélectionnables.
 
-Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectPhishing` (`BlocklistModels.swift:139`) et `blockListProjectScam` (`BlocklistModels.swift:148`) mettent tous les deux `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` (`BlocklistModels.swift:250-252`) est dérivé de `curatedSources.filter(\.defaultEnabled)`. Le commentaire dans le code (`BlocklistModels.swift:246-249`) appelle `defaultEnabled` « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, `defaultEnabled` est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
+Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectBasic` met `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` est dérivé de `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` est « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, c'est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
 
-> **Source de vérité du défaut (c'est le code qui gagne).** Tout texte de plan/catalogue qui dit « Block List Basic est le seul défaut » est faux pour l'appareil ; l'appareil livre Phishing + Scam via `defaultEnabled: true`, et le flag iOS `BlocklistSource.defaultEnabled` est le mécanisme vivant qui fait autorité. La colonne `default_enabled` du catalogue backend a été réalignée sur le même ensemble Phishing + Scam par une migration, donc les métadonnées servies par `/v1/catalog` correspondent maintenant au client. Le texte « Listes de blocage activées 3 → 10 » du site public est encore **périmé** — la vraie barrière, c'est le quota des règles de filtrage de 500 K / 2 M, pas un nombre de listes.
+> **Source de vérité du défaut (une seule spec générée).** Le catalogue est généré à partir d'une seule spec canonique ([Catalogue de listes de blocage](../legal/blocklist-catalog.md)) qui produit à la fois le `DefaultCatalog` iOS et le seed du backend, donc l'appareil et les métadonnées servies par `/v1/catalog` concordent par construction. Le défaut à l'installation fraîche est **Block List Basic**, à partir de son flag `defaultEnabled: true`. La vraie barrière de niveau, c'est le quota des règles de filtrage de 500 K / 2 M, pas un nombre de listes.
 
 ### 5.4 Modèle de distribution GPL basé uniquement sur l'URL source (Implémenté) {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -215,7 +202,7 @@ Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en d
 
 Côté Worker, `syncOneBlocklist` récupère chaque source en amont, la normalise et la hashe (en calculant `source_hash`, `normalized_hash`, `entry_count`) mais écrit `raw_r2_key = null` / `normalized_r2_key = null` — seules les métadonnées JSON du catalogue arrivent dans R2. `check-gpl-blocklist-distribution.sh` est le garde-fou de CI qui fait respecter tout le modèle : aucun code de miroir/transformation, aucune URL d'artefact/téléchargement Lava, aucune source GPL activée par défaut, aucune écriture R2 d'octets de liste par le Worker, aucun texte « miroir hébergé par Lava », aucun `.txt`/`.json` GPL embarqué, et `source_url_only` exigé dans les migrations + les documents juridiques.
 
-> **Note sur les licences :** le code Lava de première partie est livré sous **AGPL-3.0** (le fichier `LICENSE` est la GNU AGPL v3, en accord avec le badge du README). Les listes de blocage tierces (HaGeZi, OISD) restent en **GPL-3.0** sous leurs propres licences en amont — le modèle source-url-only existe précisément pour que Lava puisse les utiliser sans jamais redistribuer d'octets sous licence GPL. La GPL-3.0 ici est une propriété des listes en amont, pas de l'app Lava.
+> **Note sur les licences :** le code Lava de première partie est livré sous **AGPL-3.0** (le fichier `LICENSE` est la GNU AGPL v3, en accord avec le badge du README). Les listes de blocage tierces (y compris HaGeZi, OISD et AdGuard) restent sous leurs propres licences en amont — le modèle source-url-only existe précisément pour que Lava puisse les utiliser sans jamais redistribuer d'octets de liste sous copyleft. La GPL-3.0 ici est une propriété des listes en amont, pas de l'app Lava.
 
 ---
 
@@ -236,7 +223,7 @@ Côté Worker, `syncOneBlocklist` récupère chaque source en amont, la normalis
 | mmap sans copie du snapshot compact | Implémenté |
 | Catalogue source-url-only + récupération directe en amont + validation par hash | Implémenté |
 | Filtre des domaines protégés | Implémenté |
-| Défaut gratuit = Phishing + Scam (pas Basic) | Implémenté (catalogue réaligné pour correspondre) |
+| Défaut gratuit = Block List Basic | Implémenté (catalogue généré + projections iOS/backend concordantes) |
 | Licence du code Lava de première partie | AGPL-3.0 (`LICENSE`) ; les listes tierces restent en GPL-3.0 en amont |
 
 ---

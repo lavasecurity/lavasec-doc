@@ -27,7 +27,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 
 | 组件 | Bundle / 位置 | 角色 | 状态 |
 |---|---|---|---|
-| **LavaSecApp** | `com.lavasec.app` | SwiftUI App 外壳；入口点，两个标签页的 防护 + 设置 导航（过滤/活动是 防护 下的详情页；网络活动已挪到 设置 → 高级 下）。 | 已实现 |
+| **LavaSecApp** | `com.lavasec.app` | SwiftUI App 外壳；入口点，两个标签页的 防护 + 设置 导航（过滤器/活动是 防护 下的详情页；网络活动已挪到 设置 → 高级 下）。 | 已实现 |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`；设备端的 DNS 过滤/解析引擎。受 iOS **每个扩展约 50 MiB 的内存上限**约束。 | 已实现 |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit 实时活动（锁屏 + 灵动岛）。 | 已实现 |
 | **Shared/** | `Shared/` | 跨目标的共享源码：App Group、命令服务、吉祥物、实时活动属性/意图。 | 已实现 |
@@ -35,7 +35,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 **App 侧的控制器（在 LavaSecApp 里）：**
 
 - **AppViewModel** — App 侧的控制器（万能对象）：负责 `NETunnelProviderManager` 的生命周期、共享状态的持久化、provider 消息收发、实时活动对账、目录同步、备份、StoreKit 和身份认证。
-- **RootView** — 两个标签页的 `TabView`（防护 + 设置），过滤和活动作为 防护 下的详情页进入；它把控引导流程，承载安全锁 / 隐私遮罩这些覆盖层。
+- **RootView** — 两个标签页的 `TabView`（防护 + 设置），过滤器和活动作为 防护 下的详情页进入；它把控引导流程，承载安全锁 / 隐私遮罩这些覆盖层。
 - **SecurityController** — 密码（Keychain 里加盐的 SHA256）+ 生物识别 + 按界面分别防护。
 - **LavaLiveActivityController** — 单一活动对账器，做了去重并按 revision 把关。
 - **OnboardingFlowView** — 多页的首次启动流程（6 页：`lava → guardIntro → features → vpn → notifications → done`）。
@@ -126,7 +126,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 
 1. 数据包隧道拦下一次 DNS 查询（隧道 DNS 服务器 `10.255.0.1`）。
 2. **`DNSQueryDispatcher`** 套用查询优先级：**bootstrap > pause > filter**。bootstrap 优先是一条硬性不变量——解析器自己的主机名要在任何过滤之前先解析出来，这样解析器永远不会把自己拦掉。
-3. 如果既不是 bootstrap、也没有处于暂停，域名就会拿去和 **`CompactFilterSnapshot`** 比对（通过 `Data(contentsOf:options:[.mappedIfSafe])` 从 App Group 以零拷贝 mmap 加载）。判定优先级是 **安全护栏 > 本地允许列表（允许例外） > 拦截列表 > 默认放行**；无效域名一律拦截。
+3. 如果既不是 bootstrap、也没有处于暂停，域名就会拿去和 **`CompactFilterSnapshot`** 比对（通过 `Data(contentsOf:options:[.mappedIfSafe])` 从 App Group 以零拷贝 mmap 加载）。判定优先级是 **威胁护栏 > 本地允许列表（允许例外） > 拦截列表 > 默认放行**；无效域名一律拦截。
 4. **被拦截** → 隧道在本地直接给出应答（不联系上游）。**被允许** → 这次查询交给 **`ResolverOrchestrator`**。
 5. `ResolverOrchestrator` 把它路由到配置好的传输方式——**`DoH3` / `DoT` / `DoQ` / 明文 DNS（`IP`）**——在退避门控的背后按端点逐个做故障转移；当一个加密方案没有任何端点时降级为明文 DNS；当主端点没有应答、且方案允许时，**回退到设备 DNS**。
 6. 解析器的回复返回给操作系统。用户的查询流只去往**用户自己选的公共解析器**，绝不去 Lava。
@@ -139,7 +139,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 
 1. 设备从 Worker 拉取目录**元数据**：`GET https://api.lavasecurity.app/v1/catalog` → 直接从 R2（`catalog/latest.json`）提供的 JSON，拆成 `sources[]` + `guardrails[]`，每一项都带着 `source_url` + `accepted_source_hashes`。
 2. 对每个启用的源，设备**直接从 `source_url`**（也就是上游——HaGeZi、OISD、Block List Project 等等）下载列表**字节**，**而不是**从 Lava 下载。
-3. 设备计算 SHA256，只接受校验和在 `accepted_source_hashes` 里的字节；对不上时就回退到上一次的好缓存，或者直接失败关闭（`checksumMismatch`）。
+3. 设备在大小/规则上限之下本地解析拉取到的字节。社区列表只要是通过 TLS 提供的就会被接受——目录里的 `accepted_source_hashes` 只是参考性的（缓存身份 + 审计用），不是硬性闸门——所以一个轮换过的列表绝不会因为偏离某个钉死的哈希而被拒。Lava 的威胁护栏档位则保持哈希钉死。
 4. **`BlocklistParser`** 在本地解析/规整/去重（auto / plain / hosts / adblock / dnsmasq 格式），然后 **`DomainRuleSet.lavaSecProtectedDomains`** 剥掉受保护的域名（apple.com、icloud.com、lavasecurity.com/.app、google.com、accounts.google.com 等），这样上游列表永远不可能拦掉 Lava/Apple/身份提供商的域名。
 5. **`FilterSnapshotPreparationService`** 把去重后的并集合并起来，并跑一遍**权威的额度强制执行**（先看设备上限，再看档位），然后把 `filter-snapshot.compact` 写进 App Group。
 6. `AppViewModel` 发出一条 `reload-snapshot` provider 消息；隧道重新加载。
@@ -150,7 +150,7 @@ Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游
 - **设备护栏（人人有份，永远不是付费墙）：** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 条规则** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`——在 ~50 MiB 的 NE 上限之下设定的 32 MB 目标。超额的配置会被确定性地拒绝，而不是放任隧道被系统 jetsam 杀掉。
 - **档位上限（`FeatureLimits`）：** **免费 50 万条规则 / Plus 200 万条规则**，这个值卡在设备护栏之下。它取代了旧的按启用列表**数量**来卡的上限（免费 3 个 / 付费 10 个）——列表数量上限已经作废。
 
-> **默认启用的注意点（以代码为准）：** 出厂的免费默认值是 **Block List Project 的钓鱼 + 诈骗**（`OnboardingDefaults.lavaRecommendedDefaults`）。它们是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），这个标志是设备上的事实来源，且与后端目录的 `default_enabled` 列保持一致。方案/目录文案里说「Block List Basic 是唯一的默认值」，对设备来说是错的（内部已跟踪）。
+> **默认启用的事实来源：** 出厂的免费默认值是 **Block List Basic**（`OnboardingDefaults.lavaRecommendedDefaults`）。它是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），这个标志与后端目录的 `default_enabled` 列保持一致，而该列又是从同一份标准目录规范生成的。
 
 ### C. 备份（零知识，需主动开启）— 已实现 {#c-backup-zero-knowledge-opt-in-implemented}
 
@@ -193,7 +193,7 @@ Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游
 - **静态零知识备份。** 客户端侧的 AES-256-GCM；服务器持有的是密文 + KDF 元数据 + 一个恢复分片，永远不会有明文、恢复码或解开后的密钥。可选的通行密钥槽是用客户端侧的 WebAuthn PRF / `hmac-secret` 输出包裹的，所以它同样是零知识——没有任何服务器持有的值能解开它。
 - **设备本地的秘密。** 备份解锁材料用的是 `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`——不走 iCloud 同步，也不进设备备份。
 - **service-role 隔离。** `bug_reports`、`mirror_events` 和 `qa_developers` 对匿名/已认证的 PostgREST 角色都已撤权；只有 Worker（service role）能碰它们。
-- **安全永远不卖钱。** 付费解锁的**只是定制能力**。它绝不绕过不可放行的**安全护栏**，而护栏的完整性是靠认可的 SHA256 源哈希来保证的（不是服务器签名）。优先级处处一致：**安全护栏 > 本地允许列表（允许例外） > 拦截列表 > 默认放行。**
+- **安全永远不卖钱。** 付费解锁的**只是定制能力**。它绝不绕过不可放行的**威胁护栏**，而护栏的完整性是靠认可的 SHA256 源哈希来保证的（不是服务器签名）。优先级处处一致：**威胁护栏 > 本地允许列表（允许例外） > 拦截列表 > 默认放行。**
 
 ## 7. 各组件文档 {#7-per-component-docs}
 

@@ -184,30 +184,17 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 
 ### 5.2 精选来源（已实现） {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources`（`BlocklistModels.swift:232-243`）列出了 **10** 个来源：
+`DefaultCatalog.curatedSources` 由规范化的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成，目前共 **32** 个来源，分布在七个类别中：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling，以及 Piracy & Torrent。来源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard 以及 1Hosts。
 
-| 来源 | 许可证 |
-|---|---|
-| Block List Basic | Unlicense |
-| Block List Project Phishing | Unlicense |
-| Block List Project Scam | Unlicense |
-| Block List Project Ransomware | Unlicense |
-| Phishing.Database Active Domains | MIT |
-| HaGeZi Multi Light | GPL-3.0 |
-| HaGeZi Multi Normal | GPL-3.0 |
-| HaGeZi Multi PRO mini | GPL-3.0 |
-| HaGeZi Multi PRO | GPL-3.0 |
-| OISD Small | GPL-3.0 |
-
-`guardrailSources` 是空的。GPL 来源（HaGeZi、OISD）在目录里是可见的，但**需要手动开启 / 默认是关的**，要等法务批准；Worker 会把上线时的同步/发布限定在 `source_url_only` 加上允许的 GPL 前缀（`hagezi-` / `oisd-`）范围内。
+`guardrailSources` 是空的。GPL 来源（HaGeZi、OISD、AdGuard）在目录里是可见的，但**需要手动开启 / 默认是关的**；Worker 会把上线时的同步/发布限定在 `source_url_only` 加上已获放行的 GPL 前缀（`hagezi-`、`oisd-`、`adguard-`）范围内。
 
 ### 5.3 免费用户默认启用的列表（已实现） {#53-default-enabled-lists-for-free-users-implemented}
 
-实际的免费默认配置是 `OnboardingDefaults.lavaRecommendedDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift:7-10`），它会启用 **Block List Project Phishing + Block List Project Scam**，搭配 device-DNS 解析器预设（`resolverPresetID = DNSResolverPreset.device.id`），并开启 device-DNS 回落。
+免费默认配置是 `OnboardingDefaults.lavaRecommendedDefaults`，它会启用 **Block List Basic**——一份覆盖面广、采用宽松许可证的合并列表（广告 + 跟踪 + 恶意软件 + 钓鱼/诈骗）——搭配 device-DNS 解析器预设（`resolverPresetID = DNSResolverPreset.device.id`），并**开启**加密的 Device-DNS 回落（`usesEncryptedDeviceDNSFallback = true`），回落到 **Mullvad DoH**（`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`）：万一设备自己的 DNS 卡住了，被放行的查询会暂时经由 Mullvad DoH 来承载，随后再自动回到设备自身的 DNS。（裸的 `AppConfiguration()` 初始化器默认把这个回落**关掉**——只有在接受推荐的引导默认值时它才会被启用。）这取代了早先的 Block List Project Phishing + Scam 这一对：Basic 的合并覆盖已经把它们囊括进去了，而这两者仍然是可手动开启的列表。
 
-这套免费默认是**由 `defaultEnabled` 产生的**，不是写死的。`blockListProjectPhishing`（`BlocklistModels.swift:139`）和 `blockListProjectScam`（`BlocklistModels.swift:148`）都设了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs`（`BlocklistModels.swift:250-252`）是由 `curatedSources.filter(\.defaultEnabled)` 推导出来的。源码里的注释（`BlocklistModels.swift:246-249`）把 `defaultEnabled` 称作「全新安装默认值的唯一事实来源」，与后端目录的 `default_enabled` 列相对应。`defaultEnabled` 经由 `recommendedDefaultSourceIDs` 一路流到 `OnboardingDefaults`，是真正生效的机制——把某个来源上的这个标志翻一下，就能改默认值。
+这套免费默认是**由 `defaultEnabled` 产生的**，不是写死的。`blockListProjectBasic` 设了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs` 是由 `curatedSources.filter(\.defaultEnabled)` 推导出来的。`defaultEnabled` 是「全新安装默认值的唯一事实来源」，与后端目录的 `default_enabled` 列相对应。它经由 `recommendedDefaultSourceIDs` 一路流到 `OnboardingDefaults`，是真正生效的机制——把某个来源上的这个标志翻一下，就能改默认值。
 
-> **默认值的事实来源（以代码为准）。** 任何说「Block List Basic 是唯一默认」的计划/目录文案，对设备而言都是错的；设备靠 `defaultEnabled: true` 随包启用的是 Phishing + Scam，而 iOS 上的 `BlocklistSource.defaultEnabled` 标志才是权威的、真正生效的机制。后端目录的 `default_enabled` 列已经被一次迁移重新对齐到同一套 Phishing + Scam，所以现在 `/v1/catalog` 提供的元数据和客户端一致了。公开站点上那句「Enabled blocklists 3 → 10」的文案仍然是**过时的**——真正的关卡是 500K/2M 的过滤规则预算，而不是列表数量。
+> **默认值的事实来源（一份生成出来的规范）。** 目录是由一份规范化的、唯一的规格文档（[Blocklist Catalog](../legal/blocklist-catalog.md)）生成的，它同时产出 iOS 端的 `DefaultCatalog` 和后端的种子数据，所以设备和对外提供的 `/v1/catalog` 元数据天然就是一致的。全新安装的默认是 **Block List Basic**，源自它的 `defaultEnabled: true` 标志。真正的分层关卡是 500K/2M 的过滤规则预算，而不是列表数量。
 
 ### 5.4 只发布来源 URL 的 GPL 分发模型（已实现） {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -215,7 +202,7 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 
 在 Worker 这边，`syncOneBlocklist` 会拉取每个上游来源，并对它做归一化 + 哈希（算出 `source_hash`、`normalized_hash`、`entry_count`），但写入的是 `raw_r2_key = null` / `normalized_r2_key = null`——只有目录 JSON 元数据会进到 R2。`check-gpl-blocklist-distribution.sh` 是把整套模型钉死的 CI 守卫：不许有镜像/转换代码、不许有 Lava 的产物/下载 URL、不许有 GPL 来源默认启用、不许 Worker 往 R2 里写列表字节、不许出现「Lava 自托管镜像」的文案、不许打包 GPL 的 `.txt`/`.json`，并且迁移脚本 + 法律文档里必须出现 `source_url_only`。
 
-> **许可证说明：** Lava Security 的第一方代码以 **AGPL-3.0** 发布（`LICENSE` 文件就是 GNU AGPL v3，与 README 徽章一致）。第三方拦截列表（HaGeZi、OISD）则按它们各自的上游许可证保持 **GPL-3.0**——只发布来源 URL 这套模型存在的意义，恰恰就是让 Lava Security 能用上它们，又从不重新分发任何 GPL 许可的字节。这里的 GPL-3.0 是那些上游列表的属性，而不是 Lava Security App 的属性。
+> **许可证说明：** Lava Security 的第一方代码以 **AGPL-3.0** 发布（`LICENSE` 文件就是 GNU AGPL v3，与 README 徽章一致）。第三方拦截列表（包括 HaGeZi、OISD 和 AdGuard）则按它们各自的上游许可证保持原样——只发布来源 URL 这套模型存在的意义，恰恰就是让 Lava Security 能用上它们，又从不重新分发任何 copyleft 许可的列表字节。这里的 GPL-3.0 是那些上游列表的属性，而不是 Lava Security App 的属性。
 
 ---
 
@@ -236,7 +223,7 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 | compact 快照的零拷贝 mmap | 已实现 |
 | 只发布来源 URL 的目录 + 直接上游拉取 + 哈希校验 | 已实现 |
 | 受保护域名过滤 | 已实现 |
-| 免费默认 = Phishing + Scam（不是 Basic） | 已实现（目录已重新对齐一致） |
+| 免费默认 = Block List Basic | 已实现（生成出来的目录 + iOS/后端投影彼此一致） |
 | 第一方 Lava Security 代码许可证 | AGPL-3.0（`LICENSE`）；第三方列表上游保持 GPL-3.0 |
 
 ---
