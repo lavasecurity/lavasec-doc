@@ -103,7 +103,7 @@ A migration (`20260525000000_add_blocklist_distribution_mode.sql`) dropped these
 
 ### 3.3 Normalization guardrails (metadata only)
 
-Worker-side normalization (`normalizeBlocklist`) filters protected domains, enforces caps, and dedupes+sorts. This is purely to compute trustworthy metadata; the **device re-validates accepted hashes** when it downloads the real list, so this is not a security boundary on its own. Key constants:
+Worker-side normalization (`normalizeBlocklist`) filters protected domains, enforces caps, and dedupes+sorts. This is purely to compute trustworthy metadata; for **community lists** the device does **not** hash-gate the download — it fetches over TLS from the curated `source_url` and parses under caps (the catalog's accepted hashes are advisory), so this Worker-side normalization is not a security boundary on its own. (Lava's threat-guardrail tier remains hash-pinned on the device, and `source_url` provenance is enforced at publish time — a URL change must use a new `list_id`.) Key constants:
 
 - `PROTECTED_SUFFIXES` — strips any rule matching Apple/iCloud/`mzstatic`/Lava Security domains/Supabase/Cloudflare/Google/GitHub, so a poisoned upstream cannot block Lava's own infrastructure or sign-in providers.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.
