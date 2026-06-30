@@ -15,7 +15,7 @@ domaines connus comme risqués ou indésirables sans faire passer votre navigati
     que du texte chiffré.
 
 Ce site est le manuel public qui explique comment Lava fonctionne : son architecture, son
-comportement et les choix qui sont derrière. Il suit de près le
+comportement et les choix qui le sous-tendent. Il suit de près le
 [client iOS](https://github.com/lavasecurity/lavasec-ios) open source.
 
 ## Par où commencer {#start-here}
@@ -24,7 +24,7 @@ comportement et les choix qui sont derrière. Il suit de près le
 
 -   :material-rocket-launch: **Produit**
 
-    Ce que fait Lava et à qui ça s'adresse.
+    Ce que fait Lava et à qui il s'adresse.
 
     [Vue d'ensemble](product/overview.md) · [Catalogue des fonctionnalités](product/features.md) ·
     [Parité entre plateformes](product/platform-parity.md)
@@ -46,7 +46,7 @@ comportement et les choix qui sont derrière. Il suit de près le
 
 -   :material-scale-balance: **Décisions et conformité**
 
-    Pourquoi c'est construit comme ça.
+    Pourquoi Lava est construit ainsi.
 
     [Décisions clés (ADR)](decisions/key-decisions.md) ·
     [Mentions tierces](legal/third-party-notices.md)

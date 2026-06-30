@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > Destinatari: ingegneri iOS che lavorano in `lavasec-ios`.
 
-Lava Security è un'app iOS privacy-first che filtra il DNS localmente sul dispositivo tramite un packet tunnel NetworkExtension on-device, bloccando i domini rischiosi e indesiderati noti senza instradare la tua navigazione attraverso i server di Lava. Questo documento illustra come è strutturato il client iOS: i target, come l'app comunica con la sua estensione tunnel, il ciclo di vita della VPN, il modello di stato Guardian, la Live Activity e il widget, il flusso di onboarding e il proprietario dello stato lato app (`AppViewModel`).
+Lava Security è un'app iOS privacy-first che filtra il DNS localmente sul dispositivo tramite un packet tunnel NetworkExtension on-device, bloccando i domini rischiosi e indesiderati noti senza instradare la tua navigazione attraverso i server di Lava. Questo documento illustra come è strutturato il client iOS: i target, il confine app-tunnel, il ciclo di vita della VPN, il modello di stato Guardian, la Live Activity e il widget, il flusso di onboarding e il proprietario dello stato lato app (`AppViewModel`).
 
 Per la visione d'insieme dell'intero sistema (l'app, il Worker del catalogo e Supabase), vedi [Panoramica del sistema](./system-overview.md).
 
@@ -17,7 +17,7 @@ Per la visione d'insieme dell'intero sistema (l'app, il Worker del catalogo e Su
 
 ## 1. Target e responsabilità
 
-Il client viene distribuito come tre target eseguibili più una libreria core condivisa. Tutti e tre i target si uniscono allo stesso **App Group** (`group.com.lavasec`) e collegano `LavaSecCore`.
+Il client viene distribuito come tre target eseguibili più una libreria core condivisa. Tutti e tre i target appartengono allo stesso **App Group** (`group.com.lavasec`) e collegano `LavaSecCore`.
 
 | Target | Bundle id | Responsabilità |
 |---|---|---|
@@ -67,9 +67,9 @@ Gli helper `notifyTunnelSnapshotUpdated()` / `notifyTunnelProtectionPauseUpdated
 
 ### Perché i provider message per il controllo app→tunnel
 
-**`sendProviderMessage` è l'unico percorso di controllo app→tunnel — non esiste un segnale Darwin app→tunnel.** Un design precedente postava un segnale Darwin `CFNotificationCenter` in pausa e lo osservava all'interno dell'estensione, ma non si attivava mai in modo affidabile nel processo NetworkExtension ed è stato rimosso. Il command service non posta più `CFNotificationCenterPostNotification`, e il tunnel non aggiunge più un `CFNotificationCenterAddObserver` — la loro assenza è asserita dai test di introspezione del sorgente (`Tests/LavaSecCoreTests/LavaLiveActivitySourceTests.swift:574` per il post del command service; `Tests/LavaSecCoreTests/PacketTunnelDNSRuntimeSourceTests.swift:847` per l'observer del tunnel) a tutela contro la reintroduzione. (Le righe `import Darwin` che rimangono nel command service e nel tunnel servono per le primitive `flock`/socket, non per le notifiche.)
+**`sendProviderMessage` è l'unico percorso di controllo app→tunnel — non esiste un segnale Darwin app→tunnel.** Un design precedente pubblicava un segnale Darwin `CFNotificationCenter` alla messa in pausa e lo osservava all'interno dell'estensione, ma non si attivava mai in modo affidabile nel processo NetworkExtension ed è stato rimosso. Il command service non pubblica più `CFNotificationCenterPostNotification` e il tunnel non aggiunge più un `CFNotificationCenterAddObserver` — la loro assenza è asserita dai test di introspezione del sorgente (`Tests/LavaSecCoreTests/LavaLiveActivitySourceTests.swift:574` per il post del command service; `Tests/LavaSecCoreTests/PacketTunnelDNSRuntimeSourceTests.swift:847` per l'observer del tunnel) a tutela contro la reintroduzione. (Le righe `import Darwin` che rimangono nel command service e nel tunnel servono per le primitive `flock`/socket, non per le notifiche.)
 
-Un percorso Darwin *continua* invece a essere presente nella direzione opposta. Il tunnel posta un nudge di salute-cambiata all'app: `TunnelHealthSignal.DarwinProtectionSignalNotifier` (`Sources/LavaSecCore/TunnelHealthSignal.swift`) posta `CFNotificationCenterPostNotification` sul canale `com.lavasec.protection.tunnel-health-changed` (il nome del canale risiede in `TunnelHealthSignal.swift`, non in `AppGroup.swift`), e l'app lo osserva tramite `DarwinNotificationObserver` (`LavaSecApp/DarwinNotificationObserver.swift`, `CFNotificationCenterAddObserver`), cablato in `AppViewModel` per chiamare `handleTunnelHealthNudge()`. La presenza di questo nudge di salute tunnel→app è asserita da `LavaLiveActivitySourceTests.swift:1059-1075`.
+Un percorso Darwin *continua* invece a essere presente nella direzione opposta. Il tunnel invia all'app un nudge di cambio salute: `TunnelHealthSignal.DarwinProtectionSignalNotifier` (`Sources/LavaSecCore/TunnelHealthSignal.swift`) pubblica `CFNotificationCenterPostNotification` sul canale `com.lavasec.protection.tunnel-health-changed` (il nome del canale risiede in `TunnelHealthSignal.swift`, non in `AppGroup.swift`), e l'app lo osserva tramite `DarwinNotificationObserver` (`LavaSecApp/DarwinNotificationObserver.swift`, `CFNotificationCenterAddObserver`), cablato in `AppViewModel` per chiamare `handleTunnelHealthNudge()`. La presenza di questo nudge di salute tunnel→app è asserita da `LavaLiveActivitySourceTests.swift:1059-1075`.
 
 Per il controllo app→tunnel, la pausa viene consegnata scrivendo lo `ProtectionPauseStore` condiviso e facendola seguire dal provider message `reload-protection-pause` affinché il tunnel esegua `refreshProtectionPauseStateOnly`. `AppViewModel.swift:4995-4996` documenta la regola direttamente: l'app "non si affida mai nemmeno all'observer Darwin dello snapshot, usando sempre `sendProviderMessage`". Considera la coppia App Group (stato condiviso) + `sendProviderMessage` (il segnale di wake/controllo) come il percorso di controllo app→tunnel.
 

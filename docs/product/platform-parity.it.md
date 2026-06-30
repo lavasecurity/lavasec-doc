@@ -6,7 +6,7 @@ pubblico per il comportamento delle funzionalità: cosa deve significare la
 stessa cosa ovunque, cosa è intenzionalmente nativo della piattaforma e cosa non
 è ancora promesso.
 
-I documenti di parità non sostituiscono i piani di implementazione o i test:
+I documenti di parità non sostituiscono i piani di implementazione o i test.
 
 - `lavasec-doc` possiede il contratto di prodotto e di comportamento.
 - I piani interni possiedono lo stato di consegna, la sequenza, i rischi privati e
@@ -17,7 +17,7 @@ I documenti di parità non sostituiscono i piani di implementazione o i test:
 Quando i documenti e il codice rilasciato sono in disaccordo, il codice prevale
 finché i documenti non vengono aggiornati. Quando un piano e questa pagina sono
 in disaccordo, considera questa pagina come il contratto di prodotto e il piano
-come la coda di lavoro.
+come la coda dei lavori.
 
 ## Vocabolario di stato
 
@@ -29,7 +29,7 @@ come la coda di lavoro.
 | **Deferred** | Funzionalità valida, ma non richiesta per la prossima milestone della piattaforma. |
 | **Platform-native** | Stessa promessa all'utente, implementazione diversa specifica del sistema operativo. |
 | **Not applicable** | Non dovrebbe esistere alcuna funzionalità equivalente su quella piattaforma. |
-| **Dropped** | Precedentemente considerata o costruita, poi rimossa intenzionalmente. |
+| **Dropped** | Presa in considerazione o realizzata in precedenza, poi rimossa intenzionalmente. |
 
 ## Formato del record di funzionalità
 
@@ -77,9 +77,9 @@ Un record di funzionalità completo risponde a:
 | `dns.encrypted-transports` | Il DNS upstream cifrato è disponibile per le query consentite. | Shipped | Planned | Parità graduale consentita; Android v1 può partire con DoH prima di DoT/DoQ. | Test di trasporto iOS; test dei resolver Android e QA su dispositivo. |
 | `reports.local-only-diagnostics` | Report e diagnostica restano locali a meno che l'utente non invii esplicitamente un bundle di supporto. | Shipped | Planned | Parità esatta della privacy; l'interfaccia può differire. | Test del bundle di segnalazione bug; test di anteprima del debug-report Android una volta costruiti. |
 | `account.optional-sign-in` | La protezione funziona senza un account; l'accesso è facoltativo. | Shipped | Deferred | Promessa di prodotto esatta prima che Android esponga le funzionalità dell'account. | Documenti di autenticazione dell'account; revisione di onboarding/impostazioni Android. |
-| `backup.zero-knowledge-settings` | Il backup facoltativo delle impostazioni archivia solo testo cifrato; Lava non può leggere i contenuti del backup in chiaro. | Shipped | Deferred | Parità esatta della privacy prima che Android offra il backup. | Test di backup zero-knowledge; test di parità crittografica Android una volta costruiti. |
+| `backup.zero-knowledge-settings` | Il backup facoltativo delle impostazioni memorizza solo testo cifrato; Lava non può leggere i contenuti del backup in chiaro. | Shipped | Deferred | Parità esatta della privacy prima che Android offra il backup. | Test di backup zero-knowledge; test di parità crittografica Android una volta costruiti. |
 | `plus.customization-boundary` | La protezione gratuita resta utile; Plus sblocca la personalizzazione avanzata e non cambia mai la sicurezza delle protezioni. | Shipped | Planned | Stesso confine di prodotto; l'implementazione dello store è nativa della piattaforma. | Test della policy di abbonamento; test di entitlement Play Billing una volta costruiti. |
-| `design.calm-earned-depth` | L'UX predefinita è calma, con superfici tecniche o celebrative più approfondite solo quando guadagnate o richieste. | Partial | Planned | Corrispondenza per intento di design tramite token/ruoli condivisi. | Documenti del design system e piano di base per la portabilità. |
+| `design.calm-earned-depth` | L'UX predefinita è calma, con superfici tecniche o celebrative più approfondite solo quando giustificate o richieste. | Partial | Planned | Corrispondenza per intento di design tramite token/ruoli condivisi. | Documenti del design system e piano di base per la portabilità. |
 | `platform.ambient-presence` | Lo stato della protezione può apparire al di fuori dell'app quando il sistema operativo supporta una superficie ambientale nativa. | Platform-native | Planned | Parità di intento, non parità di superficie. | Documenti Live Activity iOS; decisione su notifica/Quick Settings Android in sospeso. |
 
 ## Uso per la preparazione di Android
@@ -92,8 +92,8 @@ contratto minimo pronto per Android è:
 - il comportamento a parità esatta ha una fonte di test o fixture iOS
   identificata;
 - il comportamento nativo della piattaforma ha una posizione Android esplicita;
-- le funzionalità rinviate sono nominate così che l'MVP Android non implichi
-  accidentalmente che vengano rilasciate.
+- le funzionalità rinviate sono indicate esplicitamente, così che l'MVP Android
+  non implichi accidentalmente che vengano rilasciate.
 
 Quella revisione appartiene al piano di implementazione o alle note di revisione,
 mentre questa pagina mantiene il contratto pubblico e durevole.

@@ -75,12 +75,12 @@ Routing is a flat `route()` dispatcher. Everything is **Implemented** unless not
 - **R2 binding** — `catalog/latest.json`, `catalog/{version}.json`, and the round-robin cursor `catalog/scheduled-sync-cursor.json`. **It never stores third-party blocklist bytes.** (Legacy bug-report attachment objects are only ever *deleted* — best-effort during account deletion — never written.)
 - **D1 binding** — append-only anonymous `article_id` / `locale` / `vote` / `path` rows; kept separate from Supabase by design.
 - **Cron (`scheduled`)** — the handler branches on the cron id:
-  - **Every 6 hours** — syncs **one** source per run, round-robined via the R2 cursor (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), then republishes the catalog. Spreading the load avoids hammering all upstreams at once.
+  - **Every 6 hours** — syncs **one** source per run, round-robined via the R2 cursor (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), then republishes the catalog. Spreading the load avoids contacting all upstreams at once.
   - **Every 2 minutes** — runs an internal bug-report triage path that promotes new anonymous reports into an internal issue-tracker queue, advancing its own watermark cursor. This is internal operations tooling; the issue-tracker/notification identifiers are configuration, not part of the public API.
 
 ## 3. Catalog & source-url-only enforcement
 
-This is the part of the backend most specific to Lava's compliance posture, so it gets server-side teeth.
+This is the part of the backend most specific to Lava's compliance posture, so it has server-side enforcement.
 
 ### 3.1 The source-url-only model
 
@@ -103,7 +103,7 @@ A migration (`20260525000000_add_blocklist_distribution_mode.sql`) dropped these
 
 ### 3.3 Normalization guardrails (metadata only)
 
-Worker-side normalization (`normalizeBlocklist`) filters protected domains, enforces caps, and dedupes+sorts. This is purely to compute trustworthy metadata; for **community lists** the device does **not** hash-gate the download — it fetches over TLS from the curated `source_url` and parses under caps (the catalog's accepted hashes are advisory), so this Worker-side normalization is not a security boundary on its own. (Lava's threat-guardrail tier remains hash-pinned on the device, and `source_url` provenance is enforced at publish time — a URL change must use a new `list_id`.) Key constants:
+Worker-side normalization (`normalizeBlocklist`) filters protected domains, enforces caps, and dedupes+sorts. This only computes trustworthy metadata; for **community lists** the device does **not** hash-gate the download — it fetches over TLS from the curated `source_url` and parses under caps (the catalog's accepted hashes are advisory), so this Worker-side normalization is not a security boundary on its own. (Lava's threat-guardrail tier remains hash-pinned on the device, and `source_url` provenance is enforced at publish time — a URL change must use a new `list_id`.) Key constants:
 
 - `PROTECTED_SUFFIXES` — strips any rule matching Apple/iCloud/`mzstatic`/Lava Security domains/Supabase/Cloudflare/Google/GitHub, so a poisoned upstream cannot block Lava's own infrastructure or sign-in providers.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.

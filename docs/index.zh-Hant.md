@@ -9,7 +9,7 @@ Lava Security 是一款**以隱私為優先的 iOS app**，透過裝置端的 Ne
 !!! quote "隱私承諾"
     DNS 篩選會在你的裝置本機完成；Lava Security 永遠不會收到你日常的 DNS 查詢、瀏覽歷史記錄或逐網域的遙測資料，而任何選用的帳號備份都是端對端加密的，因此 Lava Security 只可能儲存密文。
 
-本站是 Lava Security 運作方式的公開手冊——涵蓋它的架構、行為，以及背後的決策。它追蹤開源的 [iOS 用戶端](https://github.com/lavasecurity/lavasec-ios)。
+本站是說明 Lava Security 運作方式的公開手冊——涵蓋其架構、行為，以及背後的決策，並追蹤開源的 [iOS 用戶端](https://github.com/lavasecurity/lavasec-ios)。
 
 ## 從這裡開始 {#start-here}
 
@@ -59,4 +59,4 @@ Lava Security 是一款**以隱私為優先的 iOS app**，透過裝置端的 Ne
 
 當文件與程式碼不一致時，以程式碼為準。本文件是一份快照，會隨著產品演進從原始碼重新產生。
 
-跨平台行為的追蹤記錄在[平台一致性](product/platform-parity.md)中：它列出穩定的功能 id、平台狀態，以及應讓 iOS 與 Android 保持一致的測試或固定資料。
+跨平台行為記錄於[平台一致性](product/platform-parity.md)：當中列出穩定的功能 id、平台狀態，以及用來讓 iOS 與 Android 保持一致的測試或固定資料。

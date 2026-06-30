@@ -30,7 +30,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Context.** The product is a privacy-first filter for non-technical users (parents, older adults) shipping through the consumer App Store, with no account required. The competing NetworkExtension providers and managed-DNS APIs are restricted to supervised/MDM-managed devices or don't cover all of an app's DNS, and a resolver-side model would route the user's domain stream off the device.
 
-**Rationale.** The packet tunnel is the only provider that (a) works for unmanaged consumer devices and (b) lets every DNS decision happen on-device, which is the foundation of the privacy promise: *all DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit.* The trade-off accepted in exchange is the iOS **~50 MiB per-extension memory ceiling** the tunnel must live under — a constraint that shapes several later decisions below.
+**Rationale.** The packet tunnel is the only provider that (a) works for unmanaged consumer devices and (b) lets every DNS decision happen on-device, which is the foundation of the privacy promise: *all DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit.* The accepted trade-off is the iOS **~50 MiB per-extension memory ceiling** the tunnel must live under — a constraint that shapes several later decisions below.
 
 **Status.** **Adopted** (foundational; in code from the initial prototype).
 
@@ -66,7 +66,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Context.** RFC 9250 maps each DNS query to its own QUIC stream, so true reuse needs the multi-stream `NWConnectionGroup`/`openStream` API that is **iOS 26.0+ only**, while the deployment floor is iOS 17. An iOS-26-gated reuse path was nonetheless implemented (compiled Debug+Release against the Xcode 26 SDK) and **device-tested on iOS 26.5** against AdGuard DoQ.
 
-**Rationale.** The reuse path failed on every attempt on device (`openStream`/`receive` errored, then the fallback hit "Socket is not connected"), measuring **net worse** than the per-query baseline (control: 34 handshakes / 35 queries, all-success). This empirically confirmed Apple DTS's "hold off on QUIC with the new Network framework" guidance, so the work was reverted rather than shipped; only the docs and guard-test rationale retain the finding so it isn't re-attempted before the API matures.
+**Rationale.** The reuse path failed on every attempt on device (`openStream`/`receive` errored, then the fallback hit "Socket is not connected"), measuring **net worse** than the per-query baseline (control: 34 handshakes / 35 queries, all-success). This empirically confirmed Apple DTS's "hold off on QUIC with the new Network framework" guidance, so the work was reverted rather than shipped; only the docs and guard-test rationale retain the finding so it is not re-attempted before the API matures.
 
 **Status.** **Reverted** (deferred until the deployment floor reaches iOS 26). Describe DoQ as per-query fresh connections.
 
@@ -158,7 +158,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 ## Appendix — other recorded reversals and rejections
 
-These are smaller but were genuine decisions with a recorded flip; listed for completeness.
+These are smaller decisions, but each had a recorded flip.
 
 | Decision | Rationale | Status |
 |---|---|---|

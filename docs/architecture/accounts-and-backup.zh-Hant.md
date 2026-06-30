@@ -22,7 +22,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## 1. 認證流程 {#1-authentication-flow}
 
-**提供者：僅限 Apple 與 Google。** **(已實作)** `AccountAuthProvider` 列舉的正好是 `.apple` 與 `.google`（`AccountAuthService.swift`）。電子郵件／密碼 — 以及任何繞過認證的客服協助復原 — 明確被**捨棄**；自行掌管密碼會帶來重設／MFA／鎖定／外洩等義務，在 Apple／Google 已足夠的情況下並不值得這份複雜度，而繞過式復原則會破壞零知識保證。
+**提供者：僅限 Apple 與 Google。** **(已實作)** `AccountAuthProvider` 列舉的正好是 `.apple` 與 `.google`（`AccountAuthService.swift`）。電子郵件／密碼 — 以及任何繞過認證的客服協助復原 — 明確被**捨棄**；自行掌管密碼會帶來重設／MFA／鎖定／外洩等義務，在 Apple／Google 已足夠的情況下並不值得，而繞過式復原則會破壞零知識保證。
 
 兩種提供者都使用**原生 `id_token` 授權**，而非 Supabase Swift SDK，也非網頁 OAuth：
 
@@ -74,7 +74,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 **包含：** 已啟用封鎖清單的 **ID**（目錄參照，而非清單位元組）、允許的網域／已封鎖網域、解析器預設／自訂解析器、本機日誌偏好、LavaGuard 帳本、一個防護提示，以及自訂封鎖清單來源中繼資料。
 
-**排除：** `isPaid`（權益屬本機）、QA 旗標、診斷、篩選快照，以及完整的封鎖清單內容（僅以目錄 ID 參照）。你的瀏覽歷史與 DNS 查詢從不屬於此酬載的一部分，因為裝置從不將它們記錄為例行的遙測串流。
+**排除：** `isPaid`（權益屬本機）、QA 旗標、診斷、篩選快照，以及完整的封鎖清單內容（僅以目錄 ID 參照）。你的瀏覽歷史與 DNS 查詢從不屬於此酬載；裝置也從不將它們記錄為例行的遙測串流。
 
 ### 3.3 信封（用戶端加密） {#33-the-envelope-client-side-crypto}
 
@@ -107,13 +107,13 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 **因此：** 在沒有使用者持有機密的情況下，Supabase **無法解密備份**。三條復原路徑 — 裝置金鑰槽、復原碼（與伺服器份額結合，§4.2），以及通行密鑰槽（認證器的 PRF 輸出，§4.3）— 全都在**裝置端**解密，且伺服器對任何一條都不持有解密機密。這在遷移註解與隱私計畫中均有斷言，並經過測試（信封測試確認上傳的形狀中沒有明文網域／URL 外洩）。
 
-**精確的威脅模型注意事項 — 切勿過度宣稱。** 對於 **assisted-recovery** 槽，伺服器在 `user_backups` 中*同時*持有 `server_recovery_share` *與*被包裝的 `assistedRecovery` 槽。它唯一欠缺的是使用者的復原碼，而 Lava Security 從不接收它。因此若伺服器被完全攻陷，復原碼的熵（約 105 位元，見 §4.1）加上 210k 次迭代的 PBKDF2 成本，是抵禦對該槽進行離線暴力破解的**唯一**屏障。這是刻意設計的（協助復原在設計上即為雙因素 — 任一半單獨都無法解密），但這也意味著復原碼的熵是承重的，而非裝飾性的。`keychain`（裝置）槽的機密從不離開裝置，因此它完全不會暴露於伺服器攻陷。
+**精確的威脅模型注意事項 — 切勿過度宣稱。** 對於 **assisted-recovery** 槽，伺服器在 `user_backups` 中*同時*持有 `server_recovery_share` *與*被包裝的 `assistedRecovery` 槽。它唯一欠缺的是使用者的復原碼，而 Lava Security 從不接收它。因此若伺服器被完全攻陷，復原碼的熵（約 105 位元，見 §4.1）加上 210k 次迭代的 PBKDF2 成本，是抵禦對該槽進行離線暴力破解的**唯一**屏障。這是刻意設計的（協助復原在設計上即為雙因素 — 任一半單獨都無法解密），但這也意味著復原碼的熵是承重的，而非裝飾性的。`keychain`（裝置）槽的機密從不離開裝置，因此完全不會暴露於伺服器攻陷之下。
 
 ---
 
 ## 4. 復原 {#4-recovery}
 
-備份唯有在你能復原它時才有用。`restoreEncryptedBackup`（在 `AppViewModel` 中）藉由嘗試可用的槽位來解密：裝置金鑰、復原碼，或通行密鑰。在每一種模式下，信封都會在本機載入（或從 Supabase 取得）然後在**裝置端解密** — 伺服器從不解密。
+`restoreEncryptedBackup`（在 `AppViewModel` 中）會逐一嘗試可用的槽位來解密：裝置金鑰、復原碼或通行密鑰。在每一種模式下，信封都會在本機載入（或從 Supabase 取得）然後在**裝置端解密** — 伺服器從不解密。
 
 ### 4.1 復原碼 {#41-recovery-phrase}
 

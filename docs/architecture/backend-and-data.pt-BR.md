@@ -75,12 +75,12 @@ O roteamento é um dispatcher `route()` plano. Tudo é **Implementado** salvo in
 - **Binding R2** — `catalog/latest.json`, `catalog/{version}.json`, e o cursor round-robin `catalog/scheduled-sync-cursor.json`. **Ele nunca armazena bytes de blocklist de terceiros.** (Objetos de anexo de relatórios de bug legados são apenas *excluídos* — best-effort durante a exclusão de conta — nunca gravados.)
 - **Binding D1** — linhas anônimas somente-append `article_id` / `locale` / `vote` / `path`; mantidas separadas do Supabase por design.
 - **Cron (`scheduled`)** — o handler ramifica conforme o id do cron:
-  - **A cada 6 horas** — sincroniza **uma** fonte por execução, em round-robin via o cursor R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), depois republica o catálogo. Espalhar a carga evita martelar todos os upstreams de uma só vez.
-  - **A cada 2 minutos** — executa um caminho interno de triagem de relatórios de bug que promove novos relatórios anônimos para uma fila de issue-tracker interno, avançando seu próprio cursor watermark. Isso é ferramental de operações interno; os identificadores de issue-tracker/notificação são configuração, não parte da API pública.
+  - **A cada 6 horas** — sincroniza **uma** fonte por execução, em round-robin via o cursor R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), depois republica o catálogo. Distribuir a carga evita contatar todos os upstreams de uma só vez.
+  - **A cada 2 minutos** — executa um caminho interno de triagem de relatórios de bug que promove novos relatórios anônimos para uma fila de issue-tracker interno, avançando seu próprio cursor watermark. Isso é ferramental interno de operações; os identificadores de issue-tracker/notificação são configuração, não parte da API pública.
 
 ## 3. Catálogo e imposição do source-url-only
 
-Esta é a parte do backend mais específica à postura de conformidade da Lava, então ela ganha dentes do lado do servidor.
+Esta é a parte do backend mais específica à postura de conformidade da Lava, por isso há imposição do lado do servidor.
 
 ### 3.1 O modelo source-url-only
 
@@ -147,7 +147,7 @@ A divisão importa: relatórios de bug anônimos devem ser *inseríveis* pelo Wo
 
 ### 4.3 Auth e o envelope de backup criptografado
 
-**Auth** é opcional. O sign-in é **somente Apple + Google** (email/senha foi **Descartado**). Ambos usam o grant nativo `id_token` trocado no Supabase Auth `auth/v1/token?grant_type=id_token` com um nonce com hash; o app armazena apenas a sessão resultante, travada no dispositivo no Keychain. O fluxo do lado do cliente vive no app iOS (`lavasec-ios: LavaSecApp/AccountAuthService.swift`, `lavasec-ios: Sources/LavaSecCore/SupabaseIDTokenAuth.swift`) — ver [Contas e Backup](./accounts-and-backup.md) para o modelo completo de conta/backup.
+**Auth** é opcional. O sign-in é **somente Apple + Google** (email/senha foi **Descartado**). Ambos usam o grant nativo `id_token` trocado no Supabase Auth `auth/v1/token?grant_type=id_token` com um nonce com hash; o app armazena apenas a sessão resultante localmente no dispositivo, no Keychain. O fluxo do lado do cliente vive no app iOS (`lavasec-ios: LavaSecApp/AccountAuthService.swift`, `lavasec-ios: Sources/LavaSecCore/SupabaseIDTokenAuth.swift`) — ver [Contas e Backup](./accounts-and-backup.md) para o modelo completo de conta/backup.
 
 > **Backup zero-knowledge:** envelope AES-256-GCM do lado do cliente; apenas ciphertext + metadados não-secretos sobem para o `user_backups` do Supabase (RLS por usuário). O servidor não consegue descriptografar sem um segredo mantido pelo usuário.
 
@@ -169,9 +169,9 @@ O fato crucial do backend: **o cliente iOS lê/grava `user_backups` diretamente 
 
 A recuperação de backup assistida por passkey é **zero-knowledge** e inteiramente do lado do cliente. O material da chave de recuperação é derivado no dispositivo a partir da saída do **WebAuthn PRF / hmac-secret** do passkey; o servidor armazena **nenhum** segredo de recuperação, registra **nenhum** passkey, e emite **nenhum** challenge WebAuthn. Não há caminho de escrow controlado pelo servidor.
 
-As tabelas de escrow que um design anterior usava (`backup_passkey_recovery`, `backup_passkey_challenges`) foram removidas antes do lançamento, e o Worker não carrega rotas `/v1/backup/*` nem código de WebAuthn/passkey. (Uma entrada `@simplewebauthn/server` permanece no `package.json` do Worker como uma dependência sobrante não utilizada.)
+As tabelas de escrow que um design anterior usava (`backup_passkey_recovery`, `backup_passkey_challenges`) foram removidas antes do lançamento, e o Worker não carrega rotas `/v1/backup/*` nem código de WebAuthn/passkey. (Uma entrada `@simplewebauthn/server` permanece no `package.json` do Worker como uma dependência residual não utilizada.)
 
-O lado do cliente vive no app iOS: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` dirige a criação/asserção de passkey capaz de PRF, e `lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` deriva o slot a partir da saída do hmac-secret. A saída do PRF é lida apenas durante a asserção e nunca sai do dispositivo. Um provedor de passkey sem PRF não pode sustentar um slot zero-knowledge, então a configuração falha cedo e o usuário recai para uma frase de recuperação. Status: **Implementado**.
+O lado do cliente vive no app iOS: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` dirige a criação/asserção de passkey capaz de PRF, e `lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` deriva o slot a partir da saída do hmac-secret. A saída do PRF é lida apenas durante a asserção e nunca sai do dispositivo. Um provedor de passkey sem PRF não pode sustentar um slot zero-knowledge, então a configuração falha cedo e o usuário passa a usar uma frase de recuperação. Status: **Implementado**.
 
 ## 6. Worker lavasec-email
 

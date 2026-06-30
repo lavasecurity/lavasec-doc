@@ -22,7 +22,7 @@ Aufteilung der Komponenten: Reine Krypto + das Bauen von Anfragen liegt in `Lava
 
 ## 1. Anmeldeablauf {#1-authentication-flow}
 
-**Anbieter: nur Apple und Google.** **(Umgesetzt)** `AccountAuthProvider` zählt genau `.apple` und `.google` auf (`AccountAuthService.swift`). E-Mail/Passwort — und jede support-gestützte Wiederherstellung, die die Authentifizierung umgeht — ist ausdrücklich **Verworfen**; Passwörter selbst zu verwalten würde Pflichten rund um Zurücksetzen/MFA/Sperren/Datenlecks mit sich bringen, die den Aufwand nicht wert sind, solange Apple/Google ausreichen, und eine Umgehungs-Wiederherstellung würde die Zero-Knowledge-Garantie brechen.
+**Anbieter: nur Apple und Google.** **(Umgesetzt)** `AccountAuthProvider` zählt genau `.apple` und `.google` auf (`AccountAuthService.swift`). E-Mail/Passwort — und jede support-gestützte Wiederherstellung, die die Authentifizierung umgeht — ist ausdrücklich **Verworfen**; Passwörter selbst zu verwalten würde Pflichten rund um Zurücksetzen/MFA/Sperren/Datenlecks mit sich bringen, solange Apple/Google ausreichen, und eine Umgehungs-Wiederherstellung würde die Zero-Knowledge-Garantie brechen.
 
 Beide Anbieter nutzen den **nativen `id_token`-Grant**, nicht das Supabase Swift SDK und nicht Web-OAuth:
 
@@ -52,7 +52,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 Das **Einzige**, was von der Anmeldung gespeichert wird, ist die Supabase-Session — Access- und Refresh-Tokens als JSON. Es gibt **kein** serverseitiges Abbild davon, wer du bist, jenseits des Supabase-Auth-Nutzers und der Zeilen, die dir gehören.
 
 - **Wo:** `AccountSessionKeychainStore` (`LavaSecApp`), Keychain-Service `com.lavasec.account-session`, gespeichert **pro Anbieter** (`supabase-session-apple` / `supabase-session-google`, plus eine Migration für Altkonten). **(Umgesetzt)**
-- **Zugänglichkeit:** Alle Stores teilen sich `GenericKeychainStore` (`LavaSecCore`), festgenagelt auf `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. Das heißt **gerätelokal, nicht über iCloud synchronisiert und nicht in Gerätebackups enthalten**. **(Umgesetzt)**
+- **Zugänglichkeit:** Alle Stores teilen sich `GenericKeychainStore` (`LavaSecCore`), fest auf `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` gepinnt. Das heißt **gerätelokal, nicht über iCloud synchronisiert und nicht in Gerätebackups enthalten**. **(Umgesetzt)**
 
 Dieselbe `GenericKeychainStore`-Mechanik trägt drei Stores: die Konto-Session, das Backup-Entsperrmaterial (`BackupKeychainStore`, Service `com.lavasec.zero-knowledge-backup`) und den App-Passcode. Keiner davon synchronisiert über die iCloud-Keychain.
 
@@ -64,7 +64,7 @@ Dieselbe `GenericKeychainStore`-Mechanik trägt drei Stores: die Konto-Session, 
 
 ### 3.1 Was es genau ist {#31-what-it-is-precisely}
 
-Wenn du das Verschlüsselte Backup einschaltest, verschlüsselt der **iOS-Client** eine minimierte Kopie deiner *Einstellungen* und lädt nur den Chiffretext plus geheimnisfreie Metadaten zu Supabase hoch. Das Telefon ist der einzige Ort, an dem der Klartext und die entschlüsselnden Geheimnisse je existieren.
+Wenn du das verschlüsselte Backup einschaltest, verschlüsselt der **iOS-Client** eine minimierte Kopie deiner *Einstellungen* und lädt nur den Chiffretext plus geheimnisfreie Metadaten zu Supabase hoch. Das Telefon ist der einzige Ort, an dem der Klartext und die entschlüsselnden Geheimnisse je existieren.
 
 > **Zero-Knowledge-Backup:** Clientseitige AES-256-GCM-Hülle; der zufällige Payload-Schlüssel wird in Schlüssel-Slots pro Slot eingepackt — PBKDF2-HMAC-SHA256 (210k Iterationen) für die Passwort-/Phrase-/Geräte-/Assisted-Slots, HKDF-SHA256 für den PRF-Passkey-Slot. Nur Chiffretext + geheimnisfreie Metadaten gehen zu Supabase `user_backups` (RLS pro Nutzer). Der Server kann ohne ein nutzergehaltenes Geheimnis nicht entschlüsseln. Der Passkey-Slot ist **ebenfalls** Zero-Knowledge: Sein Entpack-Schlüssel wird auf dem Gerät aus der WebAuthn-PRF-Ausgabe (`hmac-secret`) des Authentifikators abgeleitet, und der Server hält kein Passkey-Geheimnis (siehe §4.3).
 
@@ -74,7 +74,7 @@ Wenn du das Verschlüsselte Backup einschaltest, verschlüsselt der **iOS-Client
 
 **Enthalten:** aktivierte Blocklisten-**IDs** (Katalogverweise, nicht die Listen-Bytes), erlaubte/blockierte Domains, Resolver-Preset / eigener Resolver, Einstellungen zum lokalen Verlauf, das LavaGuard-Ledger, ein Schutz-Hinweis und Quell-Metadaten zu eigenen Blocklisten.
 
-**Ausgeschlossen:** `isPaid` (die Berechtigung ist lokal), QA-Flags, Diagnosedaten, Filter-Snapshots und der vollständige Inhalt der Blocklisten (nur per Katalog-ID referenziert). Dein Browserverlauf und deine DNS-Anfragen sind nie Teil dieses Payloads, weil das Gerät sie nie als laufenden Telemetrie-Strom aufzeichnet.
+**Ausgeschlossen:** `isPaid` (die Berechtigung ist lokal), QA-Flags, Diagnosedaten, Filter-Snapshots und der vollständige Inhalt der Blocklisten (nur per Katalog-ID referenziert). Dein Browserverlauf und deine DNS-Anfragen sind nie Teil dieses Payloads; das Gerät zeichnet sie nie als laufenden Telemetrie-Strom auf.
 
 ### 3.3 Die Hülle (clientseitige Krypto) {#33-the-envelope-client-side-crypto}
 
@@ -86,7 +86,7 @@ Wenn du das Verschlüsselte Backup einschaltest, verschlüsselt der **iOS-Client
 
 Das ausgelieferte Setup ist **passwortlos** (`makePasswordless`, getrieben von `AppViewModel.turnOnEncryptedBackup`). Es erstellt einen **`keychain`- (Gerät) Slot + einen `assistedRecovery`-Slot + einen optionalen `passkey`-Slot**. Die `password`- / `recoveryPhrase`-Factories und Entschlüsselungsmethoden existieren weiterhin für alte/abwärtskompatible Hüllen (nur von Tests ausgeübt), aber die aktive UI erstellt nie eine reine Passwort-Hülle — behandle Passwort-Backup als nicht ausgeliefert. **(Umgesetzt; Passwort-Slot Verworfen im Live-Ablauf.)**
 
-**Integrität / Anti-Downgrade:** `envelopeVersion` ist hart auf `1` festgenagelt, und die KDF jedes Slots ist pro Art festgenagelt — `PBKDF2-HMAC-SHA256` für die Passwort-/Phrase-/Geräte-/Assisted-Slots, `HKDF-SHA256` für den PRF-Passkey-Slot. Nicht unterstützte Versionen oder unpassende KDFs werden abgelehnt, sodass gefälschte oder herabgestufte Metadaten das Entpacken nicht schwächen können. **(Umgesetzt)**
+**Integrität / Anti-Downgrade:** `envelopeVersion` ist hart auf `1` gepinnt, und die KDF jedes Slots ist pro Art gepinnt — `PBKDF2-HMAC-SHA256` für die Passwort-/Phrase-/Geräte-/Assisted-Slots, `HKDF-SHA256` für den PRF-Passkey-Slot. Nicht unterstützte Versionen oder unpassende KDFs werden abgelehnt, sodass gefälschte oder herabgestufte Metadaten das Entpacken nicht schwächen können. **(Umgesetzt)**
 
 ### 3.4 Hochladen & Speichern {#34-upload--storage}
 
@@ -113,7 +113,7 @@ Die Zeile ist durch **Row-Level Security** geschützt: Jede Zeile ist nur von ih
 
 ## 4. Wiederherstellung {#4-recovery}
 
-Ein Backup ist nur nützlich, wenn du es wiederherstellen kannst. `restoreEncryptedBackup` (in `AppViewModel`) entschlüsselt, indem es die verfügbaren Slots durchprobiert: Geräteschlüssel, Wiederherstellungscode oder Passkey. In jedem Modus wird die Hülle lokal geladen (oder von Supabase geholt) und dann **auf dem Gerät entschlüsselt** — der Server entschlüsselt nie.
+`restoreEncryptedBackup` (in `AppViewModel`) entschlüsselt, indem es die verfügbaren Slots durchprobiert: Geräteschlüssel, Wiederherstellungscode oder Passkey. In jedem Modus wird die Hülle lokal geladen (oder von Supabase geholt) und dann **auf dem Gerät entschlüsselt** — der Server entschlüsselt nie.
 
 ### 4.1 Wiederherstellungscode {#41-recovery-phrase}
 
@@ -141,7 +141,7 @@ Der optionale `passkey`-Slot fügt einen hardwaregestützten Faktor hinzu, und e
 
 Das frühere Escrow-Design (eine Service-Role-Tabelle `backup_passkey_recovery`, die ein serverseitiges `recovery_secret` hielt, plus eine `backup_passkey_challenges`-Tabelle und `/v1/backup/passkeys/*`-Worker-Endpunkte) wurde **Verworfen**: Die Tabellen wurden in einer Backend-Migration entfernt, der Worker trägt keine Passkey-Routen, und `lavasec-ios: Tests/LavaSecCoreTests/BackupSetupSourceTests.swift` stellt ausdrücklich fest, dass `BackupPasskeyRecoveryService` und jeglicher Server-Escrow-Pfad fehlen. **(Umgesetzt)**
 
-> **Produktionsreife-Einschränkung:** Gespeicherte Passkeys als voll produktionsreifen, wiederherstellbaren Faktor auf echten Geräten zu behandeln, hängt weiterhin von der webcredentials-Verknüpfung für `lavasecurity.app` ab. Die iOS-Hälfte ist deklariert — `lavasec-ios: LavaSecApp/LavaSecApp.entitlements` trägt `webcredentials:lavasecurity.app` — und die Server-Hälfte (die `apple-app-site-association`-Datei und die Header) wird jetzt auf der Marketing-Website gehostet. Bis diese Verknüpfung auf einem gegebenen Gerät auflöst, kann der webcredentials-Verknüpfungspfad fehlschlagen und meldet `BackupPasskeyError.webCredentialsAssociationUnavailable`. Der Passkey-Faktor selbst ist umgesetzt; seine End-to-End-Reife auf echter Hardware ist **Geplant**.
+> **Produktionsreife-Einschränkung:** Gespeicherte Passkeys als voll produktionsreifen, wiederherstellbaren Faktor auf echten Geräten zu behandeln, hängt weiterhin von der webcredentials-Verknüpfung für `lavasecurity.app` ab. Die iOS-Hälfte ist deklariert — `lavasec-ios: LavaSecApp/LavaSecApp.entitlements` trägt `webcredentials:lavasecurity.app` — und die Server-Hälfte (die `apple-app-site-association`-Datei und die Header) wird jetzt auf der Marketing-Website gehostet. Bis diese Verknüpfung auf einem gegebenen Gerät aufgelöst ist, kann der webcredentials-Verknüpfungspfad fehlschlagen und meldet `BackupPasskeyError.webCredentialsAssociationUnavailable`. Der Passkey-Faktor selbst ist umgesetzt; seine End-to-End-Reife auf echter Hardware ist **Geplant**.
 
 ---
 

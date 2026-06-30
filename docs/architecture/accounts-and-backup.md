@@ -22,7 +22,7 @@ Component split: pure crypto + request building lives in `LavaSecCore`; orchestr
 
 ## 1. Authentication flow
 
-**Providers: Apple and Google only.** **(Implemented)** `AccountAuthProvider` enumerates exactly `.apple` and `.google` (`AccountAuthService.swift`). Email/password — and any support-assisted recovery that bypasses authentication — is explicitly **Dropped**; owning passwords would add reset/MFA/lockout/breach obligations not worth the complexity while Apple/Google suffice, and bypass recovery would break the zero-knowledge guarantee.
+**Providers: Apple and Google only.** **(Implemented)** `AccountAuthProvider` enumerates exactly `.apple` and `.google` (`AccountAuthService.swift`). Email/password — and any support-assisted recovery that bypasses authentication — is explicitly **Dropped**; owning passwords would add reset/MFA/lockout/breach obligations while Apple/Google suffice, and bypass recovery would break the zero-knowledge guarantee.
 
 Both providers use the **native `id_token` grant**, not the Supabase Swift SDK and not web OAuth:
 
@@ -64,7 +64,7 @@ The same `GenericKeychainStore` mechanics back three stores: account session, th
 
 ### 3.1 What it is, precisely
 
-When you turn on encrypted backup, the **iOS client** encrypts a minimized copy of your *settings* and uploads only the ciphertext plus non-secret metadata to Supabase. The phone is the only place plaintext and the decrypting secrets ever exist.
+When you turn on encrypted backup, the **iOS client** encrypts a minimized copy of your *settings* and uploads only the ciphertext plus non-secret metadata to Supabase. The phone is the only place plaintext and the decrypting secrets exist.
 
 > **Zero-knowledge backup:** Client-side AES-256-GCM envelope; the random payload key is wrapped in per-slot key slots — PBKDF2-HMAC-SHA256 (210k iters) for the password/phrase/device/assisted slots, HKDF-SHA256 for the PRF passkey slot. Only ciphertext + non-secret metadata upload to Supabase `user_backups` (RLS per user). Server cannot decrypt without a user-held secret. The passkey slot is **also** zero-knowledge: its unwrap key is derived on-device from the authenticator's WebAuthn PRF (`hmac-secret`) output, and the server holds no passkey secret (see §4.3).
 
@@ -74,7 +74,7 @@ When you turn on encrypted backup, the **iOS client** encrypts a minimized copy 
 
 **Included:** enabled blocklist **IDs** (catalog references, not list bytes), allowed/blocked domains, resolver preset / custom resolver, local-log preferences, the LavaGuard ledger, a protection hint, and custom blocklist source metadata.
 
-**Excluded:** `isPaid` (entitlement is local), QA flags, diagnostics, filter snapshots, and the full blocklist contents (referenced by catalog ID only). Your browsing history and DNS queries are never part of this payload because the device never records them as a routine telemetry stream.
+**Excluded:** `isPaid` (entitlement is local), QA flags, diagnostics, filter snapshots, and the full blocklist contents (referenced by catalog ID only). Your browsing history and DNS queries are never part of this payload; the device never records them as a routine telemetry stream.
 
 ### 3.3 The envelope (client-side crypto)
 
@@ -113,7 +113,7 @@ The row is protected by **row-level security**: each row is readable/writable on
 
 ## 4. Recovery
 
-A backup is only useful if you can restore it. `restoreEncryptedBackup` (in `AppViewModel`) decrypts by trying the available slots: device key, recovery phrase, or passkey. In every mode the envelope is loaded locally (or fetched from Supabase) and then **decrypted on-device** — the server never decrypts.
+`restoreEncryptedBackup` (in `AppViewModel`) decrypts by trying the available slots: device key, recovery phrase, or passkey. In every mode the envelope is loaded locally (or fetched from Supabase) and then **decrypted on-device** — the server never decrypts.
 
 ### 4.1 Recovery phrase
 

@@ -17,7 +17,7 @@ Lava, c'est du **filtrage DNS/liste de blocage local**, et non la garantie que c
 
 ## 1. Le pipeline DNS (Implémenté) {#1-the-dns-pipeline-implemented}
 
-Le moteur de filtrage/résolution tourne à l'intérieur du **tunnel de paquets NE** — l'extension `NEPacketTunnelProvider` nommée `LavaSecTunnel` (`com.lavasec.app.tunnel`), qui n'intercepte que le DNS. Les adresses du tunnel sont `10.255.0.2` (tunnel) et `10.255.0.1` (serveur DNS). Le processus de l'app ne voit jamais le trafic des requêtes ; il se contente d'écrire les artefacts compilés dans l'**App Group** (`group.com.lavasec`) et de prévenir le tunnel via des **provider messages** NETunnelProviderSession (et non des notifications Darwin).
+Le moteur de filtrage/résolution tourne à l'intérieur du **tunnel de paquets NE** — l'extension `NEPacketTunnelProvider` nommée `LavaSecTunnel` (`com.lavasec.app.tunnel`), qui n'intercepte que le DNS. Les adresses du tunnel sont `10.255.0.2` (tunnel) et `10.255.0.1` (serveur DNS). Le processus de l'app ne voit jamais le trafic des requêtes ; il écrit seulement les artefacts compilés dans l'**App Group** (`group.com.lavasec`) et de prévenir le tunnel via des **provider messages** NETunnelProviderSession (et non des notifications Darwin).
 
 Pour chaque requête DNS entrante, le tunnel applique un **ordre de priorité** figé dans `DNSQueryDispatcher` (`Sources/LavaSecCore/DNSQueryDispatcher.swift`) :
 
@@ -50,7 +50,7 @@ threat guardrail  >  local allowlist (allowed exceptions)  >  blocklist  >  defa
 | 3 | `blockRules` | bloquer | `.blocklist` |
 | 4 | — | autoriser | `.defaultAllow` |
 
-Un domaine qui échoue à la normalisation est bloqué avec la raison `.invalidDomain` (par sécurité). Le même ordre de priorité est reproduit dans la forme binaire stockée sur disque (`CompactFilterSnapshot`). Le garde-fou de sécurité passe avant la liste autorisée locale, et c'est voulu : **un paiement ne contourne jamais le garde-fou de sécurité non-contournable**, et une exception de l'utilisateur ne peut pas débloquer un domaine du garde-fou.
+Un domaine qui échoue à la normalisation est bloqué avec la raison `.invalidDomain` (par sécurité). Le même ordre de priorité est reproduit dans la forme binaire stockée sur disque (`CompactFilterSnapshot`). Le garde-fou de sécurité passe avant la liste autorisée locale par conception : **un paiement ne contourne jamais le garde-fou de sécurité non-contournable**, et une exception de l'utilisateur ne peut pas débloquer un domaine du garde-fou.
 
 > Note : dans l'état actuel du dépôt de travail, `nonAllowableThreatRules` / `guardrailSources` sont vides (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`) ; la place dans l'ordre de priorité est câblée et appliquée, mais elle est livrée sans aucune entrée de garde-fou pour l'instant.
 
@@ -85,7 +85,7 @@ Les préréglages intégrés sont Google, Cloudflare, Quad9, Mullvad (chacun en 
 
 ### 3.2 DoH / DoH3 {#32-doh--doh3}
 
-`DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) exécute le DoH par-dessus `URLSession`. Chaque requête active HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`) ; le loader d'Apple bascule nativement vers H2/H1, donc ça ne rend jamais injoignable un résolveur qui l'était. Le protocole négocié est lu depuis `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN : `h3`, `h2`, `http/1.1`).
+`DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) exécute le DoH par-dessus `URLSession`. Chaque requête active HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`) ; le loader d'Apple bascule nativement vers H2/H1, de sorte qu'un résolveur joignable ne devient jamais injoignable. Le protocole négocié est lu depuis `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN : `h3`, `h2`, `http/1.1`).
 
 L'UI annote **`DoH3` (sans slash)** — par exemple « Quad9 (DoH3) » — **uniquement quand une négociation h3 est réellement observée** (`DoHHTTPVersion.dohAnnotation`) ; sinon elle affiche `DoH`. DoH3 est préféré, jamais promis : le label est une observation, propre au résolveur, et n'est jamais conservé (le report d'un « DoH3 confirmé » d'un redémarrage à l'autre a été annulé). Les requêtes envoient en POST du `application/dns-message` ; les réponses sont validées en type de contenu et en longueur, et l'ID de transaction est restauré avant la réécriture.
 
@@ -112,7 +112,7 @@ L'UI annote **`DoH3` (sans slash)** — par exemple « Quad9 (DoH3) » — **uni
 
 ## 4. Quota des règles de filtrage, plafond NE et mmap {#4-filter-rules-budget-ne-ceiling-and-mmap}
 
-La mesure de niveau qui est livrée, c'est le **quota des règles de filtrage** : le total des **règles** de domaine compilées qu'un utilisateur peut activer. Elle remplace l'ancien plafond sur le **nombre** de listes activées (3 en gratuit / 10 en payant), qui était un indicateur trompeur — une liste peut faire 1 K comme 1 M de règles. Il y a **deux couches** : un garde-fou d'appareil pour tout le monde, et une limite de monétisation par niveau, en dessous.
+La mesure de niveau qui est livrée, c'est le **quota des règles de filtrage** : le total des **règles** de domaine compilées qu'un utilisateur peut activer. Il remplace l'ancien plafond sur le **nombre** de listes activées (3 en gratuit / 10 en payant), qui était un indicateur trompeur — une liste peut faire 1 K comme 1 M de règles. Il y a **deux couches** : un garde-fou d'appareil pour tout le monde, et une limite de monétisation par niveau, en dessous.
 
 ### 4.1 Limites par niveau (Implémenté) {#41-tier-limits-implemented}
 
@@ -151,7 +151,7 @@ Le snapshot compact est chargé avec `Data(contentsOf:options:[.mappedIfSafe])` 
 
 ### 4.5 Le parseur (Implémenté) {#45-the-parser-implemented}
 
-`BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) compte les règles au pied de la lettre : il jette les commentaires/lignes vides/lignes invalides, normalise, dédup les chaînes exactes à l'intérieur d'une liste (via un `Set`), et plafonne à **`maxRules = 1 000 000`** par liste (par défaut), avec une longueur de ligne max de 4 096 caractères. Formats pris en charge : `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (le mode `auto` essaie hosts → dnsmasq → adblock → plain). Une ligne valide = une règle = l'unité de mémoire.
+`BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) compte les règles littéralement : il écarte les commentaires, lignes vides et lignes invalides, normalise, dédup les chaînes exactes à l'intérieur d'une liste (via un `Set`), et plafonne à **`maxRules = 1 000 000`** par liste (par défaut), avec une longueur de ligne max de 4 096 caractères. Formats pris en charge : `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (le mode `auto` essaie hosts → dnsmasq → adblock → plain). Une ligne valide = une règle = l'unité de mémoire.
 
 > **Lignes `hosts` multi-hôtes (version 2 des règles d'analyse).** Une ligne `hosts` qui associe une même IP à plusieurs hôtes (`0.0.0.0 a.com b.com c.com`) émet désormais **chaque** hôte comme sa propre règle, pas seulement le premier ; `maxRules` est appliqué **par règle** (et non par ligne) pour qu'une ligne multi-hôtes proche du plafond ne puisse pas le dépasser. Comme les mêmes octets en amont peuvent désormais produire plus de règles, la version des règles du parseur est passée de **1 à 2**, ce qui invalide les entrées périmées de `RuleSetCache` analysées sous l'ancien comportement « premier hôte uniquement ».
 
@@ -160,7 +160,7 @@ Le snapshot compact est chargé avec `Data(contentsOf:options:[.mappedIfSafe])` 
 Le tunnel et la synchro du catalogue tournent à l'intérieur du budget mémoire NE, donc l'ingestion des listes est durcie contre les entrées hostiles ou malformées :
 
 - **Téléchargements en flux.** `defaultDataFetcher` télécharge les octets de la liste vers un fichier temporaire via `URLSession.download` (pic mémoire borné) avec une vérification de taille après téléchargement (`maximumBlocklistBytes`) plutôt que de tamponner tout le corps en RAM ; un corps surdimensionné lève `BlocklistDownloadSizeLimitExceeded`.
-- **Plafond des métadonnées du catalogue (8 Mo).** `BlocklistCatalogRepository.maximumCatalogBytes` rejette un catalogue distant surdimensionné avant le décodage, pour qu'un hôte hostile/MITM ne puisse pas forcer un décodage JSON en OOM dans l'extension.
+- **Plafond des métadonnées du catalogue (8 Mo).** `BlocklistCatalogRepository.maximumCatalogBytes` rejette un catalogue distant surdimensionné avant le décodage, pour qu'un hôte hostile ou MITM ne puisse pas forcer un décodage JSON en OOM dans l'extension.
 - **Décodage UTF-8 indulgent.** Un seul octet UTF-8 invalide ne rejette plus une liste entière (ce qui, en fail-closed, bloquerait tout le DNS) ; les octets invalides deviennent U+FFFD et seule la ligne fautive échoue à la validation par ligne et est écartée.
 - **Erreurs nommées pour les listes de blocage personnalisées.** Une liste personnalisée en échec fait désormais remonter `customBlocklistUnavailable(displayName:reason:)` — « Impossible de charger la liste de blocage personnalisée '<nom>'. <pourquoi> » — au lieu d'une `URLError` brute ; une annulation est propagée comme une annulation, pas comme un échec de téléchargement.
 
@@ -190,7 +190,7 @@ L'**ensemble des domaines protégés** (filtrés avant l'activation) : `apple.co
 
 ### 5.3 Listes activées par défaut pour les utilisateurs gratuits (Implémenté) {#53-default-enabled-lists-for-free-users-implemented}
 
-La config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic** — une liste combinée large et permissivement licenciée (publicités + traçage + malware + phishing/scam) — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli chiffré sur le DNS de l'appareil **activé** (`usesEncryptedDeviceDNSFallback = true`), routant vers le **DoH de Mullvad** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`) : si le DNS propre à l'appareil se coince, les résolutions autorisées sont transportées de façon transitoire via le DoH de Mullvad, puis reviennent automatiquement au DNS de l'appareil. (L'initialiseur nu `AppConfiguration()` met ce repli **désactivé** par défaut — il n'est activé qu'en acceptant les valeurs par défaut recommandées de l'onboarding.) Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture combinée de Basic les englobe, et les deux restent des listes optionnelles sélectionnables.
+La config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic** — une liste combinée large et permissivement licenciée (publicités + traçage + malware + phishing/scam) — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli chiffré sur le DNS de l'appareil **activé** (`usesEncryptedDeviceDNSFallback = true`), routant vers le **DoH de Mullvad** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`) : si le DNS propre à l'appareil se bloque, les résolutions autorisées sont transportées de façon transitoire via le DoH de Mullvad, puis reviennent automatiquement au DNS de l'appareil. (L'initialiseur nu `AppConfiguration()` met ce repli **désactivé** par défaut — il n'est activé qu'en acceptant les valeurs par défaut recommandées de l'onboarding.) Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture combinée de Basic les englobe, et les deux restent des listes optionnelles sélectionnables.
 
 Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectBasic` met `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` est dérivé de `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` est « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, c'est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
 
@@ -198,7 +198,7 @@ Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en d
 
 ### 5.4 Modèle de distribution GPL basé uniquement sur l'URL source (Implémenté) {#54-source-url-only-gpl-distribution-model-implemented}
 
-**Source-url-only** est le modèle de distribution conforme GPL / propriété intellectuelle : Lava ne publie que l'URL en amont + les hashes acceptés ; l'appareil récupère et analyse les listes lui-même. Lava ne stocke, ne miroite, ne transforme et ne sert **jamais** les octets des listes de blocage tierces. Ça **remplace la conception abandonnée de miroir R2** (le plan d'origine « miroir R2 brut » a été annulé le 2026-05-25).
+**Source-url-only** est le modèle de distribution conforme GPL / propriété intellectuelle : Lava ne publie que l'URL en amont + les hashes acceptés ; l'appareil récupère et analyse les listes lui-même. Lava ne stocke, ne miroite, ne transforme et ne sert **jamais** les octets des listes de blocage tierces. Cela **remplace la conception abandonnée de miroir R2** (le plan d'origine « miroir R2 brut » a été annulé le 2026-05-25).
 
 Côté Worker, `syncOneBlocklist` récupère chaque source en amont, la normalise et la hashe (en calculant `source_hash`, `normalized_hash`, `entry_count`) mais écrit `raw_r2_key = null` / `normalized_r2_key = null` — seules les métadonnées JSON du catalogue arrivent dans R2. `check-gpl-blocklist-distribution.sh` est le garde-fou de CI qui fait respecter tout le modèle : aucun code de miroir/transformation, aucune URL d'artefact/téléchargement Lava, aucune source GPL activée par défaut, aucune écriture R2 d'octets de liste par le Worker, aucun texte « miroir hébergé par Lava », aucun `.txt`/`.json` GPL embarqué, et `source_url_only` exigé dans les migrations + les documents juridiques.
 

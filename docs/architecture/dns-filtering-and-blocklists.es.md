@@ -25,7 +25,7 @@ Para cada consulta DNS entrante el túnel ejecuta una **precedencia de consultas
 resolver bootstrap  >  temporary pause  >  filter (block / allow)
 ```
 
-- **bootstrap-first es una invariante estricta.** Una consulta que resuelve el *propio* nombre de host del resolutor configurado (el endpoint DoH/DoT/DoQ) nunca debe bloquearse ni pausarse, o el túnel no podría siquiera levantar el DNS cifrado. El dispatcher toma clausuras perezosas para que cada paso se lea solo cuando se alcanza, preservando el cortocircuito (no se lee el snapshot cuando existe una respuesta de bootstrap; no se lee la pausa durante el bootstrap).
+- **bootstrap-first es una invariante estricta.** Una consulta que resuelve el *propio* nombre de host del resolutor configurado (el endpoint DoH/DoT/DoQ) nunca debe bloquearse ni pausarse, o el túnel no podría levantar el DNS cifrado. El dispatcher toma clausuras perezosas para que cada paso se lea solo al alcanzarlo, preservando el cortocircuito (no se lee el snapshot cuando existe una respuesta de bootstrap; no se lee la pausa durante el bootstrap).
 - **temporary pause** reenvía hacia el upstream mientras un TTL de pausa iniciada por el usuario está activo.
 - **filter** evalúa el dominio contra el snapshot compilado y lo reenvía o sintetiza una respuesta bloqueada.
 
@@ -50,7 +50,7 @@ threat guardrail  >  local allowlist (allowed exceptions)  >  blocklist  >  defa
 | 3 | `blockRules` | block | `.blocklist` |
 | 4 | — | allow | `.defaultAllow` |
 
-Un dominio que falla la normalización se bloquea con la razón `.invalidDomain` (a prueba de fallos). La misma precedencia se replica en la forma binaria en disco (`CompactFilterSnapshot`). El threat guardrail se sitúa por encima de la lista de permitidos local por diseño: **el pago nunca evade el threat guardrail no-permitible**, y una excepción de usuario no puede desbloquear un dominio del guardrail.
+Un dominio que falla la normalización se bloquea con la razón `.invalidDomain` (a prueba de fallos). La misma precedencia se replica en la forma binaria en disco (`CompactFilterSnapshot`). El threat guardrail se sitúa por encima de la lista de permitidos local por diseño: **el pago nunca evade el threat guardrail no permisible**, y una excepción de usuario no puede desbloquear un dominio del guardrail.
 
 > Nota: en el árbol de trabajo actual `nonAllowableThreatRules` / `guardrailSources` están vacíos (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`); el espacio de precedencia está cableado e impuesto pero se entrega sin entradas de guardrail todavía.
 
@@ -97,7 +97,7 @@ La UI anota **`DoH3` (sin barra)** — p. ej. "Quad9 (DoH3)" — **solo cuando s
 
 `DoQTransport` (`Sources/LavaSecCore/DoQTransport.swift`) mantiene un pool acotado de **4 carriles por endpoint**, pero **cada consulta abre una conexión QUIC nueva** — un handshake completo por consulta. El pool de 4 carriles aporta **concurrencia, no reutilización de handshake**.
 
-**Estado de reutilización de conexión DoQ (Descartado / aplazado).** La reutilización se revisó y se midió en dispositivo (34 handshakes nuevos en 35 consultas ≈ sin reutilización), luego se implementó como una ruta `NWConnectionGroup` multi-stream condicionada a iOS 26, se probó en dispositivo contra AdGuard DoQ, y se **revirtió por ser neta-negativa** (fallos de stream + errores de fallback contra un servidor real). RFC 9250 mapea cada consulta a su propio stream QUIC, así que la reutilización requiere `NWConnectionGroup`/`openStream`, que es **solo iOS 26.0+**; el piso de despliegue actual es **iOS 17**. La reutilización se aplaza hasta que el piso alcance iOS 26. DoQ personalizado se rechaza en dispositivos que no lo soportan ("DNS over QUIC is not supported on this device").
+**Estado de reutilización de conexión DoQ (Descartado / aplazado).** La reutilización se revisó y se midió en dispositivo (34 handshakes nuevos en 35 consultas ≈ sin reutilización), luego se implementó como una ruta `NWConnectionGroup` multi-stream condicionada a iOS 26, se probó en dispositivo contra AdGuard DoQ, y se **revirtió por ser netamente negativa** (fallos de stream + errores de fallback contra un servidor real). RFC 9250 mapea cada consulta a su propio stream QUIC, así que la reutilización requiere `NWConnectionGroup`/`openStream`, que es **solo iOS 26.0+**; el piso de despliegue actual es **iOS 17**. La reutilización se aplaza hasta que el piso alcance iOS 26. DoQ personalizado se rechaza en dispositivos que no lo soportan ("DNS over QUIC is not supported on this device").
 
 ### 3.5 Política de resolución
 
@@ -106,7 +106,7 @@ La UI anota **`DoH3` (sin barra)** — p. ej. "Quad9 (DoH3)" — **solo cuando s
 1. **Enrutamiento de transporte** según el transporte configurado.
 2. **Degradación a Plain DNS** cuando un plan cifrado no tiene endpoints.
 3. **Failover por endpoint** con una puerta de backoff — un endpoint en backoff nunca toca el cable (resultado `backed-off`).
-4. **Fallback a Device-DNS** cuando el primario no devuelve respuesta *y* el plan lo permite (la propiedad del plan es `shouldFallbackToDeviceDNS`, derivada del campo de configuración `fallbackToDeviceDNS`); el resultado se re-anota como el transporte del dispositivo. La ejecución sobre el cable se inyecta tras ejecutores para que la política sea testeable por unidades; el estado de backoff queda fuera de la política pura.
+4. **Fallback a Device-DNS** cuando el primario no devuelve respuesta *y* el plan lo permite (la propiedad del plan es `shouldFallbackToDeviceDNS`, derivada del campo de configuración `fallbackToDeviceDNS`); el resultado se vuelve a anotar como el transporte del dispositivo. La ejecución sobre el cable se inyecta tras ejecutores para que la política sea testeable por unidades; el estado de backoff queda fuera de la política pura.
 
 ---
 
@@ -151,7 +151,7 @@ El snapshot compacto se carga con `Data(contentsOf:options:[.mappedIfSafe])` (`L
 
 ### 4.5 El parser (Implementado)
 
-`BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) cuenta reglas literalmente: descarta comentarios/líneas en blanco/líneas inválidas, normaliza, deduplica cadenas exactas dentro de una lista (mediante un `Set`), y tope en **`maxRules = 1,000,000`** por lista (por defecto), con una longitud máxima de línea de 4,096 caracteres. Formatos soportados: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto prueba hosts → dnsmasq → adblock → plain). Una línea válida = una regla = la unidad de memoria.
+`BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) cuenta reglas literalmente: descarta comentarios/líneas en blanco/líneas inválidas, normaliza, deduplica cadenas exactas dentro de una lista (mediante un `Set`), y limita a **`maxRules = 1,000,000`** por lista (por defecto), con una longitud máxima de línea de 4,096 caracteres. Formatos soportados: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto prueba hosts → dnsmasq → adblock → plain). Una línea válida = una regla = la unidad de memoria.
 
 > **Líneas `hosts` multi-host (versión 2 de reglas del parser).** Una línea `hosts` que mapea una IP a varios hosts (`0.0.0.0 a.com b.com c.com`) ahora emite **cada** host como su propia regla, no solo el primero; `maxRules` se impone **por regla** (no por línea) para que una línea multi-host cerca del tope no pueda excederse. Como los mismos bytes upstream ahora pueden producir más reglas, la versión de reglas del parser se subió de **1 → 2**, invalidando las entradas obsoletas de `RuleSetCache` parseadas bajo el antiguo comportamiento de solo-primer-host.
 

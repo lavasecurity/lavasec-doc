@@ -5,13 +5,13 @@ hide_feedback: true
 # Documentación de Lava Security
 
 Lava Security es una **aplicación de iOS centrada en la privacidad** que filtra DNS localmente en el
-dispositivo a través de un túnel de paquetes NetworkExtension en el propio dispositivo, bloqueando dominios conocidos
-como riesgosos y no deseados sin enrutar tu navegación a través de los servidores de Lava.
+dispositivo mediante un túnel de paquetes NetworkExtension en el propio dispositivo, bloqueando dominios
+de riesgo conocido y no deseados sin enrutar tu navegación por los servidores de Lava.
 
 !!! quote "La promesa de privacidad"
     El filtrado de DNS ocurre localmente en tu dispositivo; Lava nunca recibe tus
     consultas DNS rutinarias, tu historial de navegación ni telemetría por dominio, y cualquier
-    copia de seguridad opcional de la cuenta está cifrada de extremo a extremo, de modo que Lava solo puede llegar a almacenar
+    copia de seguridad opcional de la cuenta está cifrada de extremo a extremo, de modo que Lava nunca puede almacenar más que
     texto cifrado.
 
 Este sitio es el manual público de cómo funciona Lava: su arquitectura, su
@@ -67,6 +67,6 @@ Cada afirmación aquí está fundamentada en el código fuente. El estado se ind
 Cuando la documentación y el código no coinciden, gana el código. Esta documentación es una instantánea,
 regenerada a partir del código fuente a medida que el producto evoluciona.
 
-El comportamiento multiplataforma se rastrea en [Paridad entre plataformas](product/platform-parity.md):
+El comportamiento multiplataforma se documenta en [Paridad entre plataformas](product/platform-parity.md):
 nombra ids de funciones estables, el estado por plataforma y las pruebas o fixtures que
 deberían mantener alineados iOS y Android.

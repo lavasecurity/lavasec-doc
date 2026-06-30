@@ -7,7 +7,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 # Resumen del producto
 
-Te damos la bienvenida a Lava Security. Esta página es la puerta de entrada al conjunto de documentación: una introducción breve y sencilla a qué es Lava, qué promete y dónde leer más.
+Te damos la bienvenida a Lava Security. Esta página presenta qué es Lava, qué promete y dónde leer más.
 
 ## Qué es Lava
 
@@ -19,11 +19,11 @@ iOS lo etiqueta como una "VPN" porque un túnel de paquetes es la única manera 
 
 > Todo el filtrado de DNS ocurre en el dispositivo; Lava nunca enruta tu navegación a través de sus servidores y nunca recibe el flujo de dominios que visitas; el backend solo guarda metadatos del catálogo, una copia de seguridad cifrada y opaca por usuario, y diagnósticos anonimizados que tú decides enviar.
 
-Esta frase es canónica. Todo lo demás en estos documentos pretende ser coherente con ella. Pagar por el nivel opcional **no** traslada el filtrado al servidor ni le da a Lava un flujo de los dominios visitados. Cuando una función toca un servidor, la documentación detalla qué **no** se envía: tus consultas DNS rutinarias, tu historial de navegación y cualquier texto sin cifrar permanecen en el dispositivo. Consulta [el backend y el modelo de datos](../architecture/backend-and-data.md) para ver el panorama completo.
+Esta frase es canónica. Todo lo demás en estos documentos es coherente con ella. Pagar por el nivel opcional **no** traslada el filtrado al servidor ni le da a Lava un flujo de los dominios visitados. Cuando una función toca un servidor, la documentación detalla qué **no** se envía: tus consultas DNS rutinarias, tu historial de navegación y cualquier texto sin cifrar permanecen en el dispositivo. Consulta [el backend y el modelo de datos](../architecture/backend-and-data.md) para ver el panorama completo.
 
 ## Para quién es
 
-Lava está pensada para cualquiera que quiera navegar de forma más segura sin tener que gestionarlo. El público incluye deliberadamente a usuarios no técnicos: padres y madres que configuran la protección para una familia, personas mayores y cualquiera que no quiera pensar en el DNS en absoluto. La experiencia por defecto simplemente funciona: activa la protección y una lista de bloqueo conservadora empieza a filtrar, sin necesidad de cuenta. Al mismo tiempo, los usuarios avanzados pueden acceder a controles más profundos (listas de bloqueo personalizadas, resolutores alternativos) cuando los deseen.
+Lava está pensada para cualquiera que quiera navegar de forma más segura sin tener que gestionarlo. El público incluye a usuarios no técnicos: padres y madres que configuran la protección para una familia, personas mayores y cualquiera que no quiera pensar en el DNS en absoluto. La experiencia por defecto simplemente funciona: activa la protección y una lista de bloqueo conservadora empieza a filtrar, sin necesidad de cuenta. Al mismo tiempo, los usuarios avanzados pueden acceder a controles más profundos (listas de bloqueo personalizadas, resolutores alternativos) cuando los deseen.
 
 El tono en todo momento es sencillo, sereno y práctico: el peligro se plantea como una metáfora, no como miedo.
 

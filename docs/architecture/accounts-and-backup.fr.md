@@ -22,7 +22,7 @@ Répartition des composants : la crypto pure et la construction des requêtes vi
 
 ## 1. Flux d'authentification {#1-authentication-flow}
 
-**Fournisseurs : Apple et Google uniquement.** **(Implémenté)** `AccountAuthProvider` énumère exactement `.apple` et `.google` (`AccountAuthService.swift`). L'e-mail/mot de passe — et toute récupération assistée par le support qui contournerait l'authentification — est explicitement **Abandonné** ; posséder les mots de passe ajouterait des obligations de réinitialisation/MFA/verrouillage/fuite qui ne valent pas la complexité alors qu'Apple/Google suffisent, et une récupération par contournement casserait la garantie zéro connaissance.
+**Fournisseurs : Apple et Google uniquement.** **(Implémenté)** `AccountAuthProvider` énumère exactement `.apple` et `.google` (`AccountAuthService.swift`). L'e-mail/mot de passe — et toute récupération assistée par le support qui contournerait l'authentification — est explicitement **Abandonné** ; posséder les mots de passe ajouterait des obligations de réinitialisation/MFA/verrouillage/fuite alors qu'Apple/Google suffisent, et une récupération par contournement casserait la garantie zéro connaissance.
 
 Les deux fournisseurs utilisent le **grant natif `id_token`**, pas le SDK Swift Supabase et pas l'OAuth web :
 
@@ -30,7 +30,7 @@ Les deux fournisseurs utilisent le **grant natif `id_token`**, pas le SDK Swift 
 2. **Échange chez Supabase.** `SupabaseIDTokenAuth` (`LavaSecCore`) construit une `URLRequest` brute vers Supabase Auth `auth/v1/token?grant_type=id_token`, en envoyant `provider` + `id_token` + un `access_token` optionnel + le nonce **brut** (pour que Supabase puisse vérifier le lien et rejeter les rejeux), avec l'en-tête `apikey`. Pas de SDK ; `LavaSecCore` reste exempt de toute dépendance réseau/auth. **(Implémenté)**
 3. **Réception d'une session.** Supabase vérifie le token et renvoie une session : un access token, un refresh token, une expiration, et un enregistrement utilisateur (provider/providers). Le rafraîchissement utilise le même helper avec `grant_type=refresh_token`.
 
-`AccountAuthService` (`@MainActor`, `LavaSecApp`) orchestre tout ça — il lance les flux natifs, effectue l'échange, conserve et rafraîchit les sessions, expose `AccountAuthState`, et pilote la suppression de compte via le Worker.
+`AccountAuthService` (`@MainActor`, `LavaSecApp`) orchestre l'ensemble — il lance les flux natifs, effectue l'échange, conserve et rafraîchit les sessions, expose `AccountAuthState`, et pilote la suppression de compte via le Worker.
 
 ```
 Apple / Google (native id_token + raw nonce)
@@ -52,7 +52,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 La **seule** chose conservée à la connexion, c'est la session Supabase — les access et refresh tokens en JSON. Il n'y a **aucun** miroir côté serveur de qui vous êtes au-delà de l'utilisateur Supabase Auth et des lignes que vous possédez.
 
 - **Où :** `AccountSessionKeychainStore` (`LavaSecApp`), service Keychain `com.lavasec.account-session`, stocké **par fournisseur** (`supabase-session-apple` / `supabase-session-google`, plus une migration d'ancien compte). **(Implémenté)**
-- **Accessibilité :** tous les stores partagent `GenericKeychainStore` (`LavaSecCore`), épinglé à `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. Ça veut dire **local à l'appareil, non synchronisé iCloud, et non inclus dans les sauvegardes de l'appareil**. **(Implémenté)**
+- **Accessibilité :** tous les stores partagent `GenericKeychainStore` (`LavaSecCore`), épinglé à `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. C'est-à-dire **local à l'appareil, non synchronisé iCloud, et non inclus dans les sauvegardes de l'appareil**. **(Implémenté)**
 
 Les mêmes mécaniques `GenericKeychainStore` soutiennent trois stores : la session de compte, le matériel de déverrouillage de la sauvegarde (`BackupKeychainStore`, service `com.lavasec.zero-knowledge-backup`), et le code d'accès de l'app. Aucun d'eux ne se synchronise via iCloud Keychain.
 
@@ -70,11 +70,11 @@ Quand vous activez la sauvegarde chiffrée, le **client iOS** chiffre une copie 
 
 ### 3.2 Ce qui est sauvegardé (le payload minimisé) {#32-what-gets-backed-up-the-minimized-payload}
 
-`BackupConfigurationPayload` (`LavaSecCore`) est le texte en clair qui se fait sceller. Il est volontairement petit et fait l'aller-retour avec `AppConfiguration`. **(Implémenté)**
+`BackupConfigurationPayload` (`LavaSecCore`) est le texte en clair qui est scellé. Il est volontairement petit et fait l'aller-retour avec `AppConfiguration`. **(Implémenté)**
 
 **Inclus :** les **ID** des listes de blocage activées (références au catalogue, pas les octets des listes), les domaines autorisés/bloqués, le préréglage de résolveur / résolveur personnalisé, les préférences de journaux locaux, le registre LavaGuard, un indice de protection, et les métadonnées de source de liste de blocage personnalisée.
 
-**Exclus :** `isPaid` (le droit d'accès est local), les drapeaux QA, les diagnostics, les instantanés de filtres, et le contenu complet des listes de blocage (référencé uniquement par ID de catalogue). Votre historique de navigation et vos requêtes DNS ne font jamais partie de ce payload, parce que l'appareil ne les enregistre jamais comme flux de télémétrie de routine.
+**Exclus :** `isPaid` (le droit d'accès est local), les drapeaux QA, les diagnostics, les instantanés de filtres, et le contenu complet des listes de blocage (référencé uniquement par ID de catalogue). Votre historique de navigation et vos requêtes DNS ne font jamais partie de ce payload ; l'appareil ne les enregistre jamais comme flux de télémétrie de routine.
 
 ### 3.3 L'enveloppe (crypto côté client) {#33-the-envelope-client-side-crypto}
 
@@ -107,13 +107,13 @@ La ligne est protégée par **la sécurité au niveau ligne** : chaque ligne n'e
 
 **Donc :** Supabase **ne peut pas déchiffrer une sauvegarde** sans un secret détenu par l'utilisateur. Les trois chemins de restauration — le slot de clé d'appareil, la phrase de récupération (combinée au partage serveur, §4.2), et le slot passkey (la sortie PRF de l'authentificateur, §4.3) — déchiffrent **sur l'appareil**, et le serveur ne détient aucun secret de déchiffrement pour aucun d'eux. C'est affirmé dans les commentaires de migration et le plan de confidentialité, et testé (les tests d'enveloppe confirment qu'aucun domaine/URL en clair ne fuit dans la forme envoyée).
 
-**Réserve précise sur le modèle de menace — ne surpromettez pas.** Pour le slot de **récupération assistée**, le serveur détient *à la fois* le `server_recovery_share` *et* le slot `assistedRecovery` emballé dans `user_backups`. La seule chose qui lui manque, c'est la phrase de récupération de l'utilisateur, que Lava ne reçoit jamais. Donc si le serveur était entièrement compromis, l'entropie de la phrase de récupération (environ 105 bits, voir §4.1) plus le coût du PBKDF2 à 210k itérations seraient la **seule** barrière contre une attaque par force brute hors ligne de ce slot. C'est intentionnel (la récupération assistée est à deux facteurs par conception — aucune moitié seule ne déchiffre), mais ça veut dire que l'entropie de la phrase de récupération porte vraiment le poids, elle n'est pas décorative. Le secret du slot `keychain` (appareil) ne quitte jamais l'appareil, donc il n'est pas exposé du tout à une compromission du serveur.
+**Réserve précise sur le modèle de menace — ne surpromettez pas.** Pour le slot de **récupération assistée**, le serveur détient *à la fois* le `server_recovery_share` *et* le slot `assistedRecovery` emballé dans `user_backups`. La seule chose qui lui manque, c'est la phrase de récupération de l'utilisateur, que Lava ne reçoit jamais. Donc si le serveur était entièrement compromis, l'entropie de la phrase de récupération (environ 105 bits, voir §4.1) plus le coût du PBKDF2 à 210k itérations seraient la **seule** barrière contre une attaque par force brute hors ligne de ce slot. C'est intentionnel (la récupération assistée est à deux facteurs par conception — aucune moitié seule ne déchiffre), mais cela signifie que l'entropie de la phrase de récupération est porteuse, elle n'est pas décorative. Le secret du slot `keychain` (appareil) ne quitte jamais l'appareil, donc il n'est pas exposé du tout à une compromission du serveur.
 
 ---
 
 ## 4. Récupération {#4-recovery}
 
-Une sauvegarde n'est utile que si vous pouvez la restaurer. `restoreEncryptedBackup` (dans `AppViewModel`) déchiffre en essayant les slots disponibles : clé d'appareil, phrase de récupération, ou passkey. Dans tous les modes, l'enveloppe est chargée localement (ou récupérée depuis Supabase) puis **déchiffrée sur l'appareil** — le serveur ne déchiffre jamais.
+`restoreEncryptedBackup` (dans `AppViewModel`) déchiffre en essayant les slots disponibles : clé d'appareil, phrase de récupération, ou passkey. Dans tous les modes, l'enveloppe est chargée localement (ou récupérée depuis Supabase) puis **déchiffrée sur l'appareil** — le serveur ne déchiffre jamais.
 
 ### 4.1 Phrase de récupération {#41-recovery-phrase}
 

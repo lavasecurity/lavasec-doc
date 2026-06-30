@@ -7,7 +7,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 # Product Overview
 
-Welcome to Lava Security. This page is the front door to the documentation set: a short, plain introduction to what Lava is, what it promises, and where to read more.
+Welcome to Lava Security. This page introduces what Lava is, what it promises, and where to read more.
 
 ## What Lava is
 
@@ -19,11 +19,11 @@ iOS labels this a "VPN" because a packet tunnel is the only way an app can filte
 
 > All DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit — the backend holds only catalog metadata, an opaque per-user encrypted backup, and anonymized diagnostics you choose to send.
 
-This sentence is canonical. Everything else in these docs is meant to be consistent with it. Paying for the optional tier does **not** move filtering to the server or give Lava a stream of visited domains. When a feature touches a server, the docs spell out what is **not** sent — your routine DNS queries, your browsing history, and any plaintext all stay on the device. See [the backend and data model](../architecture/backend-and-data.md) for the full picture.
+This sentence is canonical; everything else in these docs is consistent with it. Paying for the optional tier does **not** move filtering to the server or give Lava a stream of visited domains. When a feature touches a server, the docs spell out what is **not** sent — your routine DNS queries, your browsing history, and any plaintext all stay on the device. See [the backend and data model](../architecture/backend-and-data.md) for the full picture.
 
 ## Who it is for
 
-Lava is built for anyone who wants safer browsing without managing it. The audience deliberately includes non-technical users — parents setting up protection for a family, older adults, and anyone who does not want to think about DNS at all. The default experience just works: turn protection on and a conservative blocklist starts filtering, with no account required. At the same time, power users can reach deeper controls (custom blocklists, alternate resolvers) when they want them.
+Lava is built for anyone who wants safer browsing without managing it. The audience includes non-technical users — parents setting up protection for a family, older adults, and anyone who does not want to think about DNS at all. The default experience just works: turn protection on and a conservative blocklist starts filtering, with no account required. At the same time, power users can reach deeper controls (custom blocklists, alternate resolvers) when they want them.
 
 The voice throughout is plain, calm, and practical — danger is framed as a metaphor, not fear.
 
@@ -33,7 +33,7 @@ The voice throughout is plain, calm, and practical — danger is framed as a met
 - **Free core protection forever.** The protection switch, default blocklist updates, and basic local counts are never gated and never require an account.
 - **On-device.** The protection engine lives entirely on the phone — DNS parsing, domain evaluation, and upstream forwarding all happen inside the packet-tunnel extension, bounded by the iOS ~50 MiB per-extension memory ceiling. Blocklists follow a [source-url-only](../architecture/dns-filtering-and-blocklists.md) model: the app fetches each upstream list directly and parses it locally; Lava never hosts or serves third-party blocklist bytes.
 - **Payment unlocks customization only — never baseline safety.** The threat guardrail — a non-allowable tier above every blocklist that no one, paid or not, can allowlist — is enforced by decision precedence: **threat guardrail > local allowlist (allowed exceptions) > blocklist > default-allow.** (The precedence slot is wired and integrity-checked by accepted SHA-256 hashes; it currently ships with no entries.) The tunnel ignores `isPaid`.
-- **Calm core, earned depth.** The default surfaces are quiet and reassuring, fronted by the Soft Shield Guardian mascot and copy that avoids fear-driven language. Richer, more technical detail is available when you go looking for it but is never forced on you. This "calm core, earned depth" philosophy is formalized in the **LavaTier** depth model (Floor / Window / Workshop) — see [the design system](../design-system/overview.md).
+- **Calm core, earned depth.** The default surfaces are quiet and reassuring, fronted by the Soft Shield Guardian mascot and copy that avoids fear-driven language. Richer, more technical detail is available when you go looking for it, never forced on you. This "calm core, earned depth" philosophy is formalized in the **LavaTier** depth model (Floor / Window / Workshop) — see [the design system](../design-system/overview.md).
 
 ## High-level capabilities
 

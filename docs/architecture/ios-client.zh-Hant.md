@@ -78,6 +78,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過裝置上的 Net
 `LavaProtectionCommandService.perform(_:)`（`Shared/LavaProtectionCommandService.swift`）是 Dynamic Island／Live Activity 動作的進入點（`LavaLiveActivityActionRequest`：`pause-5-minutes`／`pause-10-minutes`／`pause-15-minutes`／`pause-configured`（Live Activity 的單一暫停按鈕，其長度為使用者設定的值）、`resume`、`reconnect`）。`LavaLiveActivityIntents.swift` 中的 `LiveActivityIntent` 在應用程式 process（持有 NetworkExtension entitlement）中執行，因此：
 
 - **暫停／恢復**會流經一個跨 process 檔案鎖（`protection-command.lock`、`flock`），以及 `LavaSecCore` 的 `ProtectionPauseStore`／`ProtectionSessionStore`，這些負責版本鑄造與重複命令去重複（`commandID` 將呼叫者的 operation id 串接起來，使重新送達的命令無法鑄造出第二個版本）。其結果會排程一次受版本守護的 Live Activity 更新。
+
 - **重新連線**則直接處理（`performReconnect`、`LavaProtectionCommandService.swift:112-135`）：它呼叫 `loadAllFromPreferences` 並透過 `startVPNTunnel()` 啟動第一個已安裝的通道 manager（由於 `loadAllFromPreferences` 已限定在本應用程式的 NE 設定範圍內，第一個 manager 即為 Lava 的——這點與 `VPNLifecycleController.matchingManagers()` 不同，它不做明確的身分比對）。Connect-On-Demand 已啟用，因此這只是強制立即連線；應用程式的狀態調和接著會在連線完成後使 Live Activity 回到 `.on`。
 
 ---
@@ -114,7 +115,7 @@ Connect-On-Demand 可能在啟動時（或在 iOS 因網路變更而拆除通道
 
 ## 4. Guardian／狀態模型 {#4-guardian-state-model}
 
-這裡有兩套相關的狀態詞彙：連線*評估*與 Guardian *吉祥物*狀態。
+有兩套相關的狀態詞彙：連線*評估*與 Guardian *吉祥物*狀態。
 
 ### 連線評估 {#connectivity-assessment}
 
@@ -125,7 +126,7 @@ Connect-On-Demand 可能在啟動時（或在 iOS 因網路變更而拆除通道
 
 這一個單一評估同時驅動應用程式內的 Guard 介面以及（進一步對映後的）Dynamic Island 狀態，因此兩者永不矛盾。
 
-**誠實底線（v1.0）。** 一次當前、未被涵蓋的 DNS smoke-probe 失敗永遠不能被讀為 `.healthy`——評估會浮現 `.recovering`，直到某次探測真正成功為止，因此在卡住的主要上游上由後援承載的流量，不再被描繪為「已保護」。重新連線邏輯所依據的是 `consecutiveDNSSmokeProbeFailureCount` 與 `lastPrimaryUpstreamSuccessAt`（僅限主要），而非通用的上游計數器；而一個保持可連線卻持續**拒絕**那個已知良好探測的解析器（劫持／captive／過時），會透過一個以解析器身分為範疇的 `consecutiveRejectedSmokeResponseCount` 被升級為值得重啟（LAV-87），即使通用連敗計數在不穩定的漫遊網路上不斷被重設。
+**誠實底線（v1.0）。** 一次當前、未被涵蓋的 DNS smoke-probe 失敗永遠不能被讀為 `.healthy`——評估會浮現 `.recovering`，直到某次探測真正成功為止，因此在卡住的主要上游上由後援承載的流量，不再被標示為「已保護」。重新連線邏輯所依據的是 `consecutiveDNSSmokeProbeFailureCount` 與 `lastPrimaryUpstreamSuccessAt`（僅限主要），而非通用的上游計數器；而一個保持可連線卻持續**拒絕**那個已知良好探測的解析器（劫持／captive／過時），會透過一個以解析器身分為範疇的 `consecutiveRejectedSmokeResponseCount` 被升級為值得重啟（LAV-87），即使通用連敗計數在不穩定的漫遊網路上不斷被重設。
 
 ### 連線通知 {#connectivity-notifications}
 
@@ -191,7 +192,7 @@ Live Activity 的 `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 它將生命週期序列化委派給一個 `protectionActionOrchestrator`（如此一來背景復原不會與使用者的開啟動作交錯），持有快取的 `tunnelManager`，並透過 [§2](#2-app-extension-ipc) 中的 provider 訊息輔助函式，將所有快照／設定／暫停變更驅動至擴充功能。
 
-> **隱私框架。** DNS 篩選會在本裝置上於本機完成。`AppViewModel` 所發佈的診斷與網路活動介面僅儲存於本機——Lava 永遠不會收到你的日常 DNS 查詢、瀏覽歷史或逐網域遙測資料。任何選用的帳號備份皆為**零知識**（在裝置上加密；Lava 至多只能儲存密文），包括基於通行密鑰的復原——其金鑰在裝置上以 PRF 衍生，沒有伺服器持有的密鑰。伺服器邊界請參見 [系統總覽](./system-overview.md)。
+> **隱私說明。** DNS 篩選會在本裝置上於本機完成。`AppViewModel` 所發佈的診斷與網路活動介面僅儲存於本機——Lava 永遠不會收到你的日常 DNS 查詢、瀏覽歷史或逐網域遙測資料。任何選用的帳號備份皆為**零知識**（在裝置上加密；Lava 至多只能儲存密文），包括基於通行密鑰的復原——其金鑰在裝置上以 PRF 衍生，沒有伺服器持有的密鑰。伺服器邊界請參見 [系統總覽](./system-overview.md)。
 
 ---
 

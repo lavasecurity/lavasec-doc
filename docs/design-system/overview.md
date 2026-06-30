@@ -16,7 +16,7 @@ This doc covers the design philosophy, the LavaTier depth vocabulary, the Guardi
 
 ## 1. Philosophy: calm core, earned depth
 
-Lava's audience is non-technical everyday users — parents, older adults — and the design follows from that. The everyday surface "just works" calmly for everyone; additional detail, delight, and control are revealed (**earned**) only as the user goes looking for them. Nothing nags, nothing alarms, and the technical machinery stays invisible until sought.
+Lava's audience is non-technical everyday users — parents, older adults — and the design follows from that. The everyday surface "just works" calmly for everyone; additional detail, delight, and control are revealed (**earned**) only when the user goes looking for them. Nothing nags, nothing alarms, and the technical machinery stays invisible until sought.
 
 This **"calm core, earned depth"** model resolves into three product depths:
 
@@ -46,7 +46,7 @@ The remaining residual gap is the handful of raw `.red` call sites not yet migra
 
 ## 2. LavaTier — Floor / Window / Workshop **(Implemented)**
 
-`LavaTier` is the lightweight depth vocabulary that encodes "calm core, earned depth" directly in the token layer. It is a vocabulary plus a few token defaults — not a full re-theme — and ships as an enum at lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, wired into representative surfaces rather than retrofitting every view.
+`LavaTier` is the lightweight depth vocabulary that encodes "calm core, earned depth" directly in the token layer. It is a vocabulary plus a few token defaults — not a full re-theme — and ships as an enum at lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, wired into representative surfaces rather than every view.
 
 | Tier | Depth | Meaning |
 |---|---|---|
@@ -108,7 +108,7 @@ The Guard tab collapses those 6 severities onto **4 faces** (`guardianState` in 
 
 ### 3.3 Skins (looks) **(Implemented)**
 
-The mascot ships in **7 selectable shield "looks"**, persisted as `GuardianShieldStyle` (lavasec-ios: Shared/LavaActivityAttributes.swift:5). Each has its own colorway and a paired Dynamic Island glyph color:
+The mascot ships in **7 selectable shield "looks"**, persisted as `GuardianShieldStyle` (lavasec-ios: Shared/LavaActivityAttributes.swift:5). Each has its own colorway and a paired Dynamic Island glyph color.
 
 `original`, `fireOpal` (raw value `emberObsidian`), `purpleObsidian`, `obsidian`, `cherryQuartz` (raw value `strawberryObsidian`), `emerald`, `kiwiCreme`.
 

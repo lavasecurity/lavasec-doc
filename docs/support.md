@@ -8,7 +8,7 @@ Where to go when you need help, found a bug, or want to report something.
 
 ## Something not working in the app?
 
-Use the **in-app bug report** — it's the fastest path and attaches the
+Use the **in-app bug report**. It's the fastest path and attaches the
 diagnostics we need, with data minimized by design (your browsing domains are
 never included). Reports are triaged by the team.
 

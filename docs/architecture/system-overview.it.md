@@ -17,9 +17,9 @@ Lava Security è un'app iOS privacy-first che filtra il DNS **localmente sul dis
 
 ## 2. La promessa sulla privacy (canonica)
 
-> Tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i suoi server e non riceve mai il flusso dei domini che visiti — il backend conserva solo metadati del catalogo, un backup cifrato per-utente opaco e diagnostica anonimizzata che scegli di inviare.
+> Tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i suoi server e non riceve mai il flusso dei domini che visiti — il backend conserva solo metadati del catalogo, un backup cifrato per-utente opaco e i dati diagnostici anonimizzati che scegli di inviare.
 
-Tutto ciò che segue è al servizio del mantenere vera quella frase. L'architettura è deliberatamente ridotta sul lato server: il dispositivo fa il lavoro e il backend non vede mai una query.
+Tutto ciò che segue mantiene vera quella frase. L'architettura è deliberatamente ridotta sul lato server: il dispositivo fa il lavoro e il backend non vede mai una query.
 
 ## 3. Componenti
 
@@ -65,7 +65,7 @@ Tutto ciò che segue è al servizio del mantenere vera quella frase. L'architett
 
 ## 4. Diagramma del flusso dati
 
-La proprietà singola più importante: **il percorso del resolver DNS cifrato (lato destro) non tocca mai il backend di Lava (in basso).** Il dispositivo recupera i *metadati* del catalogo dal Worker, ma i *byte* delle liste e l'effettivo flusso di query vanno direttamente a terze parti.
+La proprietà singola più importante: **il percorso del resolver DNS cifrato (lato destro) non tocca mai il backend di Lava (in basso).** Il dispositivo recupera i *metadati* del catalogo dal Worker, ma i *byte* delle liste e il flusso di query vanno direttamente a terze parti.
 
 ```
                                   YOUR iPHONE
@@ -147,7 +147,7 @@ Come le regole del filtro arrivano sul dispositivo. Lava è un distributore **so
 Il lato Worker rispecchia questo: la sua sync admin/cron recupera ogni upstream, ne calcola hash/conteggio, scrive `raw_r2_key = null` / `normalized_r2_key = null` e ripubblica solo i metadati. Il modello del catalogo blocklist e il percorso di sync del backend sono trattati in [Filtraggio DNS e Blocklist](./dns-filtering-and-blocklists.md) e [Backend e Dati](./backend-and-data.md).
 
 **Modello di budget (due livelli):**
-- **Guardrail del dispositivo (per tutti, mai un paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3.262.236 regole** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — un target di 32 MB sotto il tetto NE di ~50 MiB. Le configurazioni fuori budget vengono rifiutate in modo deterministico invece di lasciare che il tunnel finisca in jetsam.
+- **Guardrail del dispositivo (per tutti, mai un paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3.262.236 regole** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — un target di 32 MB sotto il tetto NE di ~50 MiB. Le configurazioni fuori budget vengono rifiutate in modo deterministico anziché lasciare che il tunnel finisca in jetsam.
 - **Tetto di tier (`FeatureLimits`):** **Free 500K regole / Plus 2M regole**, che vincola sotto il guardrail del dispositivo. Questo ha sostituito il vecchio cap sul **conteggio** delle liste abilitate (free 3 / paid 10) — i cap sul conteggio delle liste sono obsoleti.
 
 > **Fonte di verità sull'abilitazione di default:** il default gratuito spedito è **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). Viene derivato sul dispositivo dal flag `defaultEnabled` di ciascuna source curata (`BlocklistSource.recommendedDefaultSourceIDs`), che rispecchia la colonna `default_enabled` del catalogo backend generata dalla stessa specifica canonica del catalogo.
@@ -156,7 +156,7 @@ Il lato Worker rispecchia questo: la sua sync admin/cron recupera ogni upstream,
 
 Opzionale, vincolato all'account, e gli unici dati utente che finiscono nel backend — come **testo cifrato opaco**.
 
-1. L'utente opzionalmente accede (solo Apple o Google; **email/password è Abbandonato**) tramite `id_token` nativo scambiato presso Supabase Auth (`grant_type=id_token`, nonce hashato). Viene memorizzata solo la sessione Supabase risultante, locale al dispositivo, nel Keychain.
+1. L'utente può facoltativamente accedere (solo Apple o Google; **email/password è Abbandonato**) tramite `id_token` nativo scambiato presso Supabase Auth (`grant_type=id_token`, nonce hashato). Viene memorizzata solo la sessione Supabase risultante, locale al dispositivo, nel Keychain.
 2. **`BackupConfigurationPayload`** assembla un testo in chiaro minimizzato (ID delle blocklist abilitate, domini consentiti/bloccati, preferenze del resolver, preferenze dei log locali, ledger LavaGuard). **Esclude** `isPaid`, QA, diagnostica e le blocklist complete.
 3. **`ZeroKnowledgeBackupEnvelope`** lo sigilla con **AES-256-GCM** sotto una chiave di payload casuale di 32 byte; quella chiave viene avvolta in **key slot** per-segreto via **PBKDF2-HMAC-SHA256 (210k iter)** — slot device-secret, slot di recupero assistito, slot passkey opzionale. Lo slot passkey opzionale viene avvolto con un output **WebAuthn PRF / `hmac-secret`** di un authenticator (derivato via HKDF); quell'output non lascia mai il client, quindi lo slot passkey è genuinamente zero-knowledge — nessun valore detenuto dal server lo scarta (`ZeroKnowledgeBackupEnvelope.makeWithPRF`).
 4. **`BackupSyncService`** carica **solo testo cifrato + metadati non segreti** su Supabase `user_backups` direttamente via PostgREST, con ambito per-utente tramite **RLS**. (Non c'è alcuna rotta di upload del Worker; il Worker tocca `user_backups` solo per eliminarlo durante l'eliminazione dell'account.)

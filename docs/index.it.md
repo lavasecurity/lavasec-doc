@@ -4,7 +4,7 @@ hide_feedback: true
 
 # Documentazione di Lava Security
 
-Lava Security è una **app iOS che mette la privacy al primo posto** e filtra il
+Lava Security è una **app iOS privacy-first** che filtra il
 DNS localmente sul dispositivo attraverso un packet tunnel NetworkExtension
 on-device, bloccando i domini noti rischiosi e indesiderati senza instradare la
 tua navigazione attraverso i server di Lava.
@@ -32,7 +32,7 @@ suo comportamento e le decisioni che vi stanno dietro. Segue il
 
 -   :material-sitemap: **Architettura**
 
-    Come l'intero sistema si incastra insieme.
+    Come l'intero sistema si compone.
 
     [Panoramica del sistema](architecture/system-overview.md) ·
     [Client iOS](architecture/ios-client.md) ·
@@ -63,13 +63,13 @@ Ogni affermazione qui è fondata sul codice sorgente. Lo stato è indicato ovunq
 | **Implementato** | Presente nel codice rilasciato |
 | **In corso** | In fase di sviluppo ora |
 | **Pianificato** | Una direzione, non ancora costruita |
-| **Abbandonato** | Deciso di non farlo — tenuto a verbale |
+| **Abbandonato** | Deciso di non farlo — conservato agli atti |
 
 Quando la documentazione e il codice non concordano, vince il codice. Questa
 documentazione è un'istantanea, rigenerata dal codice sorgente man mano che il
 prodotto evolve.
 
 Il comportamento multipiattaforma è tracciato in
-[Parità tra piattaforme](product/platform-parity.md): nomina gli id stabili
+[Parità tra piattaforme](product/platform-parity.md): indica gli id stabili
 delle funzionalità, lo stato per piattaforma e i test o le fixture che dovrebbero
 mantenere iOS e Android allineati.

@@ -30,7 +30,7 @@ Lectura relacionada: el modelo de distribución del catálogo en [`../legal/gpl-
 
 **Contexto.** El producto es un filtro centrado en la privacidad para usuarios no técnicos (padres, adultos mayores) que se distribuye a través de la App Store de consumo, sin requerir cuenta. Los proveedores de NetworkExtension competidores y las API de DNS gestionado están restringidos a dispositivos supervisados/gestionados por MDM o no cubren todo el DNS de una app, y un modelo del lado del resolvedor enrutaría el flujo de dominios del usuario fuera del dispositivo.
 
-**Justificación.** El túnel de paquetes es el único proveedor que (a) funciona para dispositivos de consumo no gestionados y (b) permite que cada decisión de DNS ocurra en el dispositivo, lo cual es la base de la promesa de privacidad: *todo el filtrado de DNS ocurre en el dispositivo; Lava nunca enruta tu navegación a través de sus servidores y nunca recibe el flujo de dominios que visitas.* La contrapartida aceptada a cambio es el **techo de memoria de ~50 MiB por extensión** de iOS bajo el que debe vivir el túnel — una restricción que da forma a varias de las decisiones posteriores a continuación.
+**Justificación.** El túnel de paquetes es el único proveedor que (a) funciona para dispositivos de consumo no gestionados y (b) permite que cada decisión de DNS ocurra en el dispositivo, lo cual es la base de la promesa de privacidad: *todo el filtrado de DNS ocurre en el dispositivo; Lava nunca enruta tu navegación a través de sus servidores y nunca recibe el flujo de dominios que visitas.* La contrapartida aceptada es el **techo de memoria de ~50 MiB por extensión** de iOS bajo el que debe vivir el túnel — una restricción que da forma a varias de las decisiones posteriores a continuación.
 
 **Estado.** **Adoptada** (fundacional; en el código desde el prototipo inicial).
 
@@ -78,7 +78,7 @@ Lectura relacionada: el modelo de distribución del catálogo en [`../legal/gpl-
 
 **Contexto.** Una refactorización (issue 407) propuso un protocolo único sobre todos los transportes.
 
-**Justificación.** Los transportes son demasiado disímiles — ejecutores cifrados asíncronos (DoH/DoT/DoQ) frente a transportes síncronos en claro/del dispositivo con múltiples direcciones — por lo que un protocolo unificador sería una peor abstracción que la actual costura de clausuras inyectables, que ya mantiene comprobable la ejecución sobre el cable.
+**Justificación.** Los transportes son demasiado dispares — ejecutores cifrados asíncronos (DoH/DoT/DoQ) frente a transportes síncronos en claro/del dispositivo con múltiples direcciones — por lo que un protocolo unificador sería una peor abstracción que la actual costura de clausuras inyectables, que ya mantiene comprobable la ejecución sobre el cable.
 
 **Estado.** **Revertida** / no se implementará (cerrada como una mala abstracción).
 
@@ -158,12 +158,12 @@ Lectura relacionada: el modelo de distribución del catálogo en [`../legal/gpl-
 
 ## Apéndice — otras reversiones y rechazos registrados
 
-Estos son más pequeños pero fueron decisiones genuinas con un giro registrado; se enumeran por completitud.
+Son decisiones menores, pero cada una tuvo un giro registrado.
 
 | Decisión | Justificación | Estado |
 |---|---|---|
 | DNS personalizado gratis vs. de pago | Posicionamiento de monetización; brevemente permitido en gratis, luego devuelto a solo de pago | **Revertida** a solo de pago |
-| Inicio de sesión con email/contraseña | Poseer contraseñas añade carga de restablecimiento/MFA/bloqueo/filtración/secuestro mientras que Apple + Google bastan; una recuperación que lo eludiera rompería el conocimiento cero | **Revertida** / nunca entregada (solo Apple + Google) |
+| Inicio de sesión con email/contraseña | Gestionar contraseñas añade carga de restablecimiento/MFA/bloqueo/filtración/secuestro mientras que con Apple + Google basta; una recuperación que lo eludiera rompería el conocimiento cero | **Revertida** / nunca entregada (solo Apple + Google) |
 | Allowed Exceptions Guardrails (LAV-5) | La precedencia de barreras se entregó mediante la renovación más simple de edición de listas de filtro; el pago nunca debe eludir la barrera de amenazas de alta confianza | **Revertida** (carril `dropped/` creado) |
 | Bloqueo de promoción de ramas en TestFlight | El bloqueo inicial se reconsideró; reemplazado por un bloqueo planificado del runner posterior al código abierto | **Revertida**, reemplazada por un plan en backlog |
 | Canal de control app↔extensión | `sendProviderMessage` (`NETunnelProviderSession`) es la **única ruta de control app→túnel** — lleva el estado tipado y versionado e impulsa de forma autoritativa el bucle de ejecución de la extensión. El observador anterior `CFNotificationCenter` del lado de la extensión nunca se disparaba de forma fiable en el dispositivo y fue **eliminado** (su ausencia se afirma mediante pruebas de introspección de fuente). Las notificaciones Darwin sobreviven solo en la dirección **túnel→app**, como un empujón de cambio de salud. | **Adoptada** (el mensaje de proveedor es el único control app→túnel; Darwin es solo salud túnel→app) |

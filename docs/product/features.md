@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > Audience: PM / engineering. This catalog covers the **current, implemented** feature set only. Anything designed-but-not-built lives in the private roadmap, not here.
 
-Lava Security is a privacy-first iOS app that filters DNS **locally on the device** through a NetworkExtension packet tunnel, blocking malicious and unwanted domains for non-technical users (parents, older adults) — with core protection free forever and no account required.
+Lava Security is a privacy-first iOS app that filters DNS **locally on the device** through a NetworkExtension packet tunnel, blocking malicious and unwanted domains for non-technical users (parents, older adults). Core protection is free forever and requires no account.
 
 The privacy promise behind every feature below:
 

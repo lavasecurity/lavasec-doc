@@ -22,7 +22,7 @@ Divisão de componentes: a criptografia pura + a construção de requisições f
 
 ## 1. Fluxo de autenticação
 
-**Provedores: apenas Apple e Google.** **(Implementado)** `AccountAuthProvider` enumera exatamente `.apple` e `.google` (`AccountAuthService.swift`). E-mail/senha — e qualquer recuperação assistida pelo suporte que ignore a autenticação — é explicitamente **Descartado**; possuir senhas adicionaria obrigações de redefinição/MFA/bloqueio/vazamento que não valem a complexidade enquanto Apple/Google bastam, e a recuperação por bypass quebraria a garantia de conhecimento zero.
+**Provedores: apenas Apple e Google.** **(Implementado)** `AccountAuthProvider` enumera exatamente `.apple` e `.google` (`AccountAuthService.swift`). E-mail/senha — e qualquer recuperação assistida pelo suporte que ignore a autenticação — é explicitamente **Descartado**; possuir senhas adicionaria obrigações de redefinição/MFA/bloqueio/vazamento enquanto Apple/Google bastam, e a recuperação por bypass quebraria a garantia de conhecimento zero.
 
 Ambos os provedores usam a **concessão nativa `id_token`**, não o SDK Swift do Supabase e nem OAuth via web:
 
@@ -64,7 +64,7 @@ Os mesmos mecanismos do `GenericKeychainStore` dão suporte a três stores: a se
 
 ### 3.1 O que é, com precisão
 
-Quando você ativa o backup criptografado, o **cliente iOS** criptografa uma cópia minimizada das suas *configurações* e envia apenas o texto cifrado mais metadados não secretos ao Supabase. O telefone é o único lugar onde o texto plano e os segredos de descriptografia jamais existem.
+Quando você ativa o backup criptografado, o **cliente iOS** criptografa uma cópia minimizada das suas *configurações* e envia apenas o texto cifrado mais metadados não secretos ao Supabase. O telefone é o único lugar onde o texto plano e os segredos de descriptografia existem.
 
 > **Backup de conhecimento zero:** Envelope AES-256-GCM do lado do cliente; a chave aleatória de payload é encapsulada em slots de chave por slot — PBKDF2-HMAC-SHA256 (210 mil iterações) para os slots de senha/frase/dispositivo/assistido, HKDF-SHA256 para o slot de passkey PRF. Apenas texto cifrado + metadados não secretos são enviados ao Supabase `user_backups` (RLS por usuário). O servidor não consegue descriptografar sem um segredo mantido pelo usuário. O slot de passkey é **também** de conhecimento zero: sua chave de desencapsulamento é derivada no dispositivo a partir da saída WebAuthn PRF (`hmac-secret`) do autenticador, e o servidor não mantém nenhum segredo de passkey (veja §4.3).
 
@@ -74,7 +74,7 @@ Quando você ativa o backup criptografado, o **cliente iOS** criptografa uma có
 
 **Incluído:** **IDs** de blocklists habilitadas (referências de catálogo, não os bytes das listas), domínios permitidos/bloqueados, preset de resolvedor / resolvedor personalizado, preferências de log local, o ledger do LavaGuard, uma dica de proteção e metadados de fontes de blocklist personalizadas.
 
-**Excluído:** `isPaid` (a habilitação é local), flags de QA, diagnósticos, snapshots de Filtro e o conteúdo completo das blocklists (referenciado apenas por ID de catálogo). Seu histórico de navegação e consultas de DNS nunca fazem parte deste payload porque o dispositivo nunca os registra como um fluxo de telemetria de rotina.
+**Excluído:** `isPaid` (a habilitação é local), flags de QA, diagnósticos, snapshots de Filtro e o conteúdo completo das blocklists (referenciado apenas por ID de catálogo). Seu histórico de navegação e consultas de DNS nunca fazem parte deste payload; o dispositivo nunca os registra como um fluxo de telemetria de rotina.
 
 ### 3.3 O envelope (criptografia do lado do cliente)
 
@@ -107,13 +107,13 @@ A linha é protegida por **segurança em nível de linha**: cada linha é legív
 
 **Portanto:** o Supabase **não consegue descriptografar um backup** sem um segredo mantido pelo usuário. Todos os três caminhos de restauração — o slot de chave do dispositivo, a frase de recuperação (combinada com o share do servidor, §4.2) e o slot de passkey (a saída PRF do autenticador, §4.3) — descriptografam **no dispositivo**, e o servidor não mantém nenhum segredo de descriptografia para nenhum deles. Isso é afirmado nos comentários de migração e no plano de privacidade, e testado (os testes de envelope confirmam que nenhum texto plano de domínio/URL vaza para o formato enviado).
 
-**Ressalva precisa do modelo de ameaças — não exagere a alegação.** Para o slot de **recuperação assistida**, o servidor mantém *tanto* o `server_recovery_share` *quanto* o slot `assistedRecovery` encapsulado em `user_backups`. A única coisa que lhe falta é a frase de recuperação do usuário, que a Lava nunca recebe. Então, se o servidor fosse totalmente comprometido, a entropia da frase de recuperação (~105 bits, veja §4.1) mais o custo de 210 mil iterações do PBKDF2 seria a **única** barreira contra um ataque de força bruta offline desse slot. Isso é intencional (a recuperação assistida é de dois fatores por design — nenhuma metade sozinha descriptografa), mas significa que a entropia da frase de recuperação é estrutural, não decorativa. O segredo do slot `keychain` (dispositivo) nunca sai do dispositivo, então ele não fica exposto a um comprometimento do servidor de forma alguma.
+**Ressalva precisa do modelo de ameaças — não exagere a alegação.** Para o slot de **recuperação assistida**, o servidor mantém *tanto* o `server_recovery_share` *quanto* o slot `assistedRecovery` encapsulado em `user_backups`. A única coisa que lhe falta é a frase de recuperação do usuário, que a Lava nunca recebe. Então, se o servidor fosse totalmente comprometido, a entropia da frase de recuperação (~105 bits, veja §4.1) mais o custo de 210 mil iterações do PBKDF2 seria a **única** barreira contra um ataque de força bruta offline desse slot. Isso é intencional (a recuperação assistida é de dois fatores por design — nenhuma metade sozinha descriptografa), mas significa que a entropia da frase de recuperação é determinante, não decorativa. O segredo do slot `keychain` (dispositivo) nunca sai do dispositivo, então ele não fica exposto a um comprometimento do servidor de forma alguma.
 
 ---
 
 ## 4. Recuperação
 
-Um backup só é útil se você puder restaurá-lo. `restoreEncryptedBackup` (em `AppViewModel`) descriptografa tentando os slots disponíveis: chave do dispositivo, frase de recuperação ou passkey. Em todos os modos, o envelope é carregado localmente (ou buscado do Supabase) e então **descriptografado no dispositivo** — o servidor nunca descriptografa.
+`restoreEncryptedBackup` (em `AppViewModel`) descriptografa tentando os slots disponíveis: chave do dispositivo, frase de recuperação ou passkey. Em todos os modos, o envelope é carregado localmente (ou buscado do Supabase) e então **descriptografado no dispositivo** — o servidor nunca descriptografa.
 
 ### 4.1 Frase de recuperação
 

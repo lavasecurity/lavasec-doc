@@ -13,7 +13,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## 1. Le produit en une phrase {#1-product-one-liner}
 
-Lava Security est une app iOS qui met la confidentialité d'abord et qui filtre le DNS **localement, sur l'appareil**, à travers un tunnel de paquets NetworkExtension. Elle bloque les domaines malveillants et indésirables pour les gens non techniques (parents, personnes âgées) — avec une protection de base gratuite pour toujours et sans aucun compte requis.
+Lava Security est une app iOS axée sur la confidentialité qui filtre le DNS **localement, sur l'appareil**, à travers un tunnel de paquets NetworkExtension. Elle bloque les domaines malveillants et indésirables pour les utilisateurs non techniques (parents, personnes âgées) — avec une protection de base gratuite pour toujours et sans compte requis.
 
 ## 2. La promesse de confidentialité (canonique) {#2-the-privacy-promise-canonical}
 
@@ -65,7 +65,7 @@ Tout ce qui suit sert à garder cette phrase vraie. L'architecture est volontair
 
 ## 4. Schéma du flux de données {#4-data-flow-diagram}
 
-La propriété la plus importante de toutes : **le chemin du résolveur DNS chiffré (à droite) ne touche jamais au backend de Lava (en bas).** L'appareil récupère les *métadonnées* du catalogue depuis le Worker, mais les *octets* des listes et le vrai flux des requêtes vont directement chez des tiers.
+La propriété la plus importante de toutes : **le chemin du résolveur DNS chiffré (à droite) ne touche jamais au backend de Lava (en bas).** L'appareil récupère les *métadonnées* du catalogue depuis le Worker, mais les *octets* des listes et le flux des requêtes vont directement chez des tiers.
 
 ```
                                   YOUR iPHONE
@@ -122,11 +122,11 @@ La propriété la plus importante de toutes : **le chemin du résolveur DNS chif
 
 ### A. Le chemin DNS (par requête, tout sur l'appareil) — Implémenté {#a-the-dns-path-per-query-all-on-device-implemented}
 
-C'est le chemin chaud et le cœur de la confidentialité. Il tourne entièrement dans `LavaSecTunnel` ; rien ici n'atteint les serveurs de Lava.
+C'est le chemin critique et le cœur de la confidentialité. Il tourne entièrement dans `LavaSecTunnel` ; rien ici n'atteint les serveurs de Lava.
 
 1. Le tunnel de paquets intercepte une requête DNS (serveur DNS du tunnel `10.255.0.1`).
 2. **`DNSQueryDispatcher`** applique la priorité des requêtes : **bootstrap > pause > filtre**. Le bootstrap-d'abord est une règle inviolable — le nom d'hôte du résolveur lui-même est résolu avant tout filtrage, pour que le résolveur ne puisse jamais se bloquer lui-même.
-3. Si ce n'est pas du bootstrap et que ce n'est pas en pause, le domaine est évalué face à **`CompactFilterSnapshot`** (chargé depuis l'App Group via un mmap zéro-copie `Data(contentsOf:options:[.mappedIfSafe])`). L'ordre de décision est **garde-fou de sécurité > liste d'autorisation locale (exceptions autorisées) > liste de blocage > autorisation par défaut** ; les domaines invalides sont bloqués.
+3. Si ce n'est pas du bootstrap et que ce n'est pas en pause, le domaine est évalué au regard de **`CompactFilterSnapshot`** (chargé depuis l'App Group via un mmap zéro-copie `Data(contentsOf:options:[.mappedIfSafe])`). L'ordre de décision est **garde-fou de sécurité > liste d'autorisation locale (exceptions autorisées) > liste de blocage > autorisation par défaut** ; les domaines invalides sont bloqués.
 4. **Bloqué** → le tunnel répond en local (aucun contact avec l'amont). **Autorisé** → la requête est confiée à **`ResolverOrchestrator`**.
 5. `ResolverOrchestrator` route vers le transport configuré — **`DoH3` / `DoT` / `DoQ` / DNS en clair (`IP`)** — avec bascule par endpoint derrière une barrière de backoff, repli en DNS en clair quand un plan chiffré n'a aucun endpoint, et **repli sur le DNS de l'appareil** quand le résolveur principal ne renvoie rien et que le plan l'autorise.
 6. La réponse du résolveur est renvoyée à l'OS. Le flux de requêtes de l'utilisateur ne va qu'au **résolveur public choisi par l'utilisateur**, jamais à Lava.
@@ -144,7 +144,7 @@ Comment les règles de filtrage arrivent sur l'appareil. Lava est un distributeu
 5. **`FilterSnapshotPreparationService`** fusionne l'union dédoublonnée et applique le **quota de façon autoritaire** (le plafond de l'appareil d'abord, puis l'offre), puis écrit `filter-snapshot.compact` dans l'App Group.
 6. `AppViewModel` envoie un provider message `reload-snapshot` ; le tunnel recharge.
 
-Côté Worker, c'est le miroir de ça : sa synchro admin/cron récupère chaque amont, le hache/compte, écrit `raw_r2_key = null` / `normalized_r2_key = null`, et ne republie que les métadonnées. Le modèle de catalogue de listes de blocage et le chemin de synchro du backend sont couverts dans [Filtrage DNS & listes de blocage](./dns-filtering-and-blocklists.md) et [Backend & données](./backend-and-data.md).
+Côté Worker, c'est l'exact miroir : sa synchro admin/cron récupère chaque amont, le hache/compte, écrit `raw_r2_key = null` / `normalized_r2_key = null`, et ne republie que les métadonnées. Le modèle de catalogue de listes de blocage et le chemin de synchro du backend sont couverts dans [Filtrage DNS & listes de blocage](./dns-filtering-and-blocklists.md) et [Backend & données](./backend-and-data.md).
 
 **Modèle de quota (deux couches) :**
 - **Garde-fou de l'appareil (pour tout le monde, jamais un mur payant) :** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3 262 236 règles** = `((32.0 − 4.0) MB × 1 048 576) / 9.0 B/rule` — une cible de 32 Mo sous le plafond NE d'environ 50 Mio. Les configurations qui dépassent le quota sont rejetées de façon déterministe, plutôt que de laisser le tunnel se faire tuer par le jetsam.
@@ -154,7 +154,7 @@ Côté Worker, c'est le miroir de ça : sa synchro admin/cron récupère chaque 
 
 ### C. Sauvegarde (zéro connaissance, opt-in) — Implémenté {#c-backup-zero-knowledge-opt-in-implemented}
 
-Optionnelle, conditionnée à un compte, et la seule donnée utilisateur qui atterrit dans le backend — sous forme de **texte chiffré opaque**.
+Optionnelle, conditionnée à un compte, et seule donnée utilisateur qui atterrit dans le backend — sous forme de **texte chiffré opaque**.
 
 1. L'utilisateur se connecte éventuellement (Apple ou Google uniquement ; **e-mail/mot de passe est Abandonné**) via un `id_token` natif échangé chez Supabase Auth (`grant_type=id_token`, nonce haché). Seule la session Supabase qui en résulte est stockée, en local sur l'appareil, dans le Keychain.
 2. **`BackupConfigurationPayload`** assemble un texte en clair minimisé (IDs des listes de blocage activées, domaines autorisés/bloqués, préférences de résolveur, préférences des journaux locaux, registre LavaGuard). Il **exclut** `isPaid`, la QA, les diagnostics et les listes de blocage complètes.

@@ -22,7 +22,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## 1. 认证流程 {#1-authentication-flow}
 
-**只支持 Apple 和 Google 两家。** **（已实现）** `AccountAuthProvider` 枚举的就只有 `.apple` 和 `.google`（`AccountAuthService.swift`）。邮箱/密码登录——以及任何绕过认证、靠客服协助来恢复账户的做法——都明确**已放弃**；自己管理密码会带来重置/多因素/锁定/泄露等一堆义务，在 Apple/Google 已经够用的前提下不值得这份复杂度，而绕过认证的恢复方式会破坏零知识保证。
+**只支持 Apple 和 Google 两家。** **（已实现）** `AccountAuthProvider` 枚举的就只有 `.apple` 和 `.google`（`AccountAuthService.swift`）。邮箱/密码登录——以及任何绕过认证、靠客服协助来恢复账户的做法——都明确**已放弃**；自己管理密码会带来重置/多因素/锁定/泄露等一堆义务，在 Apple/Google 已经够用的前提下不值得增加这份复杂度，而绕过认证的恢复方式会破坏零知识保证。
 
 两家都用**原生 `id_token` 授权**，既不走 Supabase Swift SDK，也不走网页 OAuth：
 
@@ -74,7 +74,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 **包含：** 已启用拦截列表的 **ID**（目录引用，不是列表本身的字节）、允许的域名/已拦截域名、解析器预设 / 自定义解析器、本地日志偏好、LavaGuard 账本、一个防护提示，以及自定义拦截列表的来源元数据。
 
-**不包含：** `isPaid`（权益是本地的）、QA 标志、诊断信息、过滤器快照，以及完整的拦截列表内容（只用目录 ID 引用）。你的浏览历史和 DNS 查询从来不在这份载荷里，因为设备压根不会把它们当成常规遥测流来记录。
+**不包含：** `isPaid`（权益是本地的）、QA 标志、诊断信息、过滤器快照，以及完整的拦截列表内容（只用目录 ID 引用）。你的浏览历史和 DNS 查询从来不在这份载荷里，因为设备根本不会把它们作为常规遥测流来记录。
 
 ### 3.3 信封（客户端加密） {#33-the-envelope-client-side-crypto}
 
@@ -84,13 +84,13 @@ AccountSessionKeychainStore  (Keychain, device-local)
 2. **密钥包装（密钥槽）。** 这把唯一的载荷密钥会被独立地包进一个或多个**密钥槽**里，每个秘密一个槽，然后用 AES-GCM 把载荷密钥的一份副本包起来。任何一个槽的秘密都能解开整份备份。包装密钥的派生方式按槽的类型而定：`password` / `recoveryPhrase` / `keychain`（设备）/ `assistedRecovery` 这几个槽用 **PBKDF2-HMAC-SHA256，21 万次迭代**（生产环境；`defaultPasswordIterations = 210_000`），每个槽都用一份新鲜的 16 字节随机盐；`passkey` 槽则在认证器的 PRF 输出之上用 **HKDF-SHA256**（info 为 `"LavaSec passkey backup PRF v1"`），并把那份非机密的 PRF 盐存在槽里，这样恢复时就能重新算出同样的输出。
 3. **槽的类型。** 信封支持五种槽：`password`、`recoveryPhrase`、`keychain`（设备秘密）、`assistedRecovery` 和 `passkey`。
 
-实际发布的设置是**无密码**的（`makePasswordless`，由 `AppViewModel.turnOnEncryptedBackup` 驱动）。它会创建一个 **`keychain`（设备）槽 + 一个 `assistedRecovery` 槽 + 一个可选的 `passkey` 槽**。`password` / `recoveryPhrase` 的工厂方法和解密方法仍然保留着，用于旧版/向后兼容的信封（只在测试里被用到），但实际 UI 从来不会创建一个只有密码的信封——把密码备份当成没发布就对了。**（已实现；密码槽已从实际流程中放弃。）**
+实际发布的设置是**无密码**的（`makePasswordless`，由 `AppViewModel.turnOnEncryptedBackup` 驱动）。它会创建一个 **`keychain`（设备）槽 + 一个 `assistedRecovery` 槽 + 一个可选的 `passkey` 槽**。`password` / `recoveryPhrase` 的工厂方法和解密方法仍然保留着，用于旧版/向后兼容的信封（只在测试里被用到），但实际 UI 从来不会创建一个只有密码的信封——把密码备份视为未发布即可。**（已实现；密码槽已从实际流程中放弃。）**
 
 **完整性 / 防降级：** `envelopeVersion` 硬钉死为 `1`，每个槽的 KDF 也按类型钉死——密码/短语/设备/协助槽用 `PBKDF2-HMAC-SHA256`，PRF 通行密钥槽用 `HKDF-SHA256`。不支持的版本或对不上的 KDF 会被拒绝，所以伪造或降级的元数据没法削弱解包过程。**（已实现）**
 
 ### 3.4 上传与存储 {#34-upload--storage}
 
-`BackupSyncService`（`SupabaseBackupSyncService`，`LavaSecApp`）把信封**直接**上传到 Supabase 的 PostgREST 表 `user_backups`，按 `user_id` 做 upsert，作用域由用户的 access token 限定。**信封上传没有走任何 Worker 路由**——客户端在 RLS 下直接和 Supabase 对话；Worker 只在账户删除时才碰 `user_backups`，去把它删掉。**（已实现）**
+`BackupSyncService`（`SupabaseBackupSyncService`，`LavaSecApp`）把信封**直接**上传到 Supabase 的 PostgREST 表 `user_backups`，按 `user_id` 做 upsert，作用域由用户的 access token 限定。**信封上传没有走任何 Worker 路由**——客户端在 RLS 下直接和 Supabase 对话；Worker 只在账户删除时才碰 `user_backups`，将其删除。**（已实现）**
 
 落进 `user_backups` 里的东西：
 
@@ -113,7 +113,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 ## 4. 恢复 {#4-recovery}
 
-备份只有在你能恢复时才有用。`restoreEncryptedBackup`（在 `AppViewModel` 里）通过逐个尝试可用的槽来解密：设备密钥、恢复短语，或通行密钥。无论哪种模式，信封都是在本地加载（或从 Supabase 取回）后**在设备上解密**的——服务器从不解密。
+`restoreEncryptedBackup`（在 `AppViewModel` 里）通过逐个尝试可用的槽来解密：设备密钥、恢复短语或通行密钥。无论哪种模式，信封都是在本地加载（或从 Supabase 取回）后**在设备上解密**的——服务器从不解密。
 
 ### 4.1 恢复短语 {#41-recovery-phrase}
 
@@ -145,7 +145,7 @@ assistedRecoverySecret =
 
 ---
 
-## 5. 数据最小化与隐私姿态 {#5-data-minimization--privacy-posture}
+## 5. 数据最小化与隐私立场 {#5-data-minimization--privacy-posture}
 
 - **账户可选。** 防护不需要账户也能用；登录只是开启设置备份。
 - **明文只在本地。** 手机是明文设置和解密秘密唯一存在的地方；Supabase 每个用户只持有一份无法解读的信封。

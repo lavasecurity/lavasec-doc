@@ -16,7 +16,7 @@ Questo documento copre la filosofia di design, il vocabolario di profondità Lav
 
 ## 1. Filosofia: nucleo calmo, profondità conquistata
 
-Il pubblico di Lava è composto da utenti comuni non tecnici — genitori, persone anziane — e il design ne deriva di conseguenza. La superficie quotidiana "funziona e basta" in modo calmo per tutti; dettagli aggiuntivi, piacere e controllo vengono rivelati (**conquistati**) solo quando l'utente va a cercarli. Niente assilla, niente allarma e i meccanismi tecnici restano invisibili finché non vengono cercati.
+Il pubblico di Lava è composto da utenti comuni non tecnici — genitori, persone anziane — e il design ne deriva. La superficie quotidiana "funziona e basta" in modo calmo per tutti; dettagli aggiuntivi, piacere e controllo vengono rivelati (**conquistati**) solo quando l'utente va a cercarli. Niente assilla, niente allarma e i meccanismi tecnici restano invisibili finché non vengono cercati.
 
 Questo modello **"nucleo calmo, profondità conquistata"** si risolve in tre profondità di prodotto:
 
@@ -46,7 +46,7 @@ Il divario residuo rimanente è la manciata di punti di chiamata grezzi `.red` n
 
 ## 2. LavaTier — Floor / Window / Workshop **(Implementato)**
 
-`LavaTier` è il vocabolario di profondità leggero che codifica "nucleo calmo, profondità conquistata" direttamente nello strato dei token. È un vocabolario più alcuni valori predefiniti dei token — non un re-theme completo — e viene rilasciato come enum in lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, cablato in superfici rappresentative anziché adattare retroattivamente ogni view.
+`LavaTier` è il vocabolario di profondità leggero che codifica "nucleo calmo, profondità conquistata" direttamente nello strato dei token. È un vocabolario più alcuni valori predefiniti dei token — non un re-theme completo — e viene rilasciato come enum in lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, cablato in superfici rappresentative anziché in ogni view.
 
 | Tier | Profondità | Significato |
 |---|---|---|
@@ -84,7 +84,7 @@ Vincoli del grafo che vale la pena conoscere: l'unica uscita di `sleeping` è `w
 
 > **`retrying` vs `concerned` — la distinzione di tono più importante.** Entrambi segnalano "non perfettamente in salute," ma si leggono in modo molto diverso e non devono essere confusi:
 > - **`retrying`** è il volto *sereno, auto-riparante*: palpebre rilassate (~0,80), occhi a livello, una bocca piatta e **nessuna inclinazione di preoccupazione**. Il movimento è portato dal **badge di stato, non dal volto** — un recupero transitorio non dovrebbe mai allarmare. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
-> - **`concerned`** è una preoccupazione *gentile, che cerca aiuto*: sopracciglia interne sollevate (`concernAmount` 1, `mouthCurve` -0,22) che si leggono come "mi servirebbe una mano," **mai uno sguardo severo**. I problemi autentici dovrebbero invitare all'aiuto, non rimproverare. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
+> - **`concerned`** è una preoccupazione *gentile, che cerca aiuto*: sopracciglia interne sollevate (`concernAmount` 1, `mouthCurve` -0,22) che si leggono come "mi servirebbe una mano," **mai uno sguardo severo**. I problemi reali dovrebbero invitare all'aiuto, non rimproverare. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
 
 ### 3.2 Mappatura connettività → espressione (6 → 4)
 
@@ -188,7 +188,7 @@ I valori predefiniti del primo avvio che il flusso installa: resolver **Device D
 
 Lava è localizzata in **6 locali**: **en** (sorgente) + **ja, zh-Hant, zh-Hans, de, fr**, tramite i cataloghi di stringhe di Xcode.
 
-- **La cucitura di localizzazione è `.lavaLocalized`** (`String.lavaLocalized` / `.lavaLocalizedFormat`, supportato da `LavaStrings.localized` → `NSLocalizedString` con un fallback inglese; lavasec-ios: LavaSecApp/LavaStrings.swift). **Tutto il copy dei componenti** deve passare attraverso di essa — niente literal di stringa nudi nelle view.
+- **La cucitura di localizzazione è `.lavaLocalized`** (`String.lavaLocalized` / `.lavaLocalizedFormat`, supportato da `LavaStrings.localized` → `NSLocalizedString` con un fallback inglese; lavasec-ios: LavaSecApp/LavaStrings.swift). **Tutto il copy dei componenti** deve passare attraverso di essa — niente stringhe letterali nelle view.
 - **zh-Hant** usa una formulazione adatta a Taiwan nella prima passata.
 - I metadati dell'App Store esistono per tutti e 6 i locali.
 - Ordine di priorità per la traduzione: ja, zh-Hant, zh-Hans, de, fr.

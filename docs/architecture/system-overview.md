@@ -19,7 +19,7 @@ Lava Security is a privacy-first iOS app that filters DNS **locally on the devic
 
 > All DNS filtering happens on the device; Lava never routes your browsing through its servers and never receives the stream of domains you visit — the backend holds only catalog metadata, an opaque per-user encrypted backup, and anonymized diagnostics you choose to send.
 
-Everything below is in service of keeping that sentence true. The architecture is deliberately small on the server side: the device does the work, and the backend never sees a query.
+Everything below keeps that sentence true. The architecture is deliberately small on the server side: the device does the work, and the backend never sees a query.
 
 ## 3. Components
 
@@ -65,7 +65,7 @@ Everything below is in service of keeping that sentence true. The architecture i
 
 ## 4. Data-flow diagram
 
-The single most important property: **the encrypted DNS resolver path (right side) never touches Lava's backend (bottom).** The device fetches catalog *metadata* from the Worker, but list *bytes* and the actual query stream go directly to third parties.
+The single most important property: **the encrypted DNS resolver path (right side) never touches Lava's backend (bottom).** The device fetches catalog *metadata* from the Worker, but list *bytes* and the query stream go directly to third parties.
 
 ```
                                   YOUR iPHONE
@@ -135,7 +135,7 @@ Transport notes (verbatim conventions): `DoH3` (no slash) is annotated **only wh
 
 ### B. Catalog fetch + blocklist load (source-url-only) — Implemented
 
-How the filter rules get onto the device. Lava is a **source-url-only** distributor: it publishes only the upstream URL + accepted hashes and **never stores, mirrors, transforms, or serves third-party blocklist bytes.**
+How filter rules reach the device. Lava is a **source-url-only** distributor: it publishes only the upstream URL + accepted hashes and **never stores, mirrors, transforms, or serves third-party blocklist bytes.**
 
 1. The device fetches catalog **metadata** from the Worker: `GET https://api.lavasecurity.app/v1/catalog` → JSON served straight from R2 (`catalog/latest.json`), split into `sources[]` + `guardrails[]`, each entry carrying `source_url` + `accepted_source_hashes`.
 2. For each enabled source, the device downloads the list **bytes directly from `source_url`** (the upstream — HaGeZi, OISD, Block List Project, etc.), **not** from Lava.

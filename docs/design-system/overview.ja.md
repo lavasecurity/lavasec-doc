@@ -180,7 +180,7 @@ DNS トランスポートのうち、用語集の Do-Not-Translate 項目は **D
 
 この流れがインストールする初回のデフォルト: **デバイス DNS** リゾルバー（`DNSResolverPreset.device`）、**デバイス DNS フォールバック オン**、ログ オン（カウント + 履歴 + アクティビティ）、そして「アカウントなしで続ける」。
 
-> **デフォルトブロックリストの食い違い（コードが正しい）。** オンボーディングプランのコピーはデフォルトのブロックリストとして HaGeZi Multi Light を挙げていますが、出荷されているコードのデフォルトは **Block List Project Phishing + Scam** です（`AppConfiguration.lavaRecommendedDefaults`、lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift で定義）。本当のプランの境目は**フィルタールールの上限（無料 500K / Plus 2M）**であって、リストの数ではありません。内部で追跡中です。プランのモデルと推奨デフォルトの設定については [機能カタログ](../product/features.md) を参照してください。
+> **デフォルトブロックリストの正典。** 出荷されているコードのデフォルトは **Block List Basic** です（`AppConfiguration.lavaRecommendedDefaults`、lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift で定義）。本当のティアの境目は**フィルタールールの上限（無料 500K / Plus 2M）**であって、リストの数ではありません。ティアのモデルと推奨デフォルトの設定については [機能カタログ](../product/features.md) を参照してください。
 
 ---
 

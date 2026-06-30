@@ -128,6 +128,8 @@ nav:
       - Accounts & Zero-Knowledge Backup: architecture/accounts-and-backup.md
   - Design System: design-system/overview.md
   - Decisions (ADRs): decisions/key-decisions.md
+  - Contributing:
+      - Translation & Localization: contributing/translation-guidelines.md
   - Support: support.md
   - Legal & Compliance:
       - Blocklist Catalog: legal/blocklist-catalog.md

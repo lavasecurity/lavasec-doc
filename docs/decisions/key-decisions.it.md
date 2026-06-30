@@ -28,9 +28,9 @@ Letture correlate: il modello di distribuzione del catalogo in [`../legal/gpl-so
 
 **Decisione.** Filtrare il DNS **localmente sul dispositivo** attraverso un packet tunnel `NEPacketTunnelProvider` (`LavaSecTunnel`, `com.lavasec.app.tunnel`), anziché `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager` o un content blocker di Safari.
 
-**Contesto.** Il prodotto è un filtro privacy-first per utenti non tecnici (genitori, persone anziane) distribuito tramite l'App Store consumer, senza alcun account richiesto. I provider NetworkExtension concorrenti e le API DNS gestite sono limitati a dispositivi supervisionati/gestiti via MDM o non coprono tutto il DNS di un'app, e un modello lato resolver instraderebbe il flusso di domini dell'utente fuori dal dispositivo.
+**Contesto.** Il prodotto è un filtro privacy-first per utenti non tecnici (genitori, persone anziane) distribuito tramite l'App Store consumer, senza account. I provider NetworkExtension concorrenti e le API DNS gestite sono limitati a dispositivi supervisionati/gestiti via MDM o non coprono tutto il DNS di un'app, e un modello lato resolver instraderebbe il flusso di domini dell'utente fuori dal dispositivo.
 
-**Motivazione.** Il packet tunnel è l'unico provider che (a) funziona per dispositivi consumer non gestiti e (b) consente a ogni decisione DNS di avvenire on-device, che è il fondamento della promessa sulla privacy: *tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i propri server e non riceve mai il flusso di domini che visiti.* Il compromesso accettato in cambio è il **tetto di memoria iOS di ~50 MiB per estensione** sotto cui il tunnel deve operare — un vincolo che plasma diverse decisioni successive qui sotto.
+**Motivazione.** Il packet tunnel è l'unico provider che (a) funziona per dispositivi consumer non gestiti e (b) consente a ogni decisione DNS di avvenire on-device, che è il fondamento della promessa sulla privacy: *tutto il filtraggio DNS avviene sul dispositivo; Lava non instrada mai la tua navigazione attraverso i propri server e non riceve mai il flusso di domini che visiti.* Il compromesso accettato è il **tetto di memoria iOS di ~50 MiB per estensione** sotto cui il tunnel deve operare — un vincolo che plasma diverse decisioni successive qui sotto.
 
 **Stato.** **Adottata** (fondamentale; presente nel codice fin dal prototipo iniziale).
 
@@ -40,7 +40,7 @@ Letture correlate: il modello di distribuzione del catalogo in [`../legal/gpl-so
 
 **Decisione.** Lava pubblica solo l'**URL della blocklist upstream più gli hash accettati**; il dispositivo recupera i **byte** della lista direttamente da ciascun `source_url`, poi li analizza, normalizza, deduplica e filtra localmente. Lava **non** memorizza, replica, trasforma o serve mai i byte di blocklist di terze parti. Il Worker scrive su R2 solo i **metadati** del catalogo in JSON (`raw_r2_key`/`normalized_r2_key` sono null).
 
-**Contesto.** Il progetto precedente replicava i byte grezzi della blocklist su R2 affinché i legali potessero rivedere la distribuzione. Molte liste upstream (HaGeZi, OISD) sono GPL-3.0, quindi ospitarne i byte renderebbe Lava un ridistributore di dati GPL.
+**Contesto.** Il design precedente replicava i byte grezzi della blocklist su R2 affinché i legali potessero rivedere la distribuzione. Molte liste upstream (HaGeZi, OISD) sono GPL-3.0, quindi ospitarne i byte renderebbe Lava un ridistributore di dati GPL.
 
 **Motivazione.** Trattare Lava come un motore di filtraggio locale / user agent — anziché come un distributore di blocklist — minimizza la ridistribuzione GPLv3 e l'esposizione in fase di App Review. Il dispositivo recupera ciascuna lista via TLS direttamente dal suo `source_url` curato e la analizza localmente sotto rigorosi limiti di dimensione/regole; le liste della community sono accettate così come servite (gli `accepted_source_hashes` del catalogo sono indicativi, non un cancello rigido — un singolo hash fissato non può seguire un upstream a rotazione rapida e produceva solo falsi rifiuti), mentre il tier threat-guardrail di Lava rimane vincolato all'hash. La provenienza è imposta a livello di catalogo (una modifica di `source_url` deve usare un nuovo `list_id`), non da un cancello hash lato client. Ogni set di regole analizzato passa anche attraverso un filtro di domini protetti affinché una lista upstream non possa bloccare i domini di Lava/Apple/del provider di identità. Il modello è imposto in CI da `check-gpl-blocklist-distribution.sh` (nessun codice di mirror, nessun URL di artefatto ospitato da Lava, nessuna sorgente GPL abilitata di default, nessuna scrittura di byte su R2).
 
@@ -80,7 +80,7 @@ Letture correlate: il modello di distribuzione del catalogo in [`../legal/gpl-so
 
 **Motivazione.** I trasporti sono troppo dissimili — executor cifrati asincroni (DoH/DoT/DoQ) contro trasporti sincroni multi-indirizzo in chiaro/del dispositivo — quindi un protocollo unificante sarebbe un'astrazione peggiore rispetto al seam a closure iniettabile esistente, che già mantiene testabile l'esecuzione sul filo.
 
-**Stato.** **Annullata** / won't-implement (chiusa come cattiva astrazione).
+**Stato.** **Annullata** / won't-implement (chiusa come astrazione sbagliata).
 
 ---
 
@@ -112,7 +112,7 @@ Letture correlate: il modello di distribuzione del catalogo in [`../legal/gpl-so
 
 **Decisione.** Ristrutturare il percorso VPN (VPNLifecycleController, ProtectionActionOrchestrator, ResolverOrchestrator, FilterArtifactStore, DNSResponseCache, RuleSetCache, FilterSnapshotPreparationService) per accensione cache-first, fetch a parallelismo limitato e coalescenza dei flap — trattando batteria/latenza come requisiti di prodotto con target espliciti p50/p95 e profilazione **on-device** (non su Simulator).
 
-**Contesto.** Accensione / refresh / pausa / ripresa erano lenti. Durante il refactor è comparsa una heat regression (134% CPU, energia Alta, telefono caldo). Un grande pannello di agenti ha dapprima confutato la causa sospettata usando evidenze pre-regressione; una cattura su dispositivo dal vivo l'ha poi confermata.
+**Contesto.** Accensione / refresh / pausa / ripresa erano lenti. Durante il refactor è comparsa una heat regression (134% CPU, energia Alta, telefono caldo). Un grande pannello di agenti ha dapprima confutato la causa sospettata usando evidenze pre-regressione; una cattura dal vivo su dispositivo l'ha poi confermata.
 
 **Motivazione.** La causa reale era un loop di refresh `NEVPNStatusDidChange` auto-sostenuto — un loop di coalescenza che si ri-armava all'infinito (~370 eventi/s, main thread ~100%, `vpn-debug-log.jsonl` cresciuto a ~180–210 MB) dopo che una guardia drop-reentrant era stata sostituita. La correzione legge lo stato del manager dalla cache e limita il loop. Gli artefatti before/after su dispositivo del piano stesso registrano l'accensione a caldo (`action.turnOn`) calare da **2.722 ms → 287 ms** su iPhone 15 Pro; una separata e successiva review di opportunità post-modulare ha misurato il percorso a caldo a **112 ms** (decode 51 + managerSetup 57) sullo stesso dispositivo. L'episodio ha fissato lo standard: i refactor strutturali si fermano finché una heat regression misurata non è circoscritta, e i risultati termici/batteria del Simulator sono respinti come privi di significato.
 
@@ -158,7 +158,7 @@ Letture correlate: il modello di distribuzione del catalogo in [`../legal/gpl-so
 
 ## Appendice — altre inversioni e rifiuti registrati
 
-Questi sono più piccoli ma sono stati decisioni genuine con un'inversione registrata; elencati per completezza.
+Sono decisioni minori, ma ciascuna ha avuto un'inversione registrata.
 
 | Decisione | Motivazione | Stato |
 |---|---|---|
@@ -166,6 +166,6 @@ Questi sono più piccoli ma sono stati decisioni genuine con un'inversione regis
 | Accesso con email/password | Possedere le password aggiunge il carico di reset/MFA/lockout/breach/takeover mentre Apple + Google bastano; un recupero che bypassasse romperebbe la conoscenza zero | **Annullata** / mai rilasciata (solo Apple + Google) |
 | Allowed Exceptions Guardrails (LAV-5) | La precedenza del guardrail è stata rilasciata tramite il più semplice revamp di filter-list-edit; il pagamento non deve mai bypassare il threat guardrail ad alta confidenza | **Annullata** (corsia `dropped/` creata) |
 | Lockdown della branch-promotion su TestFlight | Lockdown iniziale riconsiderato; sostituito da un lockdown pianificato del runner post-open-source | **Annullata**, sostituita da un piano in backlog |
-| Canale di controllo app↔extension | `sendProviderMessage` (`NETunnelProviderSession`) è l'**unico percorso di controllo app→tunnel** — porta lo stato tipizzato e con revisione e guida autoritativamente il run loop dell'estensione. Il precedente observer `CFNotificationCenter` lato estensione non si attivava mai in modo affidabile su dispositivo ed è stato **rimosso** (asserito assente dai test di source-introspection). Le notifiche Darwin sopravvivono solo nella direzione **tunnel→app**, come nudge di health-changed. | **Adottata** (provider-message è l'unico controllo app→tunnel; Darwin è solo health tunnel→app) |
+| Canale di controllo app↔extension | `sendProviderMessage` (`NETunnelProviderSession`) è l'**unico percorso di controllo app→tunnel** — porta lo stato tipizzato e con revisione e guida autoritativamente il run loop dell'estensione. Il precedente observer `CFNotificationCenter` lato estensione non si attivava mai in modo affidabile su dispositivo ed è stato **rimosso** (asserito assente dai test di source-introspection). Le notifiche Darwin sopravvivono solo nella direzione **tunnel→app**, come notifica di health-changed. | **Adottata** (provider-message è l'unico controllo app→tunnel; Darwin è solo health tunnel→app) |
 
 > Invariante di sicurezza trasversale referenziato in tutto il documento: il pagamento non bypassa mai il **threat guardrail** validato tramite hash e non escludibile. La precedenza delle decisioni è **threat guardrail > allowlist locale (eccezioni consentite) > blocklist > default-allow.**

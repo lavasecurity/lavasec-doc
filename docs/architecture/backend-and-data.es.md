@@ -75,8 +75,8 @@ El enrutamiento es un despachador `route()` plano. Todo está **Implementado** s
 - **Binding de R2** — `catalog/latest.json`, `catalog/{version}.json`, y el cursor round-robin `catalog/scheduled-sync-cursor.json`. **Nunca almacena bytes de blocklists de terceros.** (Los objetos de adjuntos de informes de errores heredados solo se *eliminan* — con el mejor esfuerzo durante la eliminación de la cuenta — nunca se escriben.)
 - **Binding de D1** — filas anónimas y solo de anexión de `article_id` / `locale` / `vote` / `path`; mantenidas separadas de Supabase por diseño.
 - **Cron (`scheduled`)** — el manejador se ramifica según el id del cron:
-  - **Cada 6 horas** — sincroniza **una** fuente por ejecución, en round-robin a través del cursor de R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), luego vuelve a publicar el catálogo. Repartir la carga evita martillear todos los upstreams a la vez.
-  - **Cada 2 minutos** — ejecuta una ruta interna de triaje de informes de errores que promueve nuevos informes anónimos a una cola interna de seguimiento de incidencias, avanzando su propio cursor de marca de agua. Esto es herramienta de operaciones internas; los identificadores de seguimiento de incidencias/notificación son configuración, no parte de la API pública.
+  - **Cada 6 horas** — sincroniza **una** fuente por ejecución, en round-robin a través del cursor de R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), luego vuelve a publicar el catálogo. Repartir la carga evita contactar con todos los upstreams a la vez.
+  - **Cada 2 minutos** — ejecuta una ruta interna de triaje de informes de errores que promueve nuevos informes anónimos a una cola interna de seguimiento de incidencias, avanzando su propio cursor de marca de agua. Esto es herramienta de operaciones interna; los identificadores de seguimiento de incidencias/notificación son configuración, no parte de la API pública.
 
 ## 3. Catálogo y cumplimiento de source-url-only
 
@@ -92,7 +92,7 @@ Cada fila `blocklist_sources` lleva `redistribution_mode`, cuyo único valor per
 
 ### 3.2 Cómo lo hace cumplir el Worker en las escrituras
 
-La ruta de sincronización (`syncOneBlocklist`, admin y cron) descarga cada `source_url` upstream, normaliza/valida **localmente en el Worker solo para calcular metadatos** (`entry_count`, `source_hash`, `normalized_hash`, `byte_size`), escribe una fila `blocklist_versions`, y vuelve a publicar. Las claves de almacenamiento de bytes están escritas a fuerza en null:
+La ruta de sincronización (`syncOneBlocklist`, admin y cron) descarga cada `source_url` upstream, normaliza/valida **localmente en el Worker, solo para calcular metadatos** (`entry_count`, `source_hash`, `normalized_hash`, `byte_size`), escribe una fila `blocklist_versions`, y vuelve a publicar. Las claves de almacenamiento de bytes se escriben directamente en null:
 
 ```ts
 raw_r2_key: null,
@@ -103,7 +103,7 @@ Una migración (`20260525000000_add_blocklist_distribution_mode.sql`) cambió es
 
 ### 3.3 Guardarraíles de normalización (solo metadatos)
 
-La normalización del lado del Worker (`normalizeBlocklist`) filtra dominios protegidos, hace cumplir los topes, y deduplica+ordena. Esto es puramente para calcular metadatos confiables; para **listas de la comunidad** el dispositivo **no** hace una comprobación de hash en la descarga — la descarga sobre TLS desde la `source_url` curada y la parsea bajo topes (los hashes aceptados del catálogo son orientativos), por lo que esta normalización del lado del Worker no es por sí sola un límite de seguridad. (El nivel de guardarraíl de amenazas de Lava sigue estando anclado por hash en el dispositivo, y la procedencia de `source_url` se hace cumplir en el momento de la publicación — un cambio de URL debe usar un nuevo `list_id`.) Constantes clave:
+La normalización del lado del Worker (`normalizeBlocklist`) filtra dominios protegidos, hace cumplir los topes, y deduplica+ordena. Esto solo calcula metadatos confiables; para **listas de la comunidad** el dispositivo **no** hace una comprobación de hash en la descarga — la descarga sobre TLS desde la `source_url` curada y la parsea bajo topes (los hashes aceptados del catálogo son orientativos), por lo que esta normalización del lado del Worker no es por sí sola un límite de seguridad. (El nivel de guardarraíl de amenazas de Lava sigue estando anclado por hash en el dispositivo, y la procedencia de `source_url` se hace cumplir en el momento de la publicación — un cambio de URL debe usar un nuevo `list_id`.) Constantes clave:
 
 - `PROTECTED_SUFFIXES` — elimina cualquier regla que coincida con dominios de Apple/iCloud/`mzstatic`/Lava Security/Supabase/Cloudflare/Google/GitHub, de modo que un upstream envenenado no pueda bloquear la propia infraestructura de Lava ni los proveedores de inicio de sesión.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.
@@ -175,7 +175,7 @@ El lado del cliente vive en la app de iOS: `lavasec-ios: LavaSecApp/BackupPasske
 
 ## 6. Worker lavasec-email
 
-Solo recibir y reenviar. Reenvía `support@` / `hello@` / `jimmy@` / `legal@lavasecurity.app` a una bandeja de entrada de operador verificada, rechaza destinatarios desconocidos y correo de más de 10 MiB, y **no almacena cuerpos de correo electrónico**. Las respuestas automáticas de soporte están codificadas pero bloqueadas tras el correo saliente de pago de Cloudflare (aplazado). Las constantes de enrutamiento viven en `email-service.ts:9` (`ROUTED_RECIPIENTS`); el manejador de entrada es `handleInboundEmail`. Estado: **Implementado** (la ruta de respuesta automática **Planeada**/aplazada).
+Solo recepción y reenvío. Reenvía `support@` / `hello@` / `jimmy@` / `legal@lavasecurity.app` a una bandeja de entrada de operador verificada, rechaza destinatarios desconocidos y correo de más de 10 MiB, y **no almacena cuerpos de correo electrónico**. Las respuestas automáticas de soporte están codificadas pero bloqueadas tras el correo saliente de pago de Cloudflare (aplazado). Las constantes de enrutamiento viven en `email-service.ts:9` (`ROUTED_RECIPIENTS`); el manejador de entrada es `handleInboundEmail`. Estado: **Implementado** (la ruta de respuesta automática **Planeada**/aplazada).
 
 ## 7. Configuración y despliegue
 
@@ -186,7 +186,7 @@ Solo recibir y reenviar. Reenvía `support@` / `hello@` / `jimmy@` / `legal@lava
 - **Enrutamiento de Cloudflare**: `lavasecurity.app` permanece en Pages; `api.lavasecurity.app` y `*.qa-probe.lavasecurity.app` resuelven a este Worker.
 - **Compatibilidad**: `compatibility_date = "2026-05-16"`, `compatibility_flags = ["nodejs_compat"]`.
 
-> `CBOR_NATIVE_ACCELERATION_DISABLED = "true"` está fijado en vars pero el código del Worker no lo referencia; es un flag de aceleración del runtime de Workers en lugar de una configuración de aplicación.
+> `CBOR_NATIVE_ACCELERATION_DISABLED = "true"` está definido en vars pero el código del Worker no lo referencia; es un flag de aceleración del runtime de Workers en lugar de una configuración de aplicación.
 
 ## 8. Invariantes de privacidad (qué está y qué no está aquí)
 

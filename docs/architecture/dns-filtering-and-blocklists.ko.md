@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > 대상 독자: 엔지니어. 이 문서는 온디바이스 DNS 파이프라인, 암호화 전송 리졸버 경로, 필터링 결정 엔진, 그리고 source-url-only 차단 목록 카탈로그 모델을 코드가 강제하는 정확한 수치와 함께 설명합니다. 상태(Status)는 코드로 확인된 현실을 반영합니다. 계획과 코드가 어긋나는 경우 **코드가 우선**하며, 그 차이를 본문에 명시합니다.
 
-모든 DNS 필터링은 기기에서 일어납니다. Lava는 사용자의 브라우징을 자사 서버로 라우팅하지 않으며, 사용자가 방문하는 도메인 스트림을 절대 수신하지 않습니다. 백엔드는 카탈로그 메타데이터, 사용자별 불투명 암호화 백업, 그리고 사용자가 보내기로 선택한 익명화된 진단 정보만 보유합니다.
+모든 DNS 필터링은 기기에서 일어납니다. Lava는 사용자의 브라우징을 자사 서버로 라우팅하지 않으며, 사용자가 방문하는 도메인의 흐름을 절대 받지 않습니다. 백엔드는 카탈로그 메타데이터, 사용자별 불투명 암호화 백업, 그리고 사용자가 보내기로 선택한 익명화된 진단 정보만 보유합니다.
 
 Lava는 **로컬 DNS/차단 목록 필터링**이며, 모든 악성 도메인이나 URL이 차단된다는 보장이 아닙니다.
 
@@ -127,7 +127,7 @@ UI는 **`DoH3`(슬래시 없음)** — 예: "Quad9 (DoH3)" — 을 **실제로 h
 
 ### 4.2 기기 메모리 가드레일 + NE 상한 (구현됨)
 
-패킷 터널은 iOS의 **확장당 ~50 MiB 메모리 상한**을 적용받습니다(iOS 15 이래 패킷 터널을 위한 OS의 확장-유형별 설계 한도로, RAM에 비례하지 않습니다. 이는 기기 모델별 `com.apple.jetsamproperties.{Model}.plist`에 존재하며 구형 기기에서는 더 낮을 수 있습니다). 이를 초과하면 jetsam이 트리거됩니다. 상한에 대한 API가 없으므로 예산은 절벽 아래로 여유를 둡니다.
+패킷 터널은 iOS의 **확장당 ~50 MiB 메모리 상한**을 적용받습니다(iOS 15 이래 패킷 터널을 위한 OS의 확장-유형별 설계 한도로, RAM에 비례하지 않습니다. 이는 기기 모델별 `com.apple.jetsamproperties.{Model}.plist`에 존재하며 구형 기기에서는 더 낮을 수 있습니다). 이를 초과하면 jetsam이 트리거됩니다. 상한을 알려주는 API가 없으므로, 예산은 그 한계선 아래로 여유를 둡니다.
 
 `FilterSnapshotMemoryBudget`(`Sources/LavaSecCore/FilterSnapshotMemoryBudget.swift:30-55`)가 필터 규칙(block + allow + guardrail) 단위로 계산을 수행합니다:
 
@@ -190,7 +190,7 @@ compact 스냅샷은 `Data(contentsOf:options:[.mappedIfSafe])`(`LavaSecTunnel/P
 
 ### 5.3 무료 사용자를 위한 기본 활성 목록 (구현됨)
 
-무료 기본 구성은 `OnboardingDefaults.lavaRecommendedDefaults`이며, **Block List Basic** — 광범위하고 허용적인 라이선스의 결합 목록(광고 + 추적 + 멀웨어 + 피싱/스캠) — 을 device-DNS 리졸버 프리셋(`resolverPresetID = DNSResolverPreset.device.id`)과 함께 활성화하고, 암호화 Device-DNS 폴백을 **켠**(`usesEncryptedDeviceDNSFallback = true`) 상태로 **Mullvad DoH**(`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`)로 라우팅합니다: 기기 자체의 DNS가 막히면 허용된 조회가 일시적으로 Mullvad DoH로 운반되었다가 자동으로 기기의 DNS로 돌아옵니다. (맨바닥 `AppConfiguration()` 초기화기는 이 폴백을 **꺼진** 상태로 기본 설정합니다 — 권장 온보딩 기본값을 수락해야만 활성화됩니다.) 이는 이전의 Block List Project Phishing + Scam 쌍을 대체합니다: Basic의 결합 커버리지가 그것들을 포섭하며, 둘 다 opt-in 선택 가능 목록으로 남아 있습니다.
+무료 기본 구성은 `OnboardingDefaults.lavaRecommendedDefaults`이며, **Block List Basic** — 광범위하고 허용적인 라이선스의 결합 목록(광고 + 추적 + 멀웨어 + 피싱/스캠) — 을 device-DNS 리졸버 프리셋(`resolverPresetID = DNSResolverPreset.device.id`)과 함께 활성화하고, 암호화 Device-DNS 폴백을 **켠**(`usesEncryptedDeviceDNSFallback = true`) 상태로 **Mullvad DoH**(`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`)로 라우팅합니다: 기기 자체의 DNS가 막히면 허용된 조회가 일시적으로 Mullvad DoH로 운반되었다가 자동으로 기기의 DNS로 돌아옵니다. (기본 `AppConfiguration()` 초기화기는 이 폴백을 **꺼진** 상태로 기본 설정합니다 — 권장 온보딩 기본값을 수락해야만 활성화됩니다.) 이는 이전의 Block List Project Phishing + Scam 쌍을 대체합니다: Basic의 결합 커버리지가 그것들을 포섭하며, 둘 다 opt-in 선택 가능 목록으로 남아 있습니다.
 
 그 무료 기본값은 하드코딩된 것이 아니라 **`defaultEnabled`에 의해 생성**됩니다. `blockListProjectBasic`이 `defaultEnabled: true`를 설정하고, `DefaultCatalog.recommendedDefaultSourceIDs`는 `curatedSources.filter(\.defaultEnabled)`에서 파생됩니다. `defaultEnabled`는 "신규 설치 기본값의 단일 진실의 원천"으로, 백엔드 카탈로그의 `default_enabled` 컬럼을 미러링합니다. `recommendedDefaultSourceIDs`를 거쳐 `OnboardingDefaults`로 흐르는 이것이 살아있는 메커니즘입니다 — 소스의 플래그를 뒤집으면 기본값이 바뀝니다.
 
@@ -198,7 +198,7 @@ compact 스냅샷은 `Data(contentsOf:options:[.mappedIfSafe])`(`LavaSecTunnel/P
 
 ### 5.4 Source-url-only GPL 배포 모델 (구현됨)
 
-**Source-url-only**는 GPL/IP 준수 배포 모델입니다: Lava는 업스트림 URL + 수락된 해시만 게시하고, 기기가 직접 목록을 가져와 파싱합니다. Lava는 제3자 차단 목록 바이트를 **절대** 저장, 미러링, 변형, 또는 제공하지 않습니다. 이는 **폐기된 R2-미러 설계를 대체했습니다**(원래의 "raw R2 mirror" 계획은 2026-05-25에 되돌려졌습니다).
+**Source-url-only**는 GPL/IP 준수 배포 모델입니다: Lava는 업스트림 URL + 수락된 해시만 게시하고, 기기가 직접 목록을 가져와 파싱합니다. Lava는 제3자 차단 목록 바이트를 **절대** 저장, 미러링, 변형, 또는 제공하지 않습니다. 이는 **폐기된 R2-미러 설계를 대체한 것입니다**(원래의 "raw R2 mirror" 계획은 2026-05-25에 되돌려졌습니다).
 
 Worker 측에서 `syncOneBlocklist`는 각 업스트림 소스를 가져와 정규화+해시하지만(`source_hash`, `normalized_hash`, `entry_count` 계산) `raw_r2_key = null` / `normalized_r2_key = null`을 씁니다 — 카탈로그 JSON 메타데이터만 R2에 도달합니다. `check-gpl-blocklist-distribution.sh`는 전체 모델을 강제하는 CI 가드레일입니다: 미러/변형 코드 없음, Lava 아티팩트/다운로드 URL 없음, GPL 소스 기본 활성화 없음, 목록 바이트의 Worker R2 쓰기 없음, "Lava-hosted mirror" 문구 없음, 번들된 GPL `.txt`/`.json` 없음, 그리고 마이그레이션 + 법무 문서에 `source_url_only` 필수.
 

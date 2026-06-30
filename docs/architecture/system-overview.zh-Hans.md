@@ -19,7 +19,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 
 > 所有 DNS 过滤都在设备上完成；Lava 从不把你的上网流量绕道它的服务器，也从不接收你访问过的那一串域名——后端只保存目录元数据、一份只属于你且别人看不懂的加密备份，以及你主动选择发送的匿名诊断信息。
 
-下面写的一切，都是为了让上面这句话一直成立。这套架构在服务端这边是刻意做小的：活儿都由设备干，后端永远看不到任何一次查询。
+下面写的一切，都是为了让上面这句话始终成立。这套架构在服务端刻意做得很小：活儿都由设备来干，后端永远看不到任何一次查询。
 
 ## 3. 组件 {#3-components}
 
@@ -35,7 +35,7 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 **App 侧的控制器（在 LavaSecApp 里）：**
 
 - **AppViewModel** — App 侧的控制器（万能对象）：负责 `NETunnelProviderManager` 的生命周期、共享状态的持久化、provider 消息收发、实时活动对账、目录同步、备份、StoreKit 和身份认证。
-- **RootView** — 两个标签页的 `TabView`（防护 + 设置），过滤器和活动作为 防护 下的详情页进入；它把控引导流程，承载安全锁 / 隐私遮罩这些覆盖层。
+- **RootView** — 两个标签页的 `TabView`（防护 + 设置），过滤器和活动作为 防护 下的详情页进入；它管控引导流程，承载安全锁 / 隐私遮罩等覆盖层。
 - **SecurityController** — 密码（Keychain 里加盐的 SHA256）+ 生物识别 + 按界面分别防护。
 - **LavaLiveActivityController** — 单一活动对账器，做了去重并按 revision 把关。
 - **OnboardingFlowView** — 多页的首次启动流程（6 页：`lava → guardIntro → features → vpn → notifications → done`）。
@@ -128,14 +128,14 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 2. **`DNSQueryDispatcher`** 套用查询优先级：**bootstrap > pause > filter**。bootstrap 优先是一条硬性不变量——解析器自己的主机名要在任何过滤之前先解析出来，这样解析器永远不会把自己拦掉。
 3. 如果既不是 bootstrap、也没有处于暂停，域名就会拿去和 **`CompactFilterSnapshot`** 比对（通过 `Data(contentsOf:options:[.mappedIfSafe])` 从 App Group 以零拷贝 mmap 加载）。判定优先级是 **威胁护栏 > 本地允许列表（允许例外） > 拦截列表 > 默认放行**；无效域名一律拦截。
 4. **被拦截** → 隧道在本地直接给出应答（不联系上游）。**被允许** → 这次查询交给 **`ResolverOrchestrator`**。
-5. `ResolverOrchestrator` 把它路由到配置好的传输方式——**`DoH3` / `DoT` / `DoQ` / 明文 DNS（`IP`）**——在退避门控的背后按端点逐个做故障转移；当一个加密方案没有任何端点时降级为明文 DNS；当主端点没有应答、且方案允许时，**回退到设备 DNS**。
-6. 解析器的回复返回给操作系统。用户的查询流只去往**用户自己选的公共解析器**，绝不去 Lava。
+5. `ResolverOrchestrator` 把它路由到配置好的传输方式——**`DoH3` / `DoT` / `DoQ` / 明文 DNS（`IP`）**——在退避门控之下按端点逐个做故障转移；当某个加密方案没有任何端点时降级为明文 DNS；当主端点无应答、且方案允许时，**回退到设备 DNS**。
+6. 解析器的回复返回给操作系统。用户的查询流只发往**用户自己选的公共解析器**，绝不发往 Lava。
 
-传输方式说明（照搬约定）：**只有真正观察到一次 h3 协商时**才会标注 `DoH3`（不带斜杠）——优先尝试，绝不保证。**`DoT`** 每个端点最多缓存 4 个 NWConnection，带空闲过期刷新 + 一次新连接重试。**`DoQ`** **每次查询都开一条全新的 QUIC 连接**（不复用）；那 4 条通道的缓存池给的是并发，不是握手复用——连接复用做出来过、在真机上测过、但**被回退了**（推迟到 iOS-26 成为部署下限之后再说）。详见 [DNS 过滤与拦截列表](./dns-filtering-and-blocklists.md)。
+传输方式说明（沿用原文约定）：**只有真正观察到一次 h3 协商时**才会标注 `DoH3`（不带斜杠）——优先尝试，绝不保证。**`DoT`** 每个端点最多缓存 4 个 NWConnection，带空闲过期刷新 + 一次新连接重试。**`DoQ`** **每次查询都开一条全新的 QUIC 连接**（不复用）；那 4 条通道的缓存池给的是并发，不是握手复用——连接复用曾构建并在真机上测试过，但**已被回退**（推迟到 iOS-26 成为部署下限之后再做）。详见 [DNS 过滤与拦截列表](./dns-filtering-and-blocklists.md)。
 
 ### B. 目录拉取 + 拦截列表加载（仅源 URL）— 已实现 {#b-catalog-fetch-blocklist-load-source-url-only-implemented}
 
-过滤规则是怎么到设备上的。Lava 是一个**仅源 URL**的分发方：它只发布上游 URL + 认可的哈希，**从不存储、镜像、转换或托管第三方拦截列表的字节。**
+过滤规则如何到达设备。Lava 是一个**仅源 URL**的分发方：它只发布上游 URL + 认可的哈希，**从不存储、镜像、转换或托管第三方拦截列表的字节。**
 
 1. 设备从 Worker 拉取目录**元数据**：`GET https://api.lavasecurity.app/v1/catalog` → 直接从 R2（`catalog/latest.json`）提供的 JSON，拆成 `sources[]` + `guardrails[]`，每一项都带着 `source_url` + `accepted_source_hashes`。
 2. 对每个启用的源，设备**直接从 `source_url`**（也就是上游——HaGeZi、OISD、Block List Project 等等）下载列表**字节**，**而不是**从 Lava 下载。
@@ -144,13 +144,13 @@ Lava Security 是一款隐私优先的 iOS App，它**在设备本地**通过 Ne
 5. **`FilterSnapshotPreparationService`** 把去重后的并集合并起来，并跑一遍**权威的额度强制执行**（先看设备上限，再看档位），然后把 `filter-snapshot.compact` 写进 App Group。
 6. `AppViewModel` 发出一条 `reload-snapshot` provider 消息；隧道重新加载。
 
-Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游、对它做哈希/计数、写入 `raw_r2_key = null` / `normalized_r2_key = null`，然后只重新发布元数据。拦截列表目录模型和后端同步路径在 [DNS 过滤与拦截列表](./dns-filtering-and-blocklists.md) 和 [后端与数据](./backend-and-data.md) 里有讲。
+Worker 端与此对称：它的管理/定时任务同步会拉取每个上游，对其做哈希/计数，写入 `raw_r2_key = null` / `normalized_r2_key = null`，然后只重新发布元数据。拦截列表目录模型和后端同步路径在 [DNS 过滤与拦截列表](./dns-filtering-and-blocklists.md) 和 [后端与数据](./backend-and-data.md) 里有讲。
 
 **额度模型（两层）：**
-- **设备护栏（人人有份，永远不是付费墙）：** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 条规则** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`——在 ~50 MiB 的 NE 上限之下设定的 32 MB 目标。超额的配置会被确定性地拒绝，而不是放任隧道被系统 jetsam 杀掉。
+- **设备护栏（人人有份，永远不是付费墙）：** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 条规则** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`——在 ~50 MiB 的 NE 上限之下设定的 32 MB 目标。超额的配置会被确定性地拒绝，而不是放任隧道被系统 jetsam 终止。
 - **档位上限（`FeatureLimits`）：** **免费 50 万条规则 / Plus 200 万条规则**，这个值卡在设备护栏之下。它取代了旧的按启用列表**数量**来卡的上限（免费 3 个 / 付费 10 个）——列表数量上限已经作废。
 
-> **默认启用的事实来源：** 出厂的免费默认值是 **Block List Basic**（`OnboardingDefaults.lavaRecommendedDefaults`）。它是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），这个标志与后端目录的 `default_enabled` 列保持一致，而该列又是从同一份标准目录规范生成的。
+> **默认启用的事实来源：** 出厂的免费默认值是 **Block List Basic**（`OnboardingDefaults.lavaRecommendedDefaults`）。它是在设备上从每个精选源的 `defaultEnabled` 标志推导出来的（`BlocklistSource.recommendedDefaultSourceIDs`），该标志与后端目录的 `default_enabled` 列保持一致，而后者又是从同一份标准目录规范生成的。
 
 ### C. 备份（零知识，需主动开启）— 已实现 {#c-backup-zero-knowledge-opt-in-implemented}
 
@@ -160,7 +160,7 @@ Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游
 2. **`BackupConfigurationPayload`** 拼出一份精简的明文（启用的拦截列表 ID、允许/已拦截的域名、解析器偏好、本地日志偏好、LavaGuard 记录）。它**不包含** `isPaid`、QA、诊断信息和完整的拦截列表。
 3. **`ZeroKnowledgeBackupEnvelope`** 用一个随机的 32 字节载荷密钥、以 **AES-256-GCM** 把它封住；那个密钥再通过 **PBKDF2-HMAC-SHA256（21 万次迭代）** 包进按密钥分的**密钥槽**——设备密钥槽、辅助恢复槽、可选的通行密钥槽。可选的通行密钥槽是用认证器的 **WebAuthn PRF / `hmac-secret`** 输出（经 HKDF 派生）来包裹的；那个输出从不离开客户端，所以通行密钥槽是真正的零知识——没有任何服务器持有的值能解开它（`ZeroKnowledgeBackupEnvelope.makeWithPRF`）。
 4. **`BackupSyncService`** **只把密文 + 非机密的元数据**通过 PostgREST 直接上传到 Supabase 的 `user_backups`，并按用户用 **RLS** 隔离。（没有 Worker 上传路由；Worker 碰 `user_backups` 只是为了在账户删除时把它删掉。）
-5. **恢复：** 同设备上通过设备密钥槽无缝还原；换设备时通过 **8 词的 CVCV 恢复码**（约 105 位）配合服务器持有的恢复分片、用 SHA256 组合起来（双因子——任何一半单独都解不开）；或者，当封进过通行密钥槽时，通过客户端侧的 WebAuthn PRF / `hmac-secret` 输出来恢复（不涉及任何服务器持有的值）。服务器从不注册通行密钥、不签发 WebAuthn challenge、也不存任何恢复秘密。
+5. **恢复：** 同设备上通过设备密钥槽无缝还原；换设备时通过 **8 词的 CVCV 恢复码**（约 105 位）配合服务器持有的恢复分片，用 SHA256 组合（双因子——任何一半单独都无法解密）；或者，当封进过通行密钥槽时，通过客户端侧的 WebAuthn PRF / `hmac-secret` 输出来恢复（不涉及任何服务器持有的值）。服务器从不注册通行密钥、不签发 WebAuthn challenge、也不存任何恢复秘密。
 
 详见 [账户与备份](./accounts-and-backup.md)。
 
@@ -182,14 +182,14 @@ Worker 那边是对称的：它的管理/定时任务同步会拉取每个上游
 | 1 | **设备 ↔ 公共 DNS 解析器** | 被允许的 DNS 查询（加密：DoH3/DoT/DoQ，或明文 IP）发给用户自己选的解析器。 | Lava 从不看到查询流；它根本不在这条路径上。 |
 | 2 | **设备 ↔ 上游拦截列表主机** | 设备直接从 `source_url` 下载列表字节。 | Lava 从不代理、镜像或存储第三方拦截列表的字节。 |
 | 3 | **设备 ↔ lavasec-api Worker** | 目录**元数据**读取；可选的匿名错误报告；权益镜像；账户删除。 | 没有 DNS 查询、没有浏览历史、没有明文设置。 |
-| 4 | **设备 ↔ Supabase** | 可选的**加密备份信封**（只有密文，PostgREST 在 RLS 之下）；账户行。 | 没有用户持有的秘密，服务器解不开这份备份。 |
+| 4 | **设备 ↔ Supabase** | 可选的**加密备份信封**（只有密文，PostgREST 在 RLS 之下）；账户行。 | 没有用户持有的秘密，服务器就无法解密这份备份。 |
 | 5 | **App ↔ 隧道扩展**（设备上） | provider 消息 + App Group 的文件/默认值。 | 冷启动时若没有可复用的快照，隧道会**失败关闭**。 |
 
 **隐私保护设计原则，落在上面这些事实之上：**
 
 - **本地优先过滤。** 判定引擎和解析器都跑在设备上的 NE 扩展里。后端从设计上就只有元数据——没有任何表用来存放日常的 DNS 查询或按域名的遥测。
 - **防护不需要账户。** 核心防护永久免费；认证和备份严格按需开启。
-- **仅源 URL 的分发方式。** 把 Lava 和第三方列表字节解耦（兼顾 GPL/知识产权合规 + App 审核安全），并保留一道 CI 护栏，强制执行「没有镜像代码、没有 Lava 制品 URL、没有往 R2 写字节」。
+- **仅源 URL 的分发方式。** 将 Lava 与第三方列表字节解耦（兼顾 GPL/知识产权合规 + App 审核安全），并保留一道 CI 护栏，强制执行「无镜像代码、无 Lava 制品 URL、不向 R2 写字节」。
 - **静态零知识备份。** 客户端侧的 AES-256-GCM；服务器持有的是密文 + KDF 元数据 + 一个恢复分片，永远不会有明文、恢复码或解开后的密钥。可选的通行密钥槽是用客户端侧的 WebAuthn PRF / `hmac-secret` 输出包裹的，所以它同样是零知识——没有任何服务器持有的值能解开它。
 - **设备本地的秘密。** 备份解锁材料用的是 `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`——不走 iCloud 同步，也不进设备备份。
 - **service-role 隔离。** `bug_reports`、`mirror_events` 和 `qa_developers` 对匿名/已认证的 PostgREST 角色都已撤权；只有 Worker（service role）能碰它们。

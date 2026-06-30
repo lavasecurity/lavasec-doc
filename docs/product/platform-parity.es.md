@@ -5,12 +5,12 @@ se comparten entre iOS, Android y futuros clientes. Es el contrato público para
 el comportamiento de las funciones: qué debe significar lo mismo en todas
 partes, qué es intencionalmente nativo de la plataforma y qué aún no se promete.
 
-Los documentos de paridad no reemplazan los planes de implementación ni las pruebas:
+Los documentos de paridad no reemplazan los planes de implementación ni las pruebas.
 
-- `lavasec-doc` es dueño del contrato de producto y comportamiento.
-- Los planes internos son dueños del estado de entrega, la secuenciación, los
+- `lavasec-doc` es responsable del contrato de producto y comportamiento.
+- Los planes internos son responsables del estado de entrega, la secuenciación, los
   riesgos privados y la sincronización con la junta.
-- Los repositorios de plataforma son dueños del código, los fixtures y las
+- Los repositorios de plataforma son responsables del código, los fixtures y las
   pruebas que demuestran el comportamiento.
 
 Cuando los documentos y el código publicado no coinciden, el código gana hasta
@@ -76,7 +76,7 @@ Un registro de función completo responde:
 | `account.optional-sign-in` | La protección funciona sin una cuenta; el inicio de sesión es opcional. | Shipped | Deferred | Promesa de producto exacta antes de que Android exponga funciones de cuenta. | Documentos de autenticación de cuenta; revisión de onboarding/ajustes de Android. |
 | `backup.zero-knowledge-settings` | La copia de seguridad opcional de ajustes almacena solo texto cifrado; Lava no puede leer el contenido en texto plano de la copia. | Shipped | Deferred | Paridad exacta de privacidad antes de que Android ofrezca copias de seguridad. | Pruebas de copia de seguridad de conocimiento cero; pruebas de paridad de criptografía de Android cuando se construyan. |
 | `plus.customization-boundary` | La protección gratuita sigue siendo útil; Plus desbloquea personalización avanzada y nunca cambia la seguridad de las protecciones. | Shipped | Planned | Mismo límite de producto; la implementación de la tienda es nativa de la plataforma. | Pruebas de política de suscripción; pruebas de derechos de Play Billing cuando se construyan. |
-| `design.calm-earned-depth` | La UX por defecto es calmada, con superficies técnicas o de celebración más profundas solo cuando se ganan o se solicitan. | Partial | Planned | Coincidencia por intención de diseño a través de tokens/roles compartidos. | Documentos del sistema de diseño y plan de la base de portabilidad. |
+| `design.calm-earned-depth` | La UX por defecto es serena, con superficies técnicas o de celebración más profundas solo cuando se ganan o se solicitan. | Partial | Planned | Coincidencia por intención de diseño a través de tokens/roles compartidos. | Documentos del sistema de diseño y plan de la base de portabilidad. |
 | `platform.ambient-presence` | El estado de protección puede aparecer fuera de la app cuando el SO admite una superficie ambiental nativa. | Platform-native | Planned | Paridad de intención, no paridad de superficie. | Documentos de Live Activity de iOS; decisión sobre notificación/Ajustes rápidos de Android pendiente. |
 
 ## Uso para preparación de Android

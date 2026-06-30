@@ -17,7 +17,7 @@ Lava Security ist eine iOS-App mit Datenschutz an erster Stelle, die DNS **lokal
 
 ## 2. Das Datenschutzversprechen (verbindlich) {#2-the-privacy-promise-canonical}
 
-> Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen nie über seine Server und bekommt nie den Strom der Domains zu sehen, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du selbst senden möchtest.
+> Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen nie über seine Server und bekommt nie den Strom der Domains zu sehen, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du freiwillig sendest.
 
 Alles weiter unten dient dazu, diesen Satz wahr zu halten. Die Architektur ist serverseitig absichtlich klein gehalten: Das Gerät macht die Arbeit, und das Backend bekommt nie eine Anfrage zu sehen.
 
@@ -34,8 +34,8 @@ Alles weiter unten dient dazu, diesen Satz wahr zu halten. Die Architektur ist s
 
 **App-seitige Controller (in LavaSecApp):**
 
-- **AppViewModel** — der app-seitige Controller (Gott-Objekt): kümmert sich um den Lebenszyklus von `NETunnelProviderManager`, die Persistenz des geteilten Zustands, die Provider-Kommunikation, den Live-Activity-Abgleich, den Katalog-Sync, das Backup, StoreKit und die Authentifizierung.
-- **RootView** — `TabView` mit zwei Tabs (Schutz + Einstellungen), wobei Filter und Aktivität als Detailansichten unter Guard erreichbar sind; steuert das Onboarding, beherbergt die Overlays für Sicherheitssperre und Datenschutzmaske.
+- **AppViewModel** — der app-seitige Controller (Gott-Objekt): verwaltet den Lebenszyklus von `NETunnelProviderManager`, die Persistenz des geteilten Zustands, die Provider-Kommunikation, den Live-Activity-Abgleich, den Katalog-Sync, das Backup, StoreKit und die Authentifizierung.
+- **RootView** — `TabView` mit zwei Tabs (Schutz + Einstellungen), wobei Filter und Aktivität als Detailansichten unter Schutz erreichbar sind; steuert das Onboarding, beherbergt die Overlays für Sicherheitssperre und Datenschutzmaske.
 - **SecurityController** — Passcode (gesalzenes SHA256 im Keychain) + Biometrie + Schutz pro Oberfläche.
 - **LavaLiveActivityController** — Abgleicher für eine einzelne Activity, dedupliziert und revisionsgesteuert.
 - **OnboardingFlowView** — mehrseitiger Ablauf beim ersten Start (6 Seiten: `lava → guardIntro → features → vpn → notifications → done`).
@@ -122,20 +122,20 @@ Die mit Abstand wichtigste Eigenschaft: **Der Pfad des verschlüsselten DNS-Reso
 
 ### A. Der DNS-Pfad (pro Anfrage, alles auf dem Gerät) — Umgesetzt {#a-the-dns-path-per-query-all-on-device-implemented}
 
-Das ist der heiße Pfad und der Kern des Datenschutzes. Er läuft komplett innerhalb von `LavaSecTunnel`; nichts hier erreicht die Server von Lava.
+Das ist der Hot Path und der Kern des Datenschutzes. Er läuft komplett innerhalb von `LavaSecTunnel`; nichts hier erreicht die Server von Lava.
 
 1. Der Paket-Tunnel fängt eine DNS-Anfrage ab (Tunnel-DNS-Server `10.255.0.1`).
 2. **`DNSQueryDispatcher`** wendet die Reihenfolge der Anfragen an: **bootstrap > pause > filter**. Bootstrap zuerst ist eine harte Invariante — der Hostname des Resolvers selbst wird vor jeder Filterung aufgelöst, damit der Resolver sich niemals selbst blockieren kann.
 3. Wenn es kein Bootstrap und keine Pause ist, wird die Domain gegen **`CompactFilterSnapshot`** geprüft (aus der App Group geladen über `Data(contentsOf:options:[.mappedIfSafe])` als Zero-Copy-mmap). Die Entscheidungsreihenfolge ist **Schutzbarriere > lokale Erlaubnisliste (Erlaubte Ausnahmen) > Blockliste > Standard-Erlauben**; ungültige Domains werden blockiert.
 4. **Blockiert** → der Tunnel antwortet lokal (kein Kontakt nach oben). **Erlaubt** → die Anfrage wird an **`ResolverOrchestrator`** übergeben.
-5. `ResolverOrchestrator` leitet zum konfigurierten Transport — **`DoH3` / `DoT` / `DoQ` / einfaches DNS (`IP`)** — mit Failover pro Endpunkt hinter einem Backoff-Gate, Rückfall auf einfaches DNS, wenn ein verschlüsselter Plan keine Endpunkte hat, und **Geräte-DNS-Ausweichoption**, wenn der primäre Pfad keine Antwort liefert und der Plan es erlaubt.
+5. `ResolverOrchestrator` leitet zum konfigurierten Transport — **`DoH3` / `DoT` / `DoQ` / einfaches DNS (`IP`)** — mit Failover pro Endpunkt hinter einem Backoff-Gate, Rückfall auf einfaches DNS, wenn ein verschlüsselter Plan keine Endpunkte hat, und **Geräte-DNS-Ausweichoption**, wenn der primäre Resolver keine Antwort liefert und der Plan es erlaubt.
 6. Die Antwort des Resolvers geht zurück ans Betriebssystem. Der Anfragestrom des Nutzers geht nur an den **vom Nutzer gewählten öffentlichen Resolver**, niemals an Lava.
 
-Hinweise zu Transporten (wörtliche Konventionen): `DoH3` (ohne Schrägstrich) wird **nur dann vermerkt, wenn eine h3-Aushandlung tatsächlich beobachtet wird** — bevorzugt, nie versprochen. **`DoT`** bündelt bis zu 4 NWConnections pro Endpunkt mit Auffrischung bei Leerlauf + einem Wiederholungsversuch über eine frische Verbindung. **`DoQ`** öffnet **pro Anfrage eine frische QUIC-Verbindung** (keine Wiederverwendung); der Pool mit 4 Bahnen bringt Nebenläufigkeit, keine Wiederverwendung des Handshakes — die Wiederverwendung von Verbindungen wurde gebaut, auf Geräten getestet und **zurückgenommen** (vertagt bis zur iOS-26-Mindestversion). Siehe [DNS-Filterung & Blocklisten](./dns-filtering-and-blocklists.md).
+Hinweise zu Transporten (wörtliche Konventionen): `DoH3` (ohne Schrägstrich) wird **nur dann vermerkt, wenn eine h3-Aushandlung tatsächlich beobachtet wird** — bevorzugt, nie versprochen. **`DoT`** bündelt bis zu 4 NWConnections pro Endpunkt mit Auffrischung bei Leerlauf + einem Wiederholungsversuch über eine frische Verbindung. **`DoQ`** öffnet **pro Anfrage eine frische QUIC-Verbindung** (keine Wiederverwendung); der Pool mit 4 Bahnen bietet Nebenläufigkeit, keine Handshake-Wiederverwendung — die Verbindungs-Wiederverwendung wurde gebaut, auf Geräten getestet und **zurückgenommen** (vertagt bis zur iOS-26-Mindestversion). Siehe [DNS-Filterung & Blocklisten](./dns-filtering-and-blocklists.md).
 
 ### B. Katalogabruf + Blocklist-Laden (nur Quell-URL) — Umgesetzt {#b-catalog-fetch-blocklist-load-source-url-only-implemented}
 
-Wie die Filterregeln aufs Gerät kommen. Lava ist ein Verteiler, der **nur die Quell-URL** weitergibt: Es veröffentlicht nur die Upstream-URL + akzeptierte Hashes und **speichert, spiegelt, transformiert oder liefert niemals Bytes von Drittanbieter-Blocklisten.**
+Wie die Filterregeln aufs Gerät kommen. Lava ist ein **Nur-Quell-URL**-Verteiler: Es veröffentlicht nur die Upstream-URL + akzeptierte Hashes und **speichert, spiegelt, transformiert oder liefert niemals Bytes von Drittanbieter-Blocklisten.**
 
 1. Das Gerät holt sich Katalog-**Metadaten** vom Worker: `GET https://api.lavasecurity.app/v1/catalog` → JSON, das direkt aus R2 (`catalog/latest.json`) geliefert wird, aufgeteilt in `sources[]` + `guardrails[]`, jeder Eintrag mit `source_url` + `accepted_source_hashes`.
 2. Für jede aktivierte Quelle lädt das Gerät die **Bytes der Liste direkt von `source_url`** herunter (dem Upstream — HaGeZi, OISD, Block List Project usw.), **nicht** von Lava.

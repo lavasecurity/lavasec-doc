@@ -10,9 +10,9 @@ bekannte gefährliche und unerwünschte Domains blockiert, ohne dass dein Surfen
 über die Server von Lava läuft.
 
 !!! quote "Das Versprechen zur Privatsphäre"
-    Die DNS-Filterung passiert lokal auf deinem Gerät. Lava bekommt deine
+    Die DNS-Filterung passiert lokal auf deinem Gerät. Lava erhält deine
     alltäglichen DNS-Anfragen, deinen Browserverlauf oder Telemetriedaten zu
-    einzelnen Domains nie zu Gesicht, und jedes optionale Konto-Backup ist
+    einzelnen Domains nie, und jedes optionale Konto-Backup ist
     Ende-zu-Ende verschlüsselt — Lava kann also immer nur den verschlüsselten
     Text speichern.
 
@@ -73,4 +73,4 @@ Produkt weiterentwickelt.
 Das plattformübergreifende Verhalten wird im
 [Plattform-Gleichstand](product/platform-parity.md) verfolgt: Dort stehen stabile
 Feature-IDs, der Status je Plattform und die Tests oder Fixtures, die iOS und
-Android im Gleichschritt halten sollen.
+Android aufeinander abgestimmt halten sollen.

@@ -10,7 +10,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 > **Destinatari:** ingegneri.
 > **Autorità:** dove questo documento e un piano sono in disaccordo, **vince il codice** — le divergenze sono segnalate inline. Lo stato riflette la realtà confermata dal codice, non le aspirazioni del piano. Legenda degli stati: **Implementato** (rilasciato e confermato nel codice), **In corso** (parzialmente integrato), **Pianificato** (progettato, non costruito), **Abbandonato** (rifiutato o annullato).
 
-Gli account sono **opzionali**. La protezione di base è gratuita per sempre e non richiede alcun account; l'accesso esiste solo per eseguire il backup delle tue *impostazioni*, cifrate, così da poterle ripristinare su un nuovo dispositivo. Questo documento copre il flusso di autenticazione, dove risiede la sessione, l'envelope del backup zero-knowledge, i percorsi di ripristino e esattamente ciò che il server può e non può vedere.
+Gli account sono **opzionali**. La protezione di base è gratuita per sempre e non richiede alcun account; l'accesso esiste solo per eseguire il backup delle tue *impostazioni*, cifrate, così da poterle ripristinare su un nuovo dispositivo. Questo documento copre il flusso di autenticazione, dove risiede la sessione, l'envelope del backup zero-knowledge, i percorsi di ripristino ed esattamente ciò che il server può e non può vedere.
 
 La promessa di privacy canonica che questo documento serve:
 
@@ -22,11 +22,11 @@ Suddivisione dei componenti: la crittografia pura + la costruzione delle richies
 
 ## 1. Flusso di autenticazione
 
-**Provider: solo Apple e Google.** **(Implementato)** `AccountAuthProvider` enumera esattamente `.apple` e `.google` (`AccountAuthService.swift`). Email/password — e qualsiasi ripristino assistito dal supporto che aggira l'autenticazione — è esplicitamente **Abbandonato**; possedere le password aggiungerebbe obblighi di reset/MFA/lockout/violazione non degni della complessità mentre Apple/Google sono sufficienti, e il ripristino tramite bypass infrangerebbe la garanzia zero-knowledge.
+**Provider: solo Apple e Google.** **(Implementato)** `AccountAuthProvider` enumera esattamente `.apple` e `.google` (`AccountAuthService.swift`). Email/password — e qualsiasi ripristino assistito dal supporto che aggira l'autenticazione — è esplicitamente **Abbandonato**; possedere le password aggiungerebbe obblighi di reset/MFA/lockout/violazione mentre Apple/Google sono sufficienti, e il ripristino tramite bypass infrangerebbe la garanzia zero-knowledge.
 
 Entrambi i provider usano il **grant `id_token` nativo**, non l'SDK Supabase Swift e non l'OAuth web:
 
-1. **Accesso nativo.** Apple tramite AuthenticationServices; Google tramite l'SDK GoogleSignIn. Ciascuno produce un `id_token` del provider (Google anche un access token). L'app genera un nonce grezzo CSPRNG, lo hasha con SHA256 e passa l'hash al provider così che l'`id_token` emesso sia legato ad esso. **(Implementato)**
+1. **Accesso nativo.** Apple tramite AuthenticationServices; Google tramite l'SDK GoogleSignIn. Ciascuno produce un `id_token` del provider (Google anche un access token). L'app genera un nonce grezzo CSPRNG, ne calcola l'hash SHA256 e passa l'hash al provider così che l'`id_token` emesso vi sia legato. **(Implementato)**
 2. **Scambio presso Supabase.** `SupabaseIDTokenAuth` (`LavaSecCore`) costruisce una `URLRequest` grezza verso Supabase Auth `auth/v1/token?grant_type=id_token`, inviando `provider` + `id_token` + `access_token` opzionale + il nonce **grezzo** (così che Supabase possa verificare il binding e rifiutare i replay), con l'header `apikey`. Nessun SDK; `LavaSecCore` resta privo di dipendenze di rete/autenticazione. **(Implementato)**
 3. **Ricezione di una sessione.** Supabase verifica il token e restituisce una sessione: un access token, un refresh token, una scadenza e un record utente (provider/providers). Il refresh usa lo stesso helper con `grant_type=refresh_token`.
 
@@ -56,7 +56,7 @@ L'**unica** cosa persistita dall'accesso è la sessione Supabase — access toke
 
 Gli stessi meccanismi di `GenericKeychainStore` supportano tre store: la sessione dell'account, il materiale di sblocco del backup (`BackupKeychainStore`, servizio `com.lavasec.zero-knowledge-backup`) e il passcode dell'app. Nessuno di essi si sincronizza tramite iCloud Keychain.
 
-> **Elemento di revisione aperto (non un comportamento dichiarato):** la classe di accessibilità attuale non ha alcun gate biometrico/di presenza utente (nessun `SecAccessControl` `.userPresence`/`.biometryCurrentSet`). Se inasprire il materiale di sblocco a un controllo di accesso con gate di presenza è tracciato come elemento di revisione di release-gate; il valore rilasciato oggi è after-first-unlock-this-device-only. **(Pianificato)**
+> **Elemento di revisione aperto (non un comportamento dichiarato):** la classe di accessibilità attuale non ha alcun gate biometrico/di presenza utente (nessun `SecAccessControl` `.userPresence`/`.biometryCurrentSet`). Se inasprire il materiale di sblocco verso un controllo di accesso con gate di presenza è tracciato come elemento di revisione di release-gate; il valore rilasciato oggi è after-first-unlock-this-device-only. **(Pianificato)**
 
 ---
 
@@ -64,9 +64,9 @@ Gli stessi meccanismi di `GenericKeychainStore` supportano tre store: la session
 
 ### 3.1 Cos'è, con precisione
 
-Quando attivi il backup cifrato, il **client iOS** cifra una copia minimizzata delle tue *impostazioni* e carica solo il testo cifrato più metadati non segreti su Supabase. Il telefono è l'unico luogo in cui il testo in chiaro e i segreti di decifratura esistono mai.
+Quando attivi il backup cifrato, il **client iOS** cifra una copia minimizzata delle tue *impostazioni* e carica solo il testo cifrato più metadati non segreti su Supabase. Il telefono è l'unico luogo in cui esistono il testo in chiaro e i segreti di decifratura.
 
-> **Backup zero-knowledge:** envelope AES-256-GCM lato client; la chiave di payload casuale è avvolta in key slot per slot — PBKDF2-HMAC-SHA256 (210k iter) per gli slot password/frase/dispositivo/assistito, HKDF-SHA256 per lo slot passkey PRF. Solo testo cifrato + metadati non segreti vengono caricati su Supabase `user_backups` (RLS per utente). Il server non può decifrare senza un segreto detenuto dall'utente. Lo slot passkey è **anch'esso** zero-knowledge: la sua chiave di unwrap è derivata sul dispositivo dall'output WebAuthn PRF (`hmac-secret`) dell'autenticatore, e il server non detiene alcun segreto passkey (vedi §4.3).
+> **Backup zero-knowledge:** envelope AES-256-GCM lato client; la chiave di payload casuale è avvolta in key slot, uno per segreto — PBKDF2-HMAC-SHA256 (210k iter) per gli slot password/frase/dispositivo/assistito, HKDF-SHA256 per lo slot passkey PRF. Solo testo cifrato + metadati non segreti vengono caricati su Supabase `user_backups` (RLS per utente). Il server non può decifrare senza un segreto detenuto dall'utente. Lo slot passkey è **anch'esso** zero-knowledge: la sua chiave di unwrap è derivata sul dispositivo dall'output WebAuthn PRF (`hmac-secret`) dell'autenticatore, e il server non detiene alcun segreto passkey (vedi §4.3).
 
 ### 3.2 Cosa viene sottoposto a backup (il payload minimizzato)
 
@@ -74,14 +74,14 @@ Quando attivi il backup cifrato, il **client iOS** cifra una copia minimizzata d
 
 **Incluso:** gli **ID** delle blocklist abilitate (riferimenti al catalogo, non i byte delle liste), domini consentiti/bloccati, preset del resolver / resolver personalizzato, preferenze di log locale, il registro LavaGuard, un suggerimento di protezione e i metadati delle sorgenti di blocklist personalizzate.
 
-**Escluso:** `isPaid` (l'entitlement è locale), flag QA, diagnostica, snapshot dei Filtri e il contenuto completo delle blocklist (riferito solo tramite ID di catalogo). La tua cronologia di navigazione e le tue query DNS non fanno mai parte di questo payload perché il dispositivo non le registra mai come flusso di telemetria di routine.
+**Escluso:** `isPaid` (l'entitlement è locale), flag QA, diagnostica, snapshot dei Filtri e il contenuto completo delle blocklist (riferito solo tramite ID di catalogo). La tua cronologia di navigazione e le tue query DNS non fanno mai parte di questo payload; il dispositivo non le registra mai come flusso di telemetria di routine.
 
 ### 3.3 L'envelope (crittografia lato client)
 
 `ZeroKnowledgeBackupEnvelope` (`LavaSecCore`) implementa la crittografia. **(Implementato)**
 
 1. **Cifratura del payload.** Il payload minimizzato viene sigillato una volta con **AES-256-GCM** sotto una **chiave di payload casuale da 32 byte** (generata con `SecRandomCopyBytes`).
-2. **Wrapping delle chiavi (key slot).** Quella singola chiave di payload è avvolta indipendentemente in uno o più **key slot**, uno per segreto, che poi avvolge in AES-GCM una copia della chiave di payload. Il segreto di qualsiasi singolo slot sblocca l'intero backup. La derivazione della chiave di wrapping è per tipo di slot: gli slot `password` / `recoveryPhrase` / `keychain` (dispositivo) / `assistedRecovery` usano **PBKDF2-HMAC-SHA256, 210.000 iterazioni** (produzione; `defaultPasswordIterations = 210_000`) con un nuovo salt casuale da 16 byte per slot; lo slot `passkey` usa **HKDF-SHA256** sull'output PRF dell'autenticatore (info `"LavaSec passkey backup PRF v1"`), con il salt PRF non segreto persistito nello slot così che il ripristino possa riprodurre l'output.
+2. **Wrapping delle chiavi (key slot).** Quella singola chiave di payload è avvolta indipendentemente in uno o più **key slot**, uno per segreto; ciascuno slot avvolge in AES-GCM una copia della chiave di payload. Il segreto di qualsiasi singolo slot sblocca l'intero backup. La derivazione della chiave di wrapping è per tipo di slot: gli slot `password` / `recoveryPhrase` / `keychain` (dispositivo) / `assistedRecovery` usano **PBKDF2-HMAC-SHA256, 210.000 iterazioni** (produzione; `defaultPasswordIterations = 210_000`) con un nuovo salt casuale da 16 byte per slot; lo slot `passkey` usa **HKDF-SHA256** sull'output PRF dell'autenticatore (info `"LavaSec passkey backup PRF v1"`), con il salt PRF non segreto persistito nello slot così che il ripristino possa riprodurre l'output.
 3. **Tipi di slot.** L'envelope supporta cinque tipi di slot: `password`, `recoveryPhrase`, `keychain` (segreto del dispositivo), `assistedRecovery` e `passkey`.
 
 La configurazione rilasciata è **senza password** (`makePasswordless`, guidata da `AppViewModel.turnOnEncryptedBackup`). Crea uno **slot `keychain` (dispositivo) + uno slot `assistedRecovery` + uno slot `passkey` opzionale**. Le factory `password` / `recoveryPhrase` e i metodi di decifratura esistono ancora per envelope legacy/retrocompatibili (esercitati solo dai test) ma l'interfaccia attiva non crea mai un envelope solo-password — considera il backup con password come non rilasciato. **(Implementato; slot password Abbandonato dal flusso live.)**
@@ -107,13 +107,13 @@ La riga è protetta da **row-level security**: ogni riga è leggibile/scrivibile
 
 **Pertanto:** Supabase **non può decifrare un backup** senza un segreto detenuto dall'utente. Tutti e tre i percorsi di ripristino — lo slot della chiave di dispositivo, la frase di recupero (combinata con la condivisione del server, §4.2) e lo slot passkey (l'output PRF dell'autenticatore, §4.3) — decifrano **sul dispositivo**, e il server non detiene alcun segreto di decifratura per nessuno di essi. Ciò è affermato nei commenti della migrazione e nel piano di privacy, ed è testato (i test dell'envelope confermano che nessun dominio/URL in chiaro trapela nella forma caricata).
 
-**Avvertenza precisa sul modello di minaccia — non sovradichiarare.** Per lo slot di **ripristino assistito**, il server detiene *sia* il `server_recovery_share` *sia* lo slot `assistedRecovery` avvolto in `user_backups`. L'unica cosa che gli manca è la frase di recupero dell'utente, che Lava non riceve mai. Quindi, se il server fosse completamente compromesso, l'entropia della frase di recupero (~105 bit, vedi §4.1) più il costo PBKDF2 a 210k iterazioni è l'**unica** barriera contro un brute-force offline di quello slot. Ciò è intenzionale (il ripristino assistito è a due fattori per progettazione — nessuna delle due metà da sola decifra), ma significa che l'entropia della frase di recupero è portante, non decorativa. Il segreto dello slot `keychain` (dispositivo) non lascia mai il dispositivo, quindi non è affatto esposto a una compromissione del server.
+**Avvertenza precisa sul modello di minaccia — non sovradichiarare.** Per lo slot di **ripristino assistito**, il server detiene *sia* il `server_recovery_share` *sia* lo slot `assistedRecovery` avvolto in `user_backups`. L'unica cosa che gli manca è la frase di recupero dell'utente, che Lava non riceve mai. Quindi, se il server fosse completamente compromesso, l'entropia della frase di recupero (~105 bit, vedi §4.1) più il costo PBKDF2 a 210k iterazioni è l'**unica** barriera contro un brute-force offline di quello slot. Ciò è intenzionale (il ripristino assistito è a due fattori per progettazione — nessuna delle due metà da sola decifra), ma implica che l'entropia della frase di recupero è portante, non decorativa. Il segreto dello slot `keychain` (dispositivo) non lascia mai il dispositivo, quindi non è affatto esposto a una compromissione del server.
 
 ---
 
 ## 4. Ripristino
 
-Un backup è utile solo se puoi ripristinarlo. `restoreEncryptedBackup` (in `AppViewModel`) decifra provando gli slot disponibili: chiave di dispositivo, frase di recupero o passkey. In ogni modalità l'envelope viene caricato localmente (o recuperato da Supabase) e poi **decifrato sul dispositivo** — il server non decifra mai.
+`restoreEncryptedBackup` (in `AppViewModel`) decifra provando gli slot disponibili: chiave di dispositivo, frase di recupero o passkey. In ogni modalità l'envelope viene caricato localmente (o recuperato da Supabase) e poi **decifrato sul dispositivo** — il server non decifra mai.
 
 ### 4.1 Frase di recupero
 
@@ -134,7 +134,7 @@ I tre segmenti sono uniti da un **separatore byte NUL (`0x00`)** nell'effettivo 
 
 ### 4.3 Ripristino tramite passkey — zero-knowledge, derivato da PRF
 
-Lo slot `passkey` opzionale aggiunge un fattore con supporto hardware, ed è **zero-knowledge**: la sua chiave di unwrap è derivata **sul dispositivo** dall'output WebAuthn PRF (`hmac-secret`) dell'autenticatore. Il server non registra alcun passkey, non emette challenge WebAuthn e non memorizza alcun segreto di recupero — non c'è alcun passaggio di rilascio lato server.
+Lo slot `passkey` opzionale aggiunge un fattore con supporto hardware, ed è **zero-knowledge**: la sua chiave di unwrap è derivata **sul dispositivo** dall'output WebAuthn PRF (`hmac-secret`) dell'autenticatore. Il server non registra alcun passkey, non emette challenge WebAuthn e non memorizza alcun segreto di recupero — non esiste alcun passaggio di rilascio lato server.
 
 - **Registrazione/asserzione:** `BackupPasskeyCoordinator` (`LavaSecApp`) esegue WebAuthn tramite `ASAuthorizationPlatformPublicKeyCredentialProvider`, relying party **`lavasecurity.app`**, richiedendo l'estensione PRF su un salt per credenziale e richiedendo la verifica dell'utente.
 - **Derivazione della chiave (zero-knowledge):** l'autenticatore restituisce un output PRF che **non lascia mai il dispositivo**. `ZeroKnowledgeBackupEnvelope.makeWithPRF` (`lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`) deriva con HKDF-SHA256 la chiave di wrapping dello slot da quell'output PRF (info `"LavaSec passkey backup PRF v1"`) e avvolge in AES-GCM la chiave di payload; solo il salt PRF non segreto e l'ID credenziale vengono persistiti nello slot. Al ripristino, `passkeyPRFOutputForRestore` → `BackupPasskeyCoordinator.assertPasskeyPRFOutput` ri-asserisce la credenziale per riprodurre lo stesso output PRF, e `decryptWithPasskeyPRFOutput` sblocca lo slot localmente. Il server **non** detiene alcun segreto passkey, quindi nessun percorso service-role può recuperare un backup protetto da passkey.

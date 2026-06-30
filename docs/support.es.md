@@ -10,14 +10,14 @@ A dónde acudir cuando necesitas ayuda, encontraste un error o quieres reportar 
 
 Usa el **reporte de errores integrado en la app**: es la vía más rápida y adjunta los
 diagnósticos que necesitamos, con los datos minimizados por diseño (tus dominios de
-navegación nunca se incluyen). El equipo prioriza y clasifica los reportes.
+navegación nunca se incluyen). El equipo clasifica y prioriza los reportes.
 
 ## ¿Encontraste una vulnerabilidad de seguridad?
 
 **No abras un issue público.** Envía un correo a **security@lavasecurity.app** con una
 descripción, el impacto y los pasos para reproducirla. Consulta la
 [política de seguridad](https://github.com/lavasecurity/lavasec-ios/blob/main/SECURITY.md)
-del cliente iOS para conocer el alcance y la divulgación. _(Dirección por confirmar.)_
+del cliente iOS para ver el alcance y la divulgación. _(Dirección por confirmar.)_
 
 ## ¿Una pregunta sobre el cliente de código abierto?
 
@@ -28,7 +28,7 @@ compilación o ideas de funciones, abre un issue en
 ## ¿Algo incorrecto en esta documentación?
 
 Cada página tiene una pregunta **"¿Te resultó útil esta página?"** al final; elegir
-*"Podría mejorar"* abre un issue prerellenado en
+*"Podría mejorar"* abre un issue ya rellenado en
 [**lavasecurity/lavasec-doc**](https://github.com/lavasecurity/lavasec-doc/issues).
 Las correcciones y los pull requests son bienvenidos.
 
