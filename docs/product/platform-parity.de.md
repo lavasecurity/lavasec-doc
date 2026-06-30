@@ -4,7 +4,7 @@ Das Plattform-Paritätssystem von Lava hält fest, welche Produktversprechen pla
 iOS, Android und künftigen Clients. Es ist der öffentliche Vertrag darüber, wie sich Funktionen
 verhalten: was überall dasselbe bedeuten muss, was bewusst plattformeigen ist und was noch gar nicht versprochen wird.
 
-Die Paritätsdocs ersetzen weder Umsetzungspläne noch Tests:
+Die Paritätsdocs ersetzen weder Umsetzungspläne noch Tests.
 
 - `lavasec-doc` ist die Heimat des Produkt- und Verhaltensvertrags.
 - Interne Pläne kümmern sich um den Lieferstatus, die Reihenfolge, vertrauliche Risiken und den
@@ -23,7 +23,7 @@ der Plan als Arbeitsliste.
 | **Partial** | Ein Teil des Verhaltens existiert, aber der öffentliche Vertrag ist noch nicht ganz erfüllt. |
 | **Planned** | Als Teil des Plattformvertrags akzeptiert, aber noch nicht umgesetzt. |
 | **Deferred** | Sinnvolle Funktion, aber für den nächsten Plattform-Meilenstein nicht erforderlich. |
-| **Platform-native** | Gleiches Nutzerversprechen, aber je nach Betriebssystem unterschiedlich umgesetzt. |
+| **Platform-native** | Gleiches Nutzerversprechen, je nach Betriebssystem unterschiedlich umgesetzt. |
 | **Not applicable** | Auf dieser Plattform sollte es kein entsprechendes Feature geben. |
 | **Dropped** | Früher erwogen oder gebaut, dann bewusst entfernt. |
 
@@ -71,7 +71,7 @@ Ein vollständiger Feature-Eintrag beantwortet:
 | `account.optional-sign-in` | Der Schutz funktioniert ohne Konto; die Anmeldung ist optional. | Shipped | Deferred | Exaktes Produktversprechen, bevor Android Kontofunktionen anbietet. | Konto-Auth-Docs; Android-Onboarding-/Einstellungs-Review. |
 | `backup.zero-knowledge-settings` | Das optionale Einstellungs-Backup speichert nur Chiffretext; Lava kann den Klartext des Backups nicht lesen. | Shipped | Deferred | Exakte Datenschutzparität, bevor Android ein Backup anbietet. | Zero-Knowledge-Backup-Tests; Android-Krypto-Paritätstests, sobald gebaut. |
 | `plus.customization-boundary` | Der kostenlose Schutz bleibt nützlich; Plus schaltet erweiterte Anpassung frei und ändert nie die Sicherheit der Schutzbarrieren. | Shipped | Planned | Gleiche Produktgrenze; die Store-Umsetzung ist plattformeigen. | Abo-Richtlinien-Tests; Play-Billing-Berechtigungstests, sobald gebaut. |
-| `design.calm-earned-depth` | Die Standard-UX ist ruhig, mit tieferen technischen oder feierlichen Oberflächen nur, wenn man sie sich verdient oder anfordert. | Partial | Planned | Sinngemäße Parität über gemeinsame Tokens/Rollen. | Design-System-Docs und Portabilitäts-Fundamentplan. |
+| `design.calm-earned-depth` | Die Standard-UX ist ruhig; tiefere technische oder feierliche Oberflächen erscheinen nur, wenn man sie sich verdient oder anfordert. | Partial | Planned | Sinngemäße Parität über gemeinsame Tokens/Rollen. | Design-System-Docs und Portabilitäts-Fundamentplan. |
 | `platform.ambient-presence` | Der Schutzstatus kann auch außerhalb der App erscheinen, wenn das Betriebssystem eine native Ambient-Oberfläche unterstützt. | Platform-native | Planned | Parität in der Absicht, nicht in der Oberfläche. | iOS-Live-Activity-Docs; Android-Entscheidung zu Benachrichtigung/Quick Settings steht aus. |
 
 ## Nutzung für die Android-Bereitschaft {#android-readiness-use}
@@ -86,5 +86,5 @@ Vertrag lautet:
 - verschobene Features sind benannt, damit das Android-MVP nicht versehentlich nahelegt,
   dass sie ausgeliefert werden.
 
-Diese Durchsicht gehört in den Umsetzungsplan oder die Review-Notizen, während diese Seite
-den öffentlichen, dauerhaften Vertrag bewahrt.
+Diese Durchsicht gehört in den Umsetzungsplan oder die Review-Notizen; diese Seite
+bewahrt den öffentlichen, dauerhaften Vertrag.

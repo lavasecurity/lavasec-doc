@@ -47,7 +47,7 @@ Il routing è un dispatcher `route()` piatto. Tutto è **Implementato** se non d
 | `POST /v1/bug-reports` | `createBugReport` | Anonimo, accesso facoltativo; solo campi di debug in allow-list |
 | `POST /v1/help-feedback` | `createHelpFeedback` | Voto anonimo sull'articolo → **D1**, non Supabase |
 
-> Il caricamento degli allegati (un'ex rotta `PUT /v1/bug-reports/:id/attachment`) è stato **rimosso**; gli screenshot e i dettagli aggiuntivi sono gestiti tramite un canale di supporto mediato da una persona. Il Worker si limita a eliminare con il massimo impegno qualunque oggetto allegato legacy durante l'eliminazione dell'account.
+> Il caricamento degli allegati (un'ex rotta `PUT /v1/bug-reports/:id/attachment`) è stato **rimosso**; gli screenshot e i dettagli aggiuntivi sono gestiti tramite un canale di supporto mediato da una persona. Il Worker si limita a eliminare best-effort qualunque oggetto allegato legacy durante l'eliminazione dell'account.
 
 **Account (richiede un access token Supabase)**
 
@@ -72,15 +72,15 @@ Il routing è un dispatcher `route()` piatto. Tutto è **Implementato** se non d
 
 ### 2.2 Binding e cron
 
-- **Binding R2** — `catalog/latest.json`, `catalog/{version}.json`, e il cursore round-robin `catalog/scheduled-sync-cursor.json`. **Non memorizza mai i byte delle blocklist di terze parti.** (Gli oggetti allegato legacy delle segnalazioni di bug vengono solo mai *eliminati* — con il massimo impegno durante l'eliminazione dell'account — mai scritti.)
+- **Binding R2** — `catalog/latest.json`, `catalog/{version}.json`, e il cursore round-robin `catalog/scheduled-sync-cursor.json`. **Non memorizza mai i byte delle blocklist di terze parti.** (Gli oggetti allegato legacy delle segnalazioni di bug vengono solo *eliminati* — best-effort, durante l'eliminazione dell'account — mai scritti.)
 - **Binding D1** — righe anonime append-only `article_id` / `locale` / `vote` / `path`; tenute separate da Supabase per scelta progettuale.
 - **Cron (`scheduled`)** — l'handler si dirama in base all'id del cron:
-  - **Ogni 6 ore** — sincronizza **una** sola sorgente per esecuzione, in round-robin tramite il cursore R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), poi ripubblica il catalogo. Distribuire il carico evita di martellare tutti gli upstream contemporaneamente.
+  - **Ogni 6 ore** — sincronizza **una** sola sorgente per esecuzione, in round-robin tramite il cursore R2 (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), poi ripubblica il catalogo. Distribuire il carico evita di contattare tutti gli upstream contemporaneamente.
   - **Ogni 2 minuti** — esegue un percorso interno di triage delle segnalazioni di bug che promuove le nuove segnalazioni anonime in una coda di issue-tracker interno, facendo avanzare il proprio cursore watermark. Questo è strumento di operations interno; gli identificatori dell'issue-tracker/notifica sono configurazione, non parte dell'API pubblica.
 
 ## 3. Catalogo e applicazione del modello source-url-only
 
-Questa è la parte del backend più specifica della postura di conformità di Lava, quindi riceve un presidio lato server.
+Questa è la parte del backend più specifica della postura di conformità di Lava, quindi prevede un'applicazione lato server.
 
 ### 3.1 Il modello source-url-only
 
@@ -167,7 +167,7 @@ Il fatto backend cruciale: **il client iOS legge/scrive `user_backups` direttame
 
 ## 5. Recupero assistito da passkey (zero-knowledge)
 
-Il recupero del backup assistito da passkey è **zero-knowledge** e interamente lato client. Il materiale della chiave di recupero è derivato sul dispositivo dall'output **WebAuthn PRF / hmac-secret** della passkey; il server **non** memorizza alcun segreto di recupero, **non** registra alcuna passkey ed **non** emette alcuna challenge WebAuthn. Non c'è alcun percorso di escrow gestito dal server.
+Il recupero del backup assistito da passkey è **zero-knowledge** e interamente lato client. Il materiale della chiave di recupero è derivato sul dispositivo dall'output **WebAuthn PRF / hmac-secret** della passkey; il server **non** memorizza alcun segreto di recupero, **non** registra alcuna passkey e **non** emette alcuna challenge WebAuthn. Non c'è alcun percorso di escrow gestito dal server.
 
 Le tabelle di escrow usate da un progetto precedente (`backup_passkey_recovery`, `backup_passkey_challenges`) sono state eliminate prima del lancio, e il Worker non porta alcuna rotta `/v1/backup/*` né codice WebAuthn/passkey. (Una voce `@simplewebauthn/server` resta nel `package.json` del Worker come dipendenza residua inutilizzata.)
 

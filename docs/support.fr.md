@@ -8,7 +8,7 @@ Où aller quand vous avez besoin d'un coup de main, que vous avez trouvé un bug
 
 ## Un souci avec l'app ? {#something-not-working-in-the-app}
 
-Passez par le **rapport de bug intégré à l'app** — c'est le plus rapide, et il joint automatiquement les diagnostics dont on a besoin, avec le minimum de données par conception (les domaines que vous visitez ne sont jamais inclus). Les rapports sont traités par l'équipe.
+Passez par le **rapport de bug intégré à l'app** — c'est le plus rapide, et il joint automatiquement les diagnostics nécessaires, avec des données minimisées dès la conception (les domaines que vous visitez ne sont jamais inclus). Les rapports sont traités par l'équipe.
 
 ## Vous avez trouvé une faille de sécurité ? {#found-a-security-vulnerability}
 

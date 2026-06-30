@@ -8,15 +8,15 @@ hide_feedback: true
 
 ## アプリで何かうまく動かない？ {#something-not-working-in-the-app}
 
-**アプリ内の不具合レポート**を使ってください。これが一番早く、必要な診断情報も一緒に送られます。設計上、データは最小限に抑えてあります（あなたが見ているドメインは一切含まれません）。寄せられたレポートはチームが内容を確認します。
+**アプリ内の不具合レポート**を使ってください。これが一番早く、必要な診断情報も一緒に送られます。設計上、データは最小限に抑えてあります（あなたが見ているドメインは一切含まれません）。レポートはチームが確認・対応します。
 
 ## セキュリティの脆弱性を見つけた？ {#found-a-security-vulnerability}
 
-**公開のイシューは立てないでください。** **security@lavasecurity.app** 宛てに、内容・影響・再現手順を添えてメールしてください。対象範囲と開示の流れについては、iOS クライアントの[セキュリティポリシー](https://github.com/lavasecurity/lavasec-ios/blob/main/SECURITY.md)をご覧ください。_（アドレスは確定後に更新します。）_
+**公開のイシューは立てないでください。** **security@lavasecurity.app** 宛てに、内容・影響・再現手順を添えてメールしてください。対象範囲と開示の流れについては、iOS クライアントの[セキュリティポリシー](https://github.com/lavasecurity/lavasec-ios/blob/main/SECURITY.md)をご覧ください。_（アドレスは確定予定です。）_
 
 ## オープンソースのクライアントについて質問がある？ {#question-about-the-open-source-client}
 
-Lava の iOS クライアントはオープンソースです。技術的な質問、ビルドのトラブル、機能のアイデアなどは、[**lavasecurity/lavasec-ios**](https://github.com/lavasecurity/lavasec-ios/issues) でイシューを立ててください。
+Lava の iOS クライアントはオープンソースです。技術的な質問、ビルドの問題、機能の提案などは、[**lavasecurity/lavasec-ios**](https://github.com/lavasecurity/lavasec-ios/issues) でイシューを立ててください。
 
 ## このドキュメントに間違いがある？ {#something-wrong-in-these-docs}
 

@@ -7,7 +7,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 # Vue d'ensemble du produit {#product-overview}
 
-Bienvenue chez Lava Security. Cette page est la porte d'entrée de toute la documentation : une introduction courte et toute simple pour comprendre ce qu'est Lava, ce qu'il promet, et où aller pour en savoir plus.
+Bienvenue chez Lava Security. Cette page présente ce qu'est Lava, ce qu'il promet et où en savoir plus.
 
 ## Ce qu'est Lava {#what-lava-is}
 
@@ -19,11 +19,11 @@ iOS appelle ça un « VPN » parce qu'un tunnel de paquets est le seul moyen pou
 
 > Tout le filtrage DNS se passe sur l'appareil ; Lava ne fait jamais passer votre navigation par ses serveurs et ne reçoit jamais le flux des domaines que vous visitez — le backend ne conserve que les métadonnées du catalogue, une sauvegarde chiffrée opaque propre à chaque utilisateur, et les diagnostics anonymisés que vous choisissez d'envoyer.
 
-Cette phrase fait foi. Tout le reste de cette documentation est censé s'y conformer. Payer pour l'offre optionnelle ne déplace **pas** le filtrage vers le serveur et ne donne pas à Lava un flux des domaines visités. Quand une fonctionnalité touche à un serveur, la documentation précise ce qui n'est **pas** envoyé — vos requêtes DNS courantes, votre historique de navigation et tout contenu en clair restent sur l'appareil. Voir [le backend et le modèle de données](../architecture/backend-and-data.md) pour le tableau complet.
+Cette phrase fait foi ; tout le reste de cette documentation s'y conforme. Payer pour l'offre optionnelle ne déplace **pas** le filtrage vers le serveur et ne donne pas à Lava un flux des domaines visités. Quand une fonctionnalité touche à un serveur, la documentation précise ce qui n'est **pas** envoyé — vos requêtes DNS courantes, votre historique de navigation et tout contenu en clair restent sur l'appareil. Voir [le backend et le modèle de données](../architecture/backend-and-data.md) pour le tableau complet.
 
 ## À qui ça s'adresse {#who-it-is-for}
 
-Lava est fait pour quiconque veut naviguer plus sereinement sans avoir à s'en occuper. Le public visé inclut volontairement les personnes non techniques — des parents qui mettent en place une protection pour la famille, des personnes âgées, et toute personne qui ne veut tout simplement pas penser au DNS. L'expérience par défaut marche toute seule : activez la protection et une liste de blocage prudente commence à filtrer, sans qu'aucun compte ne soit nécessaire. En même temps, les utilisateurs avertis peuvent accéder à des réglages plus poussés (listes de blocage personnalisées, autres résolveurs) quand ils le souhaitent.
+Lava est fait pour quiconque veut naviguer plus sereinement sans avoir à s'en occuper. Le public visé inclut les personnes non techniques — des parents qui mettent en place une protection pour la famille, des personnes âgées, et toute personne qui ne veut tout simplement pas penser au DNS. L'expérience par défaut marche toute seule : activez la protection et une liste de blocage prudente commence à filtrer, sans qu'aucun compte ne soit nécessaire. En même temps, les utilisateurs avertis peuvent accéder à des réglages plus poussés (listes de blocage personnalisées, autres résolveurs) quand ils le souhaitent.
 
 Le ton, partout, reste simple, posé et concret — le danger est présenté comme une métaphore, pas comme une source de peur.
 
@@ -44,7 +44,7 @@ Le ton, partout, reste simple, posé et concret — le danger est présenté com
 - **Le Soft Shield Guardian** — une mascotte présente sur l'onglet Guard, dans la Live Activity et le Dynamic Island, qui exprime l'état de la protection à travers 7 états d'expression. Voir [le design system](../design-system/overview.md).
 - **Personnalisation par paliers (Lava Security Plus)** — une seule offre payante optionnelle qui débloque la personnalisation (un quota de règles de filtrage plus large — gratuit 500 K / Plus 2 M de règles compilées sous un garde-fou de sécurité commun à l'appareil — plus de domaines autorisés/bloqués, des listes de blocage personnalisées et des résolveurs DNS personnalisés). Plus ne contourne jamais les garde-fous toujours actifs — le tunnel ignore `isPaid`.
 - **Comptes et sauvegarde optionnels** — connexion avec Apple ou Google, avec une sauvegarde des réglages chiffrée de bout en bout ([à divulgation nulle de connaissance](../architecture/accounts-and-backup.md)) et une phrase de récupération ; la suppression du compte se fait en libre-service. L'emplacement optionnel de récupération par passkey est **lui aussi à divulgation nulle de connaissance** — sa clé est dérivée sur l'appareil à partir du PRF WebAuthn de l'authentificateur, sans aucun secret détenu par le serveur ; sa mise en production sur l'appareil dépend encore de l'hébergement Associated Domains / AASA **(Prévu)**. Les comptes sont optionnels ; la protection fonctionne pleinement sans être connecté.
-- **Activité et rapports locaux uniquement** — compteurs de blocage/autorisation sur l'appareil, état de santé du tunnel et un lot de rapport de bug avec consentement, construits à partir de données que le tunnel en cours conserve sur l'appareil — vides au repos et vivants pendant la protection. Aucun historique de domaines courant ne quitte l'appareil. Voir [la vue d'ensemble des fonctionnalités](features.md).
+- **Activité et rapports locaux uniquement** — compteurs de blocage/autorisation sur l'appareil, état de santé du tunnel et un lot de rapport de bug avec consentement, construits à partir de données que le tunnel actif conserve sur l'appareil — vides au repos et vivants pendant la protection. Aucun historique de domaines courant ne quitte l'appareil. Voir [la vue d'ensemble des fonctionnalités](features.md).
 
 ## Plateformes {#platforms}
 

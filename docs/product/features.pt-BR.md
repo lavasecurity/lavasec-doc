@@ -9,11 +9,11 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > Público: PM / engenharia. Este catálogo cobre apenas o conjunto de recursos **atual e implementado**. Qualquer coisa projetada, mas não construída, fica no roadmap privado, não aqui.
 
-Lava Security é um app iOS com foco em privacidade que filtra DNS **localmente no dispositivo** por meio de um packet tunnel da NetworkExtension, bloqueando domínios maliciosos e indesejados para usuários não técnicos (pais, idosos) — com proteção essencial gratuita para sempre e sem necessidade de conta.
+Lava Security é um app iOS com foco em privacidade que filtra DNS **localmente no dispositivo** por meio de um packet tunnel da NetworkExtension, bloqueando domínios maliciosos e indesejados para usuários não técnicos (pais, idosos). A proteção essencial é gratuita para sempre e não exige conta.
 
 A promessa de privacidade por trás de cada recurso abaixo:
 
-> Toda a filtragem de DNS acontece no dispositivo; o Lava nunca roteia sua navegação pelos seus servidores e nunca recebe o fluxo de domínios que você visita — o backend mantém apenas metadados do catálogo, um backup criptografado opaco por usuário e diagnósticos anonimizados que você escolhe enviar.
+> Toda a filtragem de DNS acontece no dispositivo; o Lava nunca roteia sua navegação pelos próprios servidores e nunca recebe o fluxo de domínios que você visita — o backend mantém apenas metadados do catálogo, um backup criptografado opaco por usuário e diagnósticos anonimizados que você escolhe enviar.
 
 ## Como ler este catálogo
 
@@ -27,7 +27,7 @@ Os limites de nível que servem como fonte da verdade ficam em `lavasec-ios: Sou
 
 ## 1. Proteção e VPN
 
-O produto central: um packet tunnel local somente-DNS e o modelo de estado tranquilo ao seu redor.
+O produto central: um packet tunnel local somente-DNS e o modelo de estado tranquilo ao redor dele.
 
 | Recurso | Nível | Notas |
 |---|---|---|
@@ -35,8 +35,8 @@ O produto central: um packet tunnel local somente-DNS e o modelo de estado tranq
 | **Precedência da decisão de filtragem** | Free | `bloqueio da barreira de ameaças > allowlist local (exceções permitidas) > blocklist > permitir-por-padrão`; domínios inválidos são bloqueados. (`FilterSnapshot.decision()`.) |
 | **Precedência de consulta (bootstrap primeiro)** | Free | `resolver-bootstrap > temporary-pause > filter` — o próprio hostname do resolver nunca é bloqueado. (`DNSQueryDispatcher`.) |
 | **Início a frio fail-closed** | Free | Um tunnel a frio sem snapshot reutilizável instala um `FailClosedRuntimeSnapshot` que bloqueia todo o tráfego em vez de vazar DNS não filtrado. |
-| **Connect-On-Demand** | Free | `NEOnDemandRuleConnect` mantém a proteção ativa / reinicia-a automaticamente — habilitado **somente após** uma conexão confirmada, nunca na instalação do perfil, e neutralizado durante um onboarding incompleto para que uma instalação nova não consiga levantar um tunnel impossível de desligar. |
-| **Pausa temporária (configurável 1–30 min, padrão 5) + retomar** | Free | Pausar/retomar passam pelo `LavaProtectionCommandService` sob um flock file lock com dedup de revisão. |
+| **Connect-On-Demand** | Free | `NEOnDemandRuleConnect` mantém a proteção ativa / reinicia-a automaticamente — habilitado **somente após** uma conexão confirmada, nunca na instalação do perfil, e neutralizado durante um onboarding incompleto para que uma instalação nova não consiga ativar um tunnel impossível de desligar. |
+| **Pausa temporária (configurável 1–30 min, padrão 5) + retomar** | Free | Pausar e retomar passam pelo `LavaProtectionCommandService` sob um flock file lock com dedup de revisão. |
 | **Pausa com autenticação obrigatória** | Free | Barreira opcional por superfície (`SecurityProtectedSurface.protectionPause`): pausar exige autenticação local do dispositivo; o command service nega uma pausa não autenticada e a Live Activity oculta os botões de pausa. |
 | **Reconectar** | Free | Reinicia o tunnel diretamente (contorna o pipeline de pausa do command service). |
 | **Modelo de estado Soft Shield Guardian** | Free | 7 estados de expressão — `sleeping, waking, awake, paused, retrying, concerned, grateful` (`GuardianMascotAnimation.swift`, LavaSecCore). 6 severidades de conectividade se reduzem a 4 faces; renderizadas de forma idêntica no app, no onboarding e na Live Activity. |
@@ -56,7 +56,7 @@ O que é bloqueado, como as listas são escolhidas e a fronteira entre níveis.
 | **Blocklists somente source-url** | Free | O Lava publica apenas a URL upstream + os hashes aceitos; o dispositivo busca/processa os **bytes** da lista por conta própria. O Lava **nunca** armazena, espelha, transforma ou serve bytes de blocklists de terceiros. Veja a [decisão de conformidade source-url-only com a GPL](../legal/gpl-source-url-only-compliance-decision.md). |
 | **Catálogo curado (categorizado)** | Free para habilitar | Fontes curadas organizadas em categorias de defesa em profundidade — Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling, Piracy & Torrent — de HaGeZi, The Block List Project, OISD, StevenBlack, AdGuard, 1Hosts e Phishing.Database. O conjunto completo e atual está publicado no [Catálogo de Blocklists](../legal/blocklist-catalog.md); cada plataforma reflete a versão do catálogo com que foi lançada. |
 | **Blocklists padrão gratuitas** | Free | Uma instalação nova habilita o **Block List Basic** — uma lista combinada ampla e permissiva (a fonte marcada com `defaultEnabled: true`; `DefaultCatalog.recommendedDefaultSourceIDs`). Todo o resto é opt-in. |
-| **Parse / normalização / dedup no dispositivo** | Free | `BlocklistParser` suporta auto/plain/hosts/adblock/dnsmasq, descarta comentários/linhas em branco/inválidos, faz dedup de strings exatas, limita a 1.000.000 de regras por lista. Uma linha `hosts` com múltiplos hosts agora emite **todos** os hosts da linha, não apenas o primeiro (regras do parser versão 2). |
+| **Parse / normalização / dedup no dispositivo** | Free | `BlocklistParser` suporta auto/plain/hosts/adblock/dnsmasq, descarta comentários/linhas em branco/inválidos, faz dedup de strings exatas, limita a 1.000.000 de regras por lista. Uma linha `hosts` com vários hosts agora emite **todos** os hosts da linha, não apenas o primeiro (regras do parser versão 2). |
 | **Integridade upstream (TLS + URL curada)** | Free | Os bytes das listas da comunidade são buscados por TLS diretamente do `source_url` upstream curado e aceitos sujeitos a limites de tamanho + formato + contagem de regras; os `accepted_source_hashes` do catálogo são **consultivos** (identidade de cache + auditoria), não uma barreira rígida — uma lista que rotaciona rápido nunca é rejeitada por divergir de um hash fixado. O nível de **barreira de ameaças** do Lava (curado pelo Lava, não pode ser permitido) permanece estritamente fixado por hash. |
 | **Filtro de domínios protegidos** | Free | Toda fonte processada tem removidos os domínios protegidos do Lava / Apple / provedor de identidade (apple.com, icloud.com, lavasecurity.app, google.com, accounts.google.com, …) para que uma lista upstream não possa quebrar o app, o tunnel ou o login. |
 | **Exceções permitidas (allowlist)** | Free | Allowlist gerenciada pelo usuário que permite domínios apesar das blocklists. Limite Free: 25 domínios permitidos / 25 bloqueados (`FeatureLimits.free`). |

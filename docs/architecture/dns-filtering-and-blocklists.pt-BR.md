@@ -91,7 +91,7 @@ A UI anota **`DoH3` (sem barra)** — por exemplo, "Quad9 (DoH3)" — **somente 
 
 ### 3.3 DoT
 
-`DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) usa `NWConnection`s em pool, **até 4 conexões por endpoint** (`maxConnectionsPerEndpoint = 4`), round-robin, para que consultas paralelas evitem bloqueio head-of-line. Ele inclui o tratamento de **idle-staleness**: provedores como Cloudflare fecham conexões DoT ociosas do lado do servidor (~10s) sem expor uma mudança de estado, então uma conexão reutilizada ociosa por mais de **8 segundos** (`reusedConnectionMaxIdleInterval = 8`) é renovada antes do envio, e um timeout em uma conexão reutilizada ganha **exatamente uma nova tentativa de conexão nova**.
+`DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) usa `NWConnection`s em pool, **até 4 conexões por endpoint** (`maxConnectionsPerEndpoint = 4`), round-robin, para que consultas paralelas evitem bloqueio head-of-line. Ele inclui o tratamento de **idle-staleness**: provedores como Cloudflare fecham conexões DoT ociosas do lado do servidor (~10s) sem expor uma mudança de estado, então uma conexão reutilizada ociosa por mais de **8 segundos** (`reusedConnectionMaxIdleInterval = 8`) é renovada antes do envio, e um timeout em uma conexão reutilizada ganha **exatamente uma nova tentativa com conexão nova**.
 
 ### 3.4 DoQ — conexão nova por consulta
 
@@ -153,7 +153,7 @@ O snapshot compacto é carregado com `Data(contentsOf:options:[.mappedIfSafe])` 
 
 `BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) conta regras literalmente: ele descarta comentários/linhas em branco/linhas inválidas, normaliza, deduplica strings exatas dentro de uma lista (via um `Set`), e limita em **`maxRules = 1,000,000`** por lista (padrão), com comprimento máximo de linha de 4.096 caracteres. Formatos suportados: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto tenta hosts → dnsmasq → adblock → plain). Uma linha válida = uma regra = a unidade de memória.
 
-> **Linhas `hosts` multi-host (parser rules version 2).** Uma linha `hosts` que mapeia um IP para vários hosts (`0.0.0.0 a.com b.com c.com`) agora emite **cada** host como sua própria regra, não apenas o primeiro; `maxRules` é imposto **por regra** (não por linha), de modo que uma linha multi-host perto do limite não pode ultrapassar. Como os mesmos bytes upstream agora podem render mais regras, a versão de regras do parser foi elevada de **1 → 2**, invalidando entradas obsoletas de `RuleSetCache` processadas sob o antigo comportamento de apenas o primeiro host.
+> **Linhas `hosts` multi-host (parser rules version 2).** Uma linha `hosts` que mapeia um IP para vários hosts (`0.0.0.0 a.com b.com c.com`) agora emite **cada** host como sua própria regra, não apenas o primeiro; `maxRules` é imposto **por regra** (não por linha), de modo que uma linha multi-host perto do limite não pode ultrapassar. Como os mesmos bytes upstream agora podem gerar mais regras, a versão de regras do parser foi elevada de **1 → 2**, invalidando entradas obsoletas de `RuleSetCache` processadas sob o antigo comportamento de apenas o primeiro host.
 
 ### 4.6 Robustez de download e decodificação (Implementado)
 
@@ -214,7 +214,7 @@ No lado do Worker, `syncOneBlocklist` busca cada fonte upstream e a normaliza+fa
 | Precedência de decisão de filtro (guardrail > allowlist > blocklist > default-allow) | Implementado |
 | Slot de precedência da guarda contra ameaças (conectado; distribuído ainda sem entradas) | Implementado |
 | DoH / DoH3 (rótulo h3 observacional) | Implementado |
-| DoT (pool de 4/endpoint, refresh de ociosidade de 8s, uma nova tentativa nova) | Implementado |
+| DoT (pool de 4/endpoint, refresh de ociosidade de 8s, uma nova tentativa com conexão nova) | Implementado |
 | DoQ (conexão nova por consulta, concorrência de 4 vias) | Implementado |
 | Reuso de conexão DoQ | Descartado / adiado para o piso iOS-26 |
 | Degradação de resolvedor + failover por endpoint + fallback de device-DNS | Implementado |

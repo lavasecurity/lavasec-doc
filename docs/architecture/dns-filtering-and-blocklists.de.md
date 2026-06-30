@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > Zielgruppe: Entwickler. Dieses Dokument beschreibt die DNS-Pipeline auf dem Gerät, den Resolver-Pfad über verschlüsselte Transporte, die Entscheidungslogik der Filterung und das Blocklisten-Katalogmodell, das nur Quell-URLs ausliefert — samt der genauen Zahlen, die der Code durchsetzt. Der Status spiegelt das wider, was im Code tatsächlich passiert. Wenn ein Plan und der Code sich widersprechen, **gewinnt der Code**, und die Abweichung wird direkt vor Ort benannt.
 
-Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen nie über eigene Server und bekommt nie den Strom der Domains zu sehen, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du freiwillig sendest.
+Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen nie über eigene Server und sieht nie den Strom der Domains, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du freiwillig sendest.
 
 Lava ist **lokale DNS-/Blocklisten-Filterung** und keine Garantie dafür, dass wirklich jede bösartige Domain oder URL blockiert wird.
 
@@ -25,7 +25,7 @@ Für jede eingehende DNS-Query durchläuft der Tunnel eine feste **Query-Reihenf
 resolver bootstrap  >  temporary pause  >  filter (block / allow)
 ```
 
-- **Bootstrap zuerst ist eine harte Invariante.** Eine Query, die den *eigenen* Hostnamen des konfigurierten Resolvers auflöst (den DoH/DoT/DoQ-Endpunkt), darf niemals blockiert oder pausiert werden — sonst könnte der Tunnel verschlüsseltes DNS gar nicht erst hochfahren. Der Dispatcher nimmt lazy Closures, sodass jeder Schritt erst gelesen wird, wenn er drankommt; das erhält den Short-Circuit (kein Snapshot-Read, wenn schon eine Bootstrap-Antwort existiert; kein Pause-Read während des Bootstrappings).
+- **Bootstrap zuerst ist eine harte Invariante.** Eine Query, die den *eigenen* Hostnamen des konfigurierten Resolvers auflöst (den DoH/DoT/DoQ-Endpunkt), darf niemals blockiert oder pausiert werden — sonst könnte der Tunnel verschlüsseltes DNS gar nicht erst hochfahren. Der Dispatcher nimmt lazy Closures, sodass jeder Schritt erst gelesen wird, wenn er erreicht wird; das erhält den Short-Circuit (kein Snapshot-Read, wenn schon eine Bootstrap-Antwort existiert; kein Pause-Read während des Bootstrappings).
 - **temporary pause** leitet nach oben weiter, solange eine vom Nutzer gestartete Pause-TTL aktiv ist.
 - **filter** prüft die Domain gegen den kompilierten Snapshot und leitet sie entweder weiter oder erzeugt eine Block-Antwort.
 
@@ -56,7 +56,7 @@ Eine Domain, die die Normalisierung nicht besteht, wird mit dem Grund `.invalidD
 
 ### 2.2 Regelspeicherung und die Einheit im Resident Memory {#22-rule-storage-and-the-resident-memory-unit}
 
-`DomainRuleSet` (`Sources/LavaSecCore/DomainRuleSet.swift`) speichert `exactDomains`- + `suffixDomains`-Sets. Der Abgleich (`containsNormalized`) macht zur Query-Zeit eine exakte Suche plus einen Eltern-Suffix-Durchlauf (`hasSuffix`-artig) — es gibt **keine Subdomain-Subsumption zur Compile-Zeit**. Eine gültige Wildcard-Zeile ist **eine Regel** und ein Eintrag in der Memory-Tabelle. Genau diese Gleichung 1 Zeile = 1 Regel macht die Regelanzahl zur ehrlichen Ressourcen-Metrik (§4).
+`DomainRuleSet` (`Sources/LavaSecCore/DomainRuleSet.swift`) speichert `exactDomains`- + `suffixDomains`-Sets. Der Abgleich (`containsNormalized`) macht zur Query-Zeit eine exakte Suche plus einen Eltern-Suffix-Durchlauf (`hasSuffix`-artig) — es gibt **keine Subdomain-Subsumption zur Compile-Time**. Eine gültige Wildcard-Zeile ist **eine Regel** und ein Eintrag in der Memory-Tabelle. Genau diese Gleichung 1 Zeile = 1 Regel macht die Regelanzahl zur ehrlichen Ressourcen-Metrik (§4).
 
 ### 2.3 Kompilierte Snapshot-Formen {#23-compiled-snapshot-forms}
 
@@ -81,7 +81,7 @@ Nicht blockierte Queries werden an den konfigurierten Upstream-Resolver weiterge
 | DNS-over-TLS | `dns-over-tls` | `DoT` |
 | DNS-over-QUIC | `dns-over-quic` | `DoQ` |
 
-Eingebaute Presets sind Google, Cloudflare, Quad9, Mullvad (jeweils in den Varianten IP / DoH / DoT) plus Device DNS und Custom. Eigene Resolver akzeptieren einen einfachen IPv4-/IPv6-Server, eine DoH-URL, eine DoT-URL (`tls://` / `dot://`), eine DoQ-URL (`doq://` / `quic://`) oder einen `sdns://`-DNS-Stamp; Benutzernamen/Passwörter und localhost werden abgelehnt. DoT/DoQ verwenden standardmäßig Port `853`; DoH erfordert einen Pfad.
+Integrierte Presets sind Google, Cloudflare, Quad9, Mullvad (jeweils in den Varianten IP / DoH / DoT) plus Device DNS und Custom. Eigene Resolver akzeptieren einen einfachen IPv4-/IPv6-Server, eine DoH-URL, eine DoT-URL (`tls://` / `dot://`), eine DoQ-URL (`doq://` / `quic://`) oder einen `sdns://`-DNS-Stamp; Benutzernamen/Passwörter und localhost werden abgelehnt. DoT/DoQ verwenden standardmäßig Port `853`; DoH erfordert einen Pfad.
 
 ### 3.2 DoH / DoH3 {#32-doh--doh3}
 
@@ -91,7 +91,7 @@ Die UI annotiert **`DoH3` (ohne Schrägstrich)** — z. B. "Quad9 (DoH3)" — **
 
 ### 3.3 DoT {#33-dot}
 
-`DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) nutzt gepoolte `NWConnection`s, **bis zu 4 Verbindungen pro Endpunkt** (`maxConnectionsPerEndpoint = 4`), im Round-Robin, sodass parallele Queries kein Head-of-Line-Blocking erleben. Es behandelt auch **Idle-Staleness**: Anbieter wie Cloudflare schließen ungenutzte DoT-Verbindungen serverseitig (~10 s), ohne das nach außen sichtbar zu machen, also wird eine wiederverwendete Verbindung, die länger als **8 Sekunden** untätig war (`reusedConnectionMaxIdleInterval = 8`), vor dem Senden aufgefrischt, und ein Timeout auf einer wiederverwendeten Verbindung bekommt **genau einen Retry mit frischer Verbindung**.
+`DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) nutzt gepoolte `NWConnection`s, **bis zu 4 Verbindungen pro Endpunkt** (`maxConnectionsPerEndpoint = 4`), im Round-Robin, sodass parallele Queries kein Head-of-Line-Blocking erleben. Es behandelt zudem **Idle-Staleness**: Anbieter wie Cloudflare schließen ungenutzte DoT-Verbindungen serverseitig (~10 s), ohne dass sich das nach außen bemerkbar macht; daher wird eine wiederverwendete Verbindung, die länger als **8 Sekunden** untätig war (`reusedConnectionMaxIdleInterval = 8`), vor dem Senden aufgefrischt, und ein Timeout auf einer wiederverwendeten Verbindung bekommt **genau einen Retry mit frischer Verbindung**.
 
 ### 3.4 DoQ — frische Verbindung pro Query {#34-doq--fresh-connection-per-query}
 

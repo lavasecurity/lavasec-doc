@@ -22,7 +22,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## 1. 인증 흐름
 
-**제공자: Apple과 Google만 지원.** **(Implemented)** `AccountAuthProvider`는 정확히 `.apple`과 `.google`만 열거한다(`AccountAuthService.swift`). 이메일/비밀번호 — 그리고 인증을 우회하는 모든 지원팀 보조 복구 — 는 명시적으로 **Dropped**다. 비밀번호를 보유하면 재설정/MFA/잠금/유출 대응 의무가 추가되는데, Apple/Google로 충분한 상황에서 그 복잡성은 감수할 가치가 없으며, 우회 복구는 제로 지식 보장을 깨뜨린다.
+**제공자: Apple과 Google만 지원.** **(Implemented)** `AccountAuthProvider`는 정확히 `.apple`과 `.google`만 열거한다(`AccountAuthService.swift`). 이메일/비밀번호 — 그리고 인증을 우회하는 모든 지원팀 보조 복구 — 는 명시적으로 **Dropped**다. 비밀번호를 보유하면 재설정/MFA/잠금/유출 대응 의무가 추가되지만 Apple/Google로 충분하며, 우회 복구는 제로 지식 보장을 깨뜨린다.
 
 두 제공자 모두 Supabase Swift SDK나 웹 OAuth가 아닌 **네이티브 `id_token` grant**를 사용한다:
 
@@ -113,7 +113,7 @@ AccountSessionKeychainStore  (Keychain, device-local)
 
 ## 4. 복구
 
-백업은 복원할 수 있어야 유용하다. `restoreEncryptedBackup`(`AppViewModel` 내)은 사용 가능한 슬롯을 시도하며 복호화한다: device key, 복구 문구, 또는 passkey. 모든 모드에서 봉투는 로컬에서 로드되거나(또는 Supabase에서 가져와) 그 후 **기기에서 복호화된다** — 서버는 절대 복호화하지 않는다.
+`restoreEncryptedBackup`(`AppViewModel` 내)은 사용 가능한 슬롯을 시도하며 복호화한다: device key, 복구 문구, 또는 passkey. 모든 모드에서 봉투는 로컬에서 로드되거나 Supabase에서 가져온 뒤 **기기에서 복호화된다** — 서버는 절대 복호화하지 않는다.
 
 ### 4.1 복구 문구
 

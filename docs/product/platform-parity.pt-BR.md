@@ -6,7 +6,7 @@ contrato público para o comportamento de funcionalidades: o que deve significar
 a mesma coisa em todos os lugares, o que é intencionalmente nativo da
 plataforma e o que ainda não foi prometido.
 
-A documentação de paridade não substitui planos de implementação ou testes:
+A documentação de paridade não substitui planos de implementação ou testes.
 
 - `lavasec-doc` é dono do contrato de produto e de comportamento.
 - Planos internos são donos do estado de entrega, sequenciamento, riscos
@@ -26,7 +26,7 @@ esta página como o contrato de produto e o plano como a fila de trabalho.
 | **Partial** | Algum comportamento existe, mas o contrato público não é totalmente cumprido. |
 | **Planned** | Aceito como parte do contrato da plataforma, ainda não implementado. |
 | **Deferred** | Funcionalidade válida, mas não obrigatória para o próximo marco da plataforma. |
-| **Platform-native** | Mesma promessa ao usuário, implementação diferente específica do sistema operacional. |
+| **Platform-native** | Mesma promessa ao usuário, implementação específica de cada sistema operacional. |
 | **Not applicable** | Nenhuma funcionalidade equivalente deve existir naquela plataforma. |
 | **Dropped** | Considerada ou construída anteriormente e então removida intencionalmente. |
 
@@ -79,8 +79,8 @@ Um registro de funcionalidade completo responde a:
 | `account.optional-sign-in` | A proteção funciona sem uma conta; o login é opcional. | Shipped | Deferred | Promessa de produto exata antes de o Android expor funcionalidades de conta. | Documentação de autenticação de conta; revisão de onboarding/configurações do Android. |
 | `backup.zero-knowledge-settings` | O backup opcional de configurações armazena somente o texto cifrado; a Lava não consegue ler o conteúdo do backup em texto puro. | Shipped | Deferred | Paridade de privacidade exata antes de o Android oferecer backup. | Testes de backup zero-knowledge; testes de paridade de criptografia do Android quando construídos. |
 | `plus.customization-boundary` | A proteção gratuita permanece útil; o Plus desbloqueia personalização avançada e nunca altera a segurança dos guardrails. | Shipped | Planned | Mesmo limite de produto; a implementação da loja é nativa da plataforma. | Testes de política de assinatura; testes de entitlement do Play Billing quando construídos. |
-| `design.calm-earned-depth` | A UX padrão é calma, com superfícies técnicas ou comemorativas mais profundas apenas quando merecidas ou solicitadas. | Partial | Planned | Corresponder por intenção de design através de tokens/papéis compartilhados. | Documentação do design system e plano de fundação de portabilidade. |
-| `platform.ambient-presence` | O status de proteção pode aparecer fora do app quando o sistema operacional suporta uma superfície ambiente nativa. | Platform-native | Planned | Paridade de intenção, não paridade de superfície. | Documentação de Live Activity do iOS; decisão de notificação/Quick Settings do Android pendente. |
+| `design.calm-earned-depth` | A UX padrão é calma, com superfícies técnicas ou comemorativas mais profundas apenas quando merecidas ou solicitadas. | Partial | Planned | Corresponder por intenção de design via tokens/papéis compartilhados. | Documentação do design system e plano de fundação de portabilidade. |
+| `platform.ambient-presence` | O status de proteção pode aparecer fora do app quando o sistema operacional oferece uma superfície ambiente nativa. | Platform-native | Planned | Paridade de intenção, não paridade de superfície. | Documentação de Live Activity do iOS; decisão de notificação/Quick Settings do Android pendente. |
 
 ## Uso para prontidão do Android
 
@@ -93,7 +93,7 @@ contrato mínimo de prontidão para o Android é:
   identificada;
 - comportamento nativo da plataforma tem uma posição explícita do Android;
 - funcionalidades adiadas são nomeadas para que o MVP do Android não dê a
-  entender acidentalmente que elas são entregues.
+  entender acidentalmente que já foram entregues.
 
 Essa revisão pertence ao plano de implementação ou às notas de revisão,
 enquanto esta página mantém o contrato público e durável.

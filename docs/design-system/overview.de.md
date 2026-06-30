@@ -10,13 +10,13 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 > **Zielgruppe:** Design + Engineering, die an der Lava Security iOS-App arbeiten.
 > **Maßgeblich:** Wenn dieses Dokument und ein Plan sich widersprechen, **gewinnt der Code** — Abweichungen werden direkt im Text genannt. Der Status spiegelt die im Code bestätigte Realität wider, nicht das, was im Plan geplant war. Status-Legende: **Umgesetzt** (ausgeliefert und im Code bestätigt), **In Arbeit** (teilweise gelandet), **Geplant** (entworfen, aber noch nicht gebaut), **Verworfen** (abgelehnt oder zurückgenommen).
 
-Dieses Dokument behandelt die Designphilosophie, das LavaTier-Tiefenvokabular, das Lava-Maskottchen, Texte und Namenskonventionen, die Onboarding-UX und die Internationalisierung. Für die architektonische Verkabelung hinter diesen Oberflächen (Targets, VPN-Lebenszyklus, das Lava-/Schutz-Zustandsmodell) siehe [den iOS-Client](../architecture/ios-client.md); für die Produkt-Einordnung siehe [die Produktübersicht](../product/overview.md).
+Dieses Dokument behandelt die Designphilosophie, das LavaTier-Tiefenvokabular, das Lava-Maskottchen, Texte und Namenskonventionen, die Onboarding-UX und die Internationalisierung. Für die architektonische Verkabelung hinter diesen Oberflächen (Targets, VPN-Lebenszyklus, die Guardian-/Schutz-Zustandsmodell-Verkabelung) siehe [den iOS-Client](../architecture/ios-client.md); für die Produkt-Einordnung siehe [die Produktübersicht](../product/overview.md).
 
 ---
 
 ## 1. Philosophie: ruhiger Kern, verdiente Tiefe {#1-philosophy-calm-core-earned-depth}
 
-Lavas Zielgruppe sind nicht-technische Alltagsnutzer — Eltern, ältere Menschen — und das Design folgt daraus. Die Alltagsoberfläche „funktioniert einfach" und bleibt für alle ruhig; zusätzliche Details, Freude und Kontrolle tauchen erst dann auf (sind also **verdient**), wenn die Nutzerin danach sucht. Nichts nervt, nichts schreckt auf, und das technische Innenleben bleibt unsichtbar, bis man danach sucht.
+Lavas Zielgruppe sind nicht-technische Alltagsnutzer — Eltern, ältere Menschen — und das Design folgt daraus. Die Alltagsoberfläche „funktioniert einfach" und bleibt für alle ruhig; zusätzliche Details, Freude und Kontrolle tauchen erst dann auf (sind also **verdient**), wenn die Nutzerin danach sucht. Nichts nervt, nichts schreckt auf, und die technische Maschinerie bleibt unsichtbar, bis man sie sucht.
 
 Dieses Modell **„ruhiger Kern, verdiente Tiefe"** lässt sich in drei Produkt-Tiefen auflösen:
 
@@ -62,7 +62,7 @@ Die verbleibende Restlücke ist die Handvoll roher `.red`-Aufrufstellen, die noc
 
 bereitgestellt über einen `EnvironmentKey` plus einen `.lavaTier(_:)`-Modifier und einen `.lavaTierMetadata()`-Modifier (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:258/263). Es ist in repräsentative Oberflächen verkabelt — z. B. `.lavaTier(.technical)` und `.lavaTier(.celebratory)` in lavasec-ios: LavaSecApp/SettingsView.swift — statt in jede View. Diese bewusste Begrenzung hält die drei Produkt-Tiefen im Code lesbar und portierbar zu einem künftigen Android-Consumer, ohne die Absicht neu herleiten zu müssen.
 
-> **Vorbehalt (Akzent-Tokenisierung Geplant, Phase 3):** `LavaColorRole` ist noch nicht erstellt, daher löst `LavaTier.accent` weiterhin zu rohen `LavaStyle`-Farben auf (LavaTokens.swift:~230). Behandle die Akzentfarben-Tokenisierung als offene Schleife, nicht als fertige Oberfläche.
+> **Vorbehalt (Akzent-Tokenisierung Geplant, Phase 3):** `LavaColorRole` ist noch nicht erstellt, daher löst `LavaTier.accent` weiterhin zu rohen `LavaStyle`-Farben auf (LavaTokens.swift:~230). Behandle die Akzentfarben-Tokenisierung als offenen Punkt, nicht als fertige Oberfläche.
 
 ---
 
@@ -112,7 +112,7 @@ Das Maskottchen kommt in **7 auswählbaren Schild-„Looks"**, gespeichert als `
 
 `original`, `fireOpal` (Rohwert `emberObsidian`), `purpleObsidian`, `obsidian`, `cherryQuartz` (Rohwert `strawberryObsidian`), `emerald`, `kiwiCreme`.
 
-Die zwei alten Rohwerte sind Absicht — „repariere" sie nicht; sie würden gespeicherte Nutzerauswahlen kaputtmachen.
+Die zwei alten Rohwerte sind Absicht — „repariere" sie nicht; sie würden gespeicherte Nutzerauswahlen zerstören.
 
 ### 3.4 Datenschutz-Schwärzung **(Umgesetzt)** {#34-privacy-redaction-implemented}
 
@@ -180,7 +180,7 @@ Designentscheidungen, die fest in den Ablauf eingebaut sind:
 
 Die Erststart-Standards, die der Ablauf installiert: **Device DNS**-Resolver (`DNSResolverPreset.device`), **Geräte-DNS-Ausweichoption AN**, Logging an (Zähler + Verlauf + Aktivität) und „Ohne Konto fortfahren".
 
-> **Standard-Sperrlisten-Abweichung (Code gewinnt).** Der Onboarding-Plan-Text listet HaGeZi Multi Light als Standard-Sperrliste, aber der ausgelieferte Code-Standard ist **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, definiert in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Das eigentliche Tier-Gate ist das **Filter-Regel-Budget (Free 500K / Plus 2M)**, *nicht* eine Listenanzahl. Intern nachverfolgt. Für das Tier-Modell und die empfohlene Standard-Konfiguration siehe [den Feature-Katalog](../product/features.md).
+> **Standard-Sperrliste, Quelle der Wahrheit.** Der ausgelieferte Code-Standard ist **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, definiert in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Das eigentliche Tier-Gate ist das **Filter-Regel-Budget (Free 500K / Plus 2M)**, *nicht* eine Listenanzahl. Für das Tier-Modell und die empfohlene Standard-Konfiguration siehe [den Feature-Katalog](../product/features.md).
 
 ---
 

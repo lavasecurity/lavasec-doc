@@ -10,7 +10,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 > **Audiencia:** diseño + ingeniería que trabajan en la app de iOS de Lava Security.
 > **Autoridad:** Cuando este documento y un plan no coincidan, **el código manda** — las divergencias se señalan en línea. El estado refleja la realidad confirmada en el código, no la aspiración del plan. Leyenda de estado: **Implementado** (lanzado y confirmado en el código), **En curso** (parcialmente integrado), **Planificado** (diseñado, no construido), **Descartado** (rechazado o revertido).
 
-Este documento cubre la filosofía de diseño, el vocabulario de profundidad LavaTier, la mascota Guardian, las convenciones de texto y nomenclatura, la UX de onboarding y la internacionalización. Para la fontanería arquitectónica detrás de estas superficies (targets, ciclo de vida del VPN, el cableado del modelo de estado de Guardian/protección), consulta [el cliente de iOS](../architecture/ios-client.md); para el encuadre de producto, consulta [la visión general del producto](../product/overview.md).
+Este documento cubre la filosofía de diseño, el vocabulario de profundidad LavaTier, la mascota Guardian, las convenciones de texto y nomenclatura, la UX de onboarding y la internacionalización. Para la infraestructura arquitectónica detrás de estas superficies (targets, ciclo de vida del VPN, el cableado del modelo de estado de Guardian/protección), consulta [el cliente de iOS](../architecture/ios-client.md); para el encuadre de producto, consulta [la visión general del producto](../product/overview.md).
 
 ---
 
@@ -36,11 +36,11 @@ El sistema de diseño es una capa de SwiftUI real y tokenizada, junto al vocabul
 - **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5) — la fuente de verdad del color adaptativo: ~18 colores semánticos (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), cada uno producido por una única fábrica `adaptiveColor(light:dark:)` para que claro/oscuro se definan juntos. El rojo de peligro está tokenizado aquí como `dangerRed`/`errorText` (líneas 81/86).
 - **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101) — roles de superficie de tarjeta/panel/selección y radios de esquina: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
 - **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183) — la escala de espaciado: `xs`/`sm`/`md`/`lg`/`xl` más `screenHorizontal`/`screenTop`/`screenBottom`.
-- **`LavaActionRole`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift, v1.0) — un enum semántico de rol de acción (`.cancel`, `.close`, `.confirm`, `.destructive`) mapeado al `ButtonRole` del sistema. `NativeToolbarIconButton` ganó un parámetro `role:` y se usa de forma generalizada, por lo que los glifos de la barra de herramientas adoptan el estilo de rol nativo en casi todas las hojas/barras de herramientas.
+- **`LavaActionRole`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift, v1.0) — un enum semántico de rol de acción (`.cancel`, `.close`, `.confirm`, `.destructive`) mapeado al `ButtonRole` del sistema. `NativeToolbarIconButton` incorporó un parámetro `role:` y se usa de forma generalizada, por lo que los glifos de la barra de herramientas adoptan el estilo de rol nativo en casi todas las hojas/barras de herramientas.
 
 La brecha residual restante es el puñado de sitios de llamada con `.red` en crudo que aún no se han migrado a `LavaStyle.dangerRed` (consulta §1).
 
-> **Rotación de componentes (v1.0).** Se eliminó `LavaTabOverviewCard`; los bloques de titular de Filtro y Actividad ahora comparten `LavaInfoCard` + `LavaOverviewMetricBlock` para que coincidan en tamaño y posición. Nuevos componentes compartidos llegaron junto con el rediseño de Filtro/Actividad: `FiltersFlowDiagram` (el diagrama "Teléfono → Lava → Internet"), `ActivityFlowBar` / `ActivityFlowStatRow` (el resumen del flujo de solicitudes), `NetworkActivityPrivacyInfoPanel` y `LavaGuardLookPickerSheet` (el selector de Guard en hoja inferior). Los flujos de importar/compartir reemplazaron su cabecera personalizada dentro del contenido por una `importFlowToolbar` nativa.
+> **Cambios de componentes (v1.0).** Se eliminó `LavaTabOverviewCard`; los bloques de titular de Filtro y Actividad ahora comparten `LavaInfoCard` + `LavaOverviewMetricBlock` para que coincidan en tamaño y posición. Nuevos componentes compartidos llegaron junto con el rediseño de Filtro/Actividad: `FiltersFlowDiagram` (el diagrama "Teléfono → Lava → Internet"), `ActivityFlowBar` / `ActivityFlowStatRow` (el resumen del flujo de solicitudes), `NetworkActivityPrivacyInfoPanel` y `LavaGuardLookPickerSheet` (el selector de Guard en hoja inferior). Los flujos de importar/compartir reemplazaron su cabecera personalizada dentro del contenido por una `importFlowToolbar` nativa.
 
 ---
 
@@ -82,8 +82,8 @@ sleeping, waking, awake, paused, retrying, concerned, grateful
 
 Restricciones del grafo que conviene conocer: la única salida de `sleeping` es `waking`, y `grateful` solo vuelve a `awake`. Las transiciones `awake ↔ grateful` tienen fotogramas de interpolación a medida — este es el único toque de **movimiento de deleite** (nivel Window) del sistema.
 
-> **`retrying` vs `concerned` — la distinción de tono más importante.** Ambos señalan "no perfectamente sano", pero se leen de forma muy distinta y no deben confundirse:
-> - **`retrying`** es la cara *despreocupada, que se autorrepara*: párpados relajados (~0,80), ojos nivelados, boca plana y **sin inclinación de preocupación**. El movimiento lo lleva la **insignia de estado, no la cara** — una autorecuperación transitoria nunca debería alarmar. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
+> **`retrying` vs `concerned` — la distinción de tono más importante.** Ambos señalan "no del todo en buen estado", pero se leen de forma muy distinta y no deben confundirse:
+> - **`retrying`** es la cara *despreocupada, de autorreparación*: párpados relajados (~0,80), ojos nivelados, boca plana y **sin inclinación de preocupación**. El movimiento lo lleva la **insignia de estado, no la cara** — una autorecuperación transitoria nunca debería alarmar. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
 > - **`concerned`** es preocupación *suave, que busca ayuda*: cejas internas elevadas (`concernAmount` 1, `mouthCurve` -0,22) que se leen como "me vendría bien una mano", **nunca una mirada severa**. Los problemas genuinos deberían invitar a ayudar, no regañar. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
 
 ### 3.2 Mapeo de conectividad → expresión (6 → 4)

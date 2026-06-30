@@ -20,7 +20,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 | **Remplacée** | Une décision antérieure remplacée par une plus récente |
 | **Proposée** | Prévu — conçu, recommandé ou consigné, mais pas encore appliqué dans cette arborescence |
 
-À lire aussi : le modèle de distribution du catalogue dans [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md) et [`../legal/open-source-list-data-terms-carveout.md`](../legal/open-source-list-data-terms-carveout.md) ; le comportement livré dans [`../product/features.md`](../product/features.md). L'orientation à venir vit dans la feuille de route interne.
+À lire aussi : le modèle de distribution du catalogue dans [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md) et [`../legal/open-source-list-data-terms-carveout.md`](../legal/open-source-list-data-terms-carveout.md) ; le comportement livré dans [`../product/features.md`](../product/features.md). L'orientation à venir figure dans la feuille de route interne.
 
 ---
 
@@ -28,9 +28,9 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Décision.** Filtrer le DNS **localement sur l'appareil** via un tunnel de paquets `NEPacketTunnelProvider` (`LavaSecTunnel`, `com.lavasec.app.tunnel`), plutôt qu'avec `NEDNSProxyProvider`, `NEFilterProvider`, `NEDNSSettingsManager` ou un bloqueur de contenu Safari.
 
-**Contexte.** Le produit est un filtre qui met la confidentialité d'abord, pour des gens non techniques (parents, personnes âgées), distribué via l'App Store grand public, sans compte requis. Les autres fournisseurs NetworkExtension et API de DNS géré sont réservés aux appareils supervisés/gérés par MDM ou ne couvrent pas tout le DNS d'une app, et un modèle côté résolveur ferait sortir de l'appareil le flux des domaines de l'utilisateur.
+**Contexte.** Le produit est un filtre privilégiant la confidentialité, destiné à un public non technique (parents, personnes âgées), distribué via l'App Store grand public, sans compte requis. Les autres fournisseurs NetworkExtension et API de DNS géré sont réservés aux appareils supervisés/gérés par MDM ou ne couvrent pas tout le DNS d'une app, et un modèle côté résolveur ferait sortir de l'appareil le flux des domaines de l'utilisateur.
 
-**Logique.** Le tunnel de paquets est le seul fournisseur qui (a) marche pour des appareils grand public non gérés et (b) laisse chaque décision DNS se prendre sur l'appareil, ce qui est le socle de la promesse de confidentialité : *tout le filtrage DNS se fait sur l'appareil ; Lava ne fait jamais transiter votre navigation par ses serveurs et ne reçoit jamais le flux des domaines que vous visitez.* Le compromis accepté en échange, c'est le **plafond mémoire iOS d'environ 50 Mio par extension** sous lequel le tunnel doit tenir — une contrainte qui façonne plusieurs des décisions qui suivent.
+**Logique.** Le tunnel de paquets est le seul fournisseur qui (a) fonctionne sur des appareils grand public non gérés et (b) permet que chaque décision DNS soit prise sur l'appareil, ce qui est le socle de la promesse de confidentialité : *tout le filtrage DNS se fait sur l'appareil ; Lava ne fait jamais transiter votre navigation par ses serveurs et ne reçoit jamais le flux des domaines que vous visitez.* Le compromis accepté est le **plafond mémoire iOS d'environ 50 Mio par extension** sous lequel le tunnel doit tenir — une contrainte qui façonne plusieurs des décisions qui suivent.
 
 **Statut.** **Adoptée** (fondatrice ; dans le code depuis le tout premier prototype).
 
@@ -42,7 +42,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** La conception précédente recopiait les octets bruts des listes dans R2 pour que le conseil juridique puisse vérifier la distribution. Beaucoup de listes en amont (HaGeZi, OISD) sont sous GPL-3.0, donc héberger leurs octets ferait de Lava un redistributeur de données GPL.
 
-**Logique.** Traiter Lava comme un moteur de filtrage local / agent utilisateur — plutôt que comme un distributeur de listes de blocage — minimise la redistribution sous GPLv3 et l'exposition à l'App Review. L'appareil récupère chaque liste via TLS directement depuis son `source_url` sélectionné et l'analyse localement sous des plafonds stricts de taille/nombre de règles ; les listes communautaires sont acceptées telles que servies (les `accepted_source_hashes` du catalogue sont indicatives, pas une barrière stricte — une seule empreinte épinglée ne peut pas suivre une source en amont qui tourne vite et ne produisait que de faux rejets), tandis que l'offre de garde-fou de sécurité de Lava reste épinglée par empreinte. La provenance est imposée au niveau du catalogue (un changement de `source_url` doit utiliser un nouveau `list_id`), pas par une barrière d'empreinte côté client. Chaque jeu de règles analysé passe aussi par un filtre de domaines protégés, pour qu'une liste en amont ne puisse pas bloquer les domaines de Lava/Apple/fournisseur d'identité. Le modèle est imposé en CI par `check-gpl-blocklist-distribution.sh` (pas de code de copie, pas d'URL d'artefact hébergé par Lava, aucune source GPL activée par défaut, aucune écriture d'octets dans R2).
+**Logique.** Traiter Lava comme un moteur de filtrage local / agent utilisateur — plutôt que comme un distributeur de listes de blocage — minimise la redistribution sous GPLv3 et l'exposition à l'App Review. L'appareil récupère chaque liste via TLS directement depuis son `source_url` sélectionné et l'analyse localement sous des plafonds stricts de taille/nombre de règles ; les listes communautaires sont acceptées telles que servies (les `accepted_source_hashes` du catalogue sont indicatives, pas une barrière stricte — une seule empreinte épinglée ne peut pas suivre une source en amont qui tourne vite et ne produisait que de faux rejets,), tandis que l'offre de garde-fou de sécurité de Lava reste épinglée par empreinte. La provenance est imposée au niveau du catalogue (un changement de `source_url` doit utiliser un nouveau `list_id`), pas par une barrière d'empreinte côté client. Chaque jeu de règles analysé passe aussi par un filtre de domaines protégés, pour qu'une liste en amont ne puisse pas bloquer les domaines de Lava/Apple/fournisseur d'identité. Le modèle est imposé en CI par `check-gpl-blocklist-distribution.sh` (pas de code de copie, pas d'URL d'artefact hébergé par Lava, aucune source GPL activée par défaut, aucune écriture d'octets dans R2).
 
 **Statut.** **Adoptée**, et elle a **Remplacé** le plan abandonné de copie brute dans R2 (`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`, en-tête « Superseded by the source-url-only implementation »). Voir [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md).
 
@@ -54,7 +54,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** Transmettre en clair les requêtes non bloquées à un résolveur fait fuiter le flux de domaines même que le modèle sur l'appareil est censé protéger. Les transports ont été construits petit à petit (DoH → DoH3 → DoT → DoQ).
 
-**Logique.** Un transport amont chiffré garde les requêtes non bloquées privées de bout en bout. **DoH3** est étiqueté de façon purement observée — `assumesHTTP3Capable=true` est posé et le protocole négocié est observé, et l'interface affiche `DoH3` (sans barre oblique) **seulement quand une négociation h3 est réellement observée**, jamais promise, parce que h3 est au mieux par connexion et qu'une affirmation persistante surévaluerait le comportement derrière des pare-feux qui bloquent l'UDP. Le pooling DoT avec rafraîchissement à l'inactivité a été un correctif direct au fait que Cloudflare fermait silencieusement les connexions DoT inactives.
+**Logique.** Un transport amont chiffré garde les requêtes non bloquées privées de bout en bout. **DoH3** est étiqueté de manière purement observationnelle — `assumesHTTP3Capable=true` est posé et le protocole négocié est observé, et l'interface affiche `DoH3` (sans barre oblique) **seulement quand une négociation h3 est réellement observée**, jamais promise, car h3 est au mieux assuré au cas par cas et qu'une affirmation persistante surévaluerait le comportement derrière des pare-feux qui bloquent l'UDP. Le pooling DoT avec rafraîchissement à l'inactivité a été un correctif direct au fait que Cloudflare fermait silencieusement les connexions DoT inactives.
 
 **Statut.** **Adoptée** (les quatre transports présents et câblés).
 
@@ -66,7 +66,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** La RFC 9250 mappe chaque requête DNS à son propre flux QUIC, donc une vraie réutilisation a besoin de l'API multi-flux `NWConnectionGroup`/`openStream`, **disponible seulement à partir d'iOS 26.0**, alors que le plancher de déploiement est iOS 17. Un chemin de réutilisation conditionné à iOS 26 a quand même été implémenté (compilé en Debug+Release avec le SDK Xcode 26) et **testé sur appareil sous iOS 26.5** contre le DoQ d'AdGuard.
 
-**Logique.** Le chemin de réutilisation a échoué à chaque tentative sur l'appareil (`openStream`/`receive` en erreur, puis le repli tombait sur « Socket is not connected »), mesurant **nettement pire** que la référence par requête (témoin : 34 handshakes / 35 requêtes, tout réussi). Ça a confirmé empiriquement le conseil d'Apple DTS « tenez-vous à l'écart de QUIC avec le nouveau framework Network », donc le travail a été annulé plutôt que livré ; seuls les docs et la logique des tests de garde gardent le constat, pour qu'on ne s'y essaie pas de nouveau avant que l'API ne mûrisse.
+**Logique.** Le chemin de réutilisation a échoué à chaque tentative sur l'appareil (`openStream`/`receive` en erreur, puis le repli tombait sur « Socket is not connected »), mesurant **nettement pire** que la référence par requête (témoin : 34 handshakes / 35 requêtes, tout réussi). Cela a confirmé empiriquement le conseil d'Apple DTS « tenez-vous à l'écart de QUIC avec le nouveau framework Network », donc le travail a été annulé plutôt que livré ; seuls les docs et la logique des tests de garde gardent le constat, afin qu'on n'y revienne pas avant la maturation de l'API.
 
 **Statut.** **Annulée** (différée jusqu'à ce que le plancher de déploiement atteigne iOS 26). Décrire DoQ comme des connexions neuves par requête.
 
@@ -78,7 +78,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** Un remaniement (issue 407) proposait un seul protocole pour tous les transports.
 
-**Logique.** Les transports sont trop dissemblables — exécuteurs chiffrés asynchrones (DoH/DoT/DoQ) contre transports synchrones multi-adresses en clair/appareil — donc un protocole unificateur serait une moins bonne abstraction que le point de jonction par closure injectable existant, qui garde déjà l'exécution sur le fil testable.
+**Logique.** Les transports sont trop dissemblables — exécuteurs chiffrés asynchrones (DoH/DoT/DoQ) contre transports synchrones multi-adresses en clair/appareil — donc un protocole unificateur serait une moins bonne abstraction que le point de jonction par closure injectable existant, qui garde déjà testable l'exécution sur le fil.
 
 **Statut.** **Annulée** / ne-sera-pas-implémenté (fermé comme une mauvaise abstraction).
 
@@ -114,7 +114,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** Activer / actualiser / mettre en pause / reprendre étaient lents. Pendant le remaniement, une régression thermique est apparue (134 % CPU, énergie élevée, téléphone chaud). Un grand panel d'agents a d'abord réfuté la cause soupçonnée à partir de preuves d'avant la régression ; une capture en direct sur appareil l'a ensuite confirmée.
 
-**Logique.** La vraie cause était une boucle de rafraîchissement `NEVPNStatusDidChange` qui s'auto-entretenait — une boucle de regroupement qui se réarmait à l'infini (environ 370 événements/s, fil principal à environ 100 %, `vpn-debug-log.jsonl` gonflé à environ 180–210 Mo) après le remplacement d'une garde drop-reentrant. Le correctif lit l'état du gestionnaire mis en cache et borne la boucle. Les artefacts avant/après sur appareil du plan lui-même enregistrent que l'activation à chaud (`action.turnOn`) chute de **2 722 ms à 287 ms** sur iPhone 15 Pro ; une revue d'opportunités post-modulaire séparée et plus tardive a mesuré le chemin à chaud à **112 ms** (décodage 51 + managerSetup 57) sur le même appareil. L'épisode a fixé la norme : les remaniements structurels s'arrêtent jusqu'à ce qu'une régression thermique mesurée soit bornée, et les résultats thermiques/batterie du Simulateur sont rejetés comme sans valeur.
+**Logique.** La vraie cause était une boucle de rafraîchissement `NEVPNStatusDidChange` qui s'auto-entretenait — une boucle de regroupement qui se réarmait à l'infini (environ 370 événements/s, fil principal à environ 100 %, `vpn-debug-log.jsonl` gonflé à environ 180–210 Mo) après le remplacement d'une garde drop-reentrant. Le correctif lit l'état du gestionnaire mis en cache et borne la boucle. Les artefacts avant/après sur appareil du plan lui-même enregistrent que l'activation à chaud (`action.turnOn`) chute de **2 722 ms à 287 ms** sur iPhone 15 Pro ; une revue d'opportunités post-modulaire séparée et plus tardive a mesuré le chemin à chaud à **112 ms** (décodage 51 + managerSetup 57) sur le même appareil. Cet épisode a fixé la norme : les remaniements structurels s'arrêtent jusqu'à ce qu'une régression thermique mesurée soit bornée, et les résultats thermiques/batterie du Simulateur sont rejetés comme sans valeur.
 
 **Statut.** **Adoptée** (`plans/implemented/2026-06-12-modular-speed-up-plan.md`). Une revue post-modulaire garde `PacketTunnelProvider` et `AppViewModel` comme des objets-dieux survivants connus.
 
@@ -126,7 +126,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **Contexte.** L'ancien plafond portait sur un **nombre** de listes (gratuit 3 / payant 10). Une liste peut contenir 1K ou 1M de règles, donc le nombre était un indicateur malhonnête de la vraie ressource contrainte — le plafond mémoire NE de 50 Mio.
 
-**Logique.** Les règles correspondent à de la mémoire réelle, donc toute combinaison de listes qui tient est permise. L'application de référence tourne à la compilation sur l'union dédupliquée dans `FilterSnapshotPreparationService` (garde-fou matériel d'abord, puis limite de l'offre) ; le compteur de l'interface au moment de la sélection utilise une somme par liste avec une marge plafond souple de 1,10. Les configs au-dessus du quota sont rejetées de façon déterministe (la protection reste coupée) plutôt que de laisser le tunnel se faire jetsam.
+**Logique.** Les règles correspondent à de la mémoire réelle, donc toute combinaison de listes qui tient est permise. L'application qui fait foi s'exécute à la compilation sur l'union dédupliquée dans `FilterSnapshotPreparationService` (garde-fou matériel d'abord, puis limite de l'offre) ; le compteur de l'interface au moment de la sélection utilise une somme par liste avec une marge plafond souple de 1,10. Les configs au-dessus du quota sont rejetées de façon déterministe (la protection reste coupée) plutôt que de laisser le tunnel se faire jetsam.
 
 **Statut.** **Adoptée** dans le code (`SubscriptionPolicy.swift`), livrée en **v1.0.0**, ce qui a **Remplacé** le plafond du nombre de listes. Le quota de règles est désormais la barrière de niveau active ; les plafonds par domaine ont aussi été relevés en 1.0 (Gratuit 25 / Plus 1 000 domaines autorisés et bloqués). Voir [`../product/features.md`](../product/features.md).
 
@@ -158,7 +158,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## Annexe — autres annulations et rejets consignés {#appendix--other-recorded-reversals-and-rejections}
 
-Ce sont des décisions plus petites, mais c'étaient de vraies décisions avec un revirement consigné ; listées par souci d'exhaustivité.
+Ce sont des décisions plus petites, mais chacune a connu un revirement consigné.
 
 | Décision | Logique | Statut |
 |---|---|---|

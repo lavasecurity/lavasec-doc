@@ -95,7 +95,7 @@ UI 只在**真正观测到 h3 协商成功时**，才把它标注成 **`DoH3`（
 
 ### 3.4 DoQ —— 每次查询都新建连接 {#34-doq--fresh-connection-per-query}
 
-`DoQTransport`（`Sources/LavaSecCore/DoQTransport.swift`）会维持一个有上限的连接池，**每个端点 4 条通道**，但**每次查询都会新开一条 QUIC 连接**——也就是每次查询都做一次完整握手。这 4 条通道的池子提供的是**并发能力，而不是握手复用**。
+`DoQTransport`（`Sources/LavaSecCore/DoQTransport.swift`）会维持一个有上限的连接池，**每个端点 4 条通道**，但**每次查询都会新开一条 QUIC 连接**——也就是每次查询都做一次完整握手。这个 4 通道池提供的是**并发能力，而不是握手复用**。
 
 **DoQ 连接复用的状态（已放弃 / 已延后）。** 复用方案做过评审，也在真机上跑过基准（35 次查询里有 34 次是全新握手 ≈ 基本没复用），随后实现成了一条需要 iOS 26 才启用的多流 `NWConnectionGroup` 路径，并在真机上对着 AdGuard 的 DoQ 测过，最后因为**净收益为负而被回退**（对着真实服务器时出现流失败 + 回退报错）。RFC 9250 把每个查询都映射到它自己的 QUIC 流上，所以复用需要用到 `NWConnectionGroup` / `openStream`，而这**只在 iOS 26.0+ 才有**；目前部署的最低系统门槛是 **iOS 17**。复用会一直延后到门槛抬到 iOS 26 为止。在不支持的设备上，自定义 DoQ 会被拒绝（提示「DNS over QUIC is not supported on this device」）。
 

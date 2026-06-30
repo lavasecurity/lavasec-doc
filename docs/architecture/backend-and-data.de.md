@@ -13,7 +13,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 ## 1. Wie das Backend aufgebaut ist {#1-the-shape-of-the-backend}
 
-Das Backend ist bewusst klein und datensparsam gehalten. Es ist eine Kante für Metadaten und Konten, kein Filterdienst. **Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen niemals über seine Server und bekommt nie den Strom der Domains zu sehen, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du selbst entscheidest zu senden.** Es gibt keine Tabellen für alltägliche DNS-Anfragen oder Telemetrie pro Domain, und ein Konto-Login ist optional und für den Schutz nie nötig.
+Das Backend ist bewusst klein und datensparsam gehalten. Es ist eine Edge-Schicht für Metadaten und Konten, kein Filterdienst. **Die gesamte DNS-Filterung passiert auf dem Gerät; Lava leitet dein Surfen niemals über seine Server und bekommt nie den Strom der Domains zu sehen, die du besuchst — das Backend hält nur Katalog-Metadaten, ein undurchsichtiges, pro Nutzer verschlüsseltes Backup und anonymisierte Diagnosedaten, die du freiwillig sendest.** Es gibt keine Tabellen für alltägliche DNS-Anfragen oder Telemetrie pro Domain, und ein Konto-Login ist optional und für den Schutz nie nötig.
 
 Die Server-Ebene teilt sich auf zwei Komponenten auf: den Code des Backend-Workers und das DB-Schema.
 
@@ -25,7 +25,7 @@ Die Server-Ebene teilt sich auf zwei Komponenten auf: den Code des Backend-Worke
 | **Cloudflare R2** (ein Produktions-Bucket, mit einem separaten Preview-Bucket für Staging) | Katalog-Snapshots + der Sync-Cursor; **niemals** Bytes von Drittanbieter-Blocklisten |
 | **Cloudflare D1** (die Hilfe-Feedback-Datenbank) | Nur-Anhängen, anonyme Abstimmungen zum Feedback für Hilfe-Artikel |
 
-Der Worker erreicht Supabase über PostgREST (`/rest/v1`) und Auth (`/auth/v1`) mit einer Supabase-Service-Rolle-Zugangsdaten — es gibt kein Supabase-SDK auf dem Server; die Aufrufe sind reines `fetch` über die Helfer `supabase()` / `supabaseAuth()`.
+Der Worker erreicht Supabase über PostgREST (`/rest/v1`) und Auth (`/auth/v1`) mit Zugangsdaten der Supabase-Service-Rolle — es gibt kein Supabase-SDK auf dem Server; die Aufrufe sind reines `fetch` über die Helfer `supabase()` / `supabaseAuth()`.
 
 Status: **Umgesetzt**.
 
@@ -80,7 +80,7 @@ Das Routing ist ein flacher `route()`-Dispatcher. Alles ist **Umgesetzt**, sofer
 
 ## 3. Katalog & Durchsetzung von source-url-only {#3-catalog--source-url-only-enforcement}
 
-Das ist der Teil des Backends, der am stärksten auf Lavas Compliance-Haltung zugeschnitten ist, deshalb bekommt er serverseitige Zähne.
+Das ist der Teil des Backends, der am stärksten auf Lavas Compliance-Haltung zugeschnitten ist, deshalb wird er serverseitig durchgesetzt.
 
 ### 3.1 Das source-url-only-Modell {#31-the-source-url-only-model}
 
@@ -103,7 +103,7 @@ Eine Migration (`20260525000000_add_blocklist_distribution_mode.sql`) hat diese 
 
 ### 3.3 Normalisierungs-Schutzbarrieren (nur Metadaten) {#33-normalization-guardrails-metadata-only}
 
-Die Worker-seitige Normalisierung (`normalizeBlocklist`) filtert geschützte Domains, erzwingt Obergrenzen und dedupliziert + sortiert. Das dient rein dazu, vertrauenswürdige Metadaten zu berechnen; für **Community-Listen** hash-gatet das Gerät den Download **nicht** — es holt über TLS von der kuratierten `source_url` und parst unter Obergrenzen (die akzeptierten Hashes des Katalogs sind beratend), sodass diese Worker-seitige Normalisierung für sich genommen keine Sicherheitsgrenze ist. (Lavas Bedrohungs-Schutzbarrieren-Stufe bleibt auf dem Gerät hash-gepinnt, und die `source_url`-Herkunft wird zur Veröffentlichungszeit durchgesetzt — eine URL-Änderung muss eine neue `list_id` verwenden.) Wichtige Konstanten:
+Die Worker-seitige Normalisierung (`normalizeBlocklist`) filtert geschützte Domains, erzwingt Obergrenzen und dedupliziert + sortiert. Das dient rein dazu, vertrauenswürdige Metadaten zu berechnen; für **Community-Listen** hash-gatet das Gerät den Download **nicht** — es holt über TLS von der kuratierten `source_url` und parst unter Obergrenzen (die akzeptierten Hashes des Katalogs sind beratend), sodass diese Worker-seitige Normalisierung für sich genommen keine Sicherheitsgrenze ist. (Lavas Bedrohungs-Schutzbarrieren-Stufe bleibt auf dem Gerät hash-gepinnt, und die `source_url`-Herkunft wird beim Veröffentlichen durchgesetzt — eine URL-Änderung muss eine neue `list_id` verwenden.) Wichtige Konstanten:
 
 - `PROTECTED_SUFFIXES` — entfernt jede Regel, die auf Apple/iCloud/`mzstatic`/Lava-Security-Domains/Supabase/Cloudflare/Google/GitHub passt, damit ein vergifteter Upstream nicht Lavas eigene Infrastruktur oder Anmelde-Anbieter blockieren kann.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.
@@ -157,7 +157,7 @@ Die entscheidende Backend-Tatsache: **Der iOS-Client liest/schreibt `user_backup
 
 ### 4.4 Kontolöschung {#44-account-deletion}
 
-`POST /v1/account/delete` prüft das Access-Token des Nutzers und löscht dann seine `bug_reports` (und jedes passende alte R2-Anhang-Objekt), `user_backups`, `entitlements`, `user_settings` und `profiles`-Zeilen, und löscht schließlich den Supabase-Auth-Nutzer über den Service-Rolle-Endpunkt `/admin/users`. Es gibt nur einen Lösch-Status + die verknüpften Anbieter zurück. Status: **Umgesetzt** (das Frontmatter des Plans liest `status: Done` und die Datei liegt in `plans/implemented/`; eine veraltete **im-Text-Annotation** sagt noch "Backlog", aber der Lane-Ordner + die Code-Präsenz machen es zu einem ausgelieferten Feature).
+`POST /v1/account/delete` prüft das Access-Token des Nutzers und löscht dann seine `bug_reports` (und jedes passende alte R2-Anhang-Objekt), `user_backups`, `entitlements`, `user_settings` und `profiles`-Zeilen, und löscht schließlich den Supabase-Auth-Nutzer über den Service-Rollen-Endpunkt `/admin/users`. Es gibt nur einen Lösch-Status + die verknüpften Anbieter zurück. Status: **Umgesetzt** (das Frontmatter des Plans liest `status: Done` und die Datei liegt in `plans/implemented/`; eine veraltete **im-Text-Annotation** sagt noch "Backlog", aber der Lane-Ordner + die Code-Präsenz machen es zu einem ausgelieferten Feature).
 
 ### 4.5 Spiegelung der App-Store-Berechtigungen {#45-app-store-entitlement-mirroring}
 
@@ -181,7 +181,7 @@ Nur Empfangen-und-Weiterleiten. Er leitet `support@` / `hello@` / `jimmy@` / `le
 
 - **Die Konfiguration ist `wrangler.toml`, die per gitignore ausgeschlossen ist**; `wrangler.toml.example` ist die eingecheckte Vorlage. Behandle die lokale `wrangler.toml` als maßgeblich für umgebungsspezifische Werte.
 - **Vars** (nicht-geheim, in `[vars]`): die Supabase-URL, der öffentliche API-Origin (`https://api.lavasecurity.app`), die Katalog-Cache-TTL (Standard 300s), eine Größenobergrenze für Fehlerberichte, ein Audit-Schalter für die Kontolöschung und ein Beschleunigungs-Flag der Workers-Runtime. Die interne Fehlerbericht-Triage fügt einen internen Triage-Queue-Schlüssel und einen Dashboard-Origin hinzu, der beim Zusammenstellen von Triage-Links genutzt wird.
-- **Secrets** (über `wrangler secret put`): eine Supabase-Service-Rolle-Zugangsdaten, ein Admin-API-Key und — für den Fehlerbericht-Triage-Pfad — ein Issue-Tracker-API-Key und ein optionaler Chat-Benachrichtigungs-Webhook.
+- **Secrets** (über `wrangler secret put`): Zugangsdaten der Supabase-Service-Rolle, ein Admin-API-Key und — für den Fehlerbericht-Triage-Pfad — ein Issue-Tracker-API-Key und ein optionaler Chat-Benachrichtigungs-Webhook.
 - **Das Deploy ist manuell**: `npm run deploy` → `wrangler deploy`. Es gibt keine CI für den Worker.
 - **Cloudflare-Routing**: `lavasecurity.app` bleibt auf Pages; `api.lavasecurity.app` und `*.qa-probe.lavasecurity.app` zeigen auf diesen Worker.
 - **Kompatibilität**: `compatibility_date = "2026-05-16"`, `compatibility_flags = ["nodejs_compat"]`.

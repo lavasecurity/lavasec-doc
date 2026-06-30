@@ -7,7 +7,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 # Descripción general del sistema
 
-> **Audiencia:** ingenieros. Esto es la totalidad de Lava Security en una sola página: qué son las partes, cómo se mueven los datos entre ellas y dónde se sitúan los límites de confianza. Los documentos por componente profundizan más; este existe para que puedas tener el sistema en la cabeza antes de leerlos.
+> **Audiencia:** ingenieros. Es todo Lava Security en una sola página: qué son las partes, cómo se mueven los datos entre ellas y dónde se sitúan los límites de confianza. Los documentos por componente profundizan más; este existe para que puedas tener el sistema en la cabeza antes de leerlos.
 >
 > **Autoridad:** donde este documento y un plan no coincidan, **el código gana**. El estado refleja la realidad confirmada en el código, no la aspiración del plan. Consulta la [Leyenda de estados](#8-leyenda-de-estados) al final.
 
@@ -19,7 +19,7 @@ Lava Security es una app de iOS centrada en la privacidad que filtra DNS **local
 
 > Todo el filtrado de DNS ocurre en el dispositivo; Lava nunca enruta tu navegación a través de sus servidores y nunca recibe el flujo de dominios que visitas: el backend solo guarda metadatos del catálogo, una copia de seguridad cifrada y opaca por usuario, y diagnósticos anonimizados que tú elijas enviar.
 
-Todo lo que sigue está al servicio de mantener verdadera esa frase. La arquitectura es deliberadamente pequeña del lado del servidor: el dispositivo hace el trabajo y el backend nunca ve una consulta.
+Todo lo que sigue existe para que esa frase siga siendo cierta. La arquitectura es deliberadamente pequeña del lado del servidor: el dispositivo hace el trabajo y el backend nunca ve una consulta.
 
 ## 3. Componentes
 
@@ -65,7 +65,7 @@ Todo lo que sigue está al servicio de mantener verdadera esa frase. La arquitec
 
 ## 4. Diagrama de flujo de datos
 
-La propiedad más importante de todas: **la ruta del resolutor de DNS cifrado (lado derecho) nunca toca el backend de Lava (abajo).** El dispositivo obtiene *metadatos* del catálogo desde el Worker, pero los *bytes* de las listas y el flujo de consultas real van directamente a terceros.
+La propiedad más importante: **la ruta del resolutor de DNS cifrado (lado derecho) nunca toca el backend de Lava (abajo).** El dispositivo obtiene *metadatos* del catálogo desde el Worker, pero los *bytes* de las listas y el flujo de consultas van directamente a terceros.
 
 ```
                                   YOUR iPHONE
@@ -139,7 +139,7 @@ Cómo llegan las reglas de filtrado al dispositivo. Lava es un distribuidor de *
 
 1. El dispositivo obtiene los **metadatos** del catálogo desde el Worker: `GET https://api.lavasecurity.app/v1/catalog` → JSON servido directamente desde R2 (`catalog/latest.json`), dividido en `sources[]` + `guardrails[]`, donde cada entrada lleva `source_url` + `accepted_source_hashes`.
 2. Para cada fuente habilitada, el dispositivo descarga los **bytes de la lista directamente desde `source_url`** (el upstream: HaGeZi, OISD, Block List Project, etc.), **no** desde Lava.
-3. El dispositivo analiza localmente los bytes obtenidos bajo topes de tamaño/reglas. Las listas comunitarias se aceptan tal como se sirven sobre TLS — los `accepted_source_hashes` del catálogo son consultivos (identidad de caché + auditoría), no una puerta estricta — de modo que una lista rotada nunca se rechaza por desviarse de un hash fijado. El nivel de barrera de amenazas de Lava se mantiene con hash fijado.
+3. El dispositivo analiza localmente los bytes obtenidos bajo topes de tamaño/reglas. Las listas comunitarias se aceptan tal como se sirven sobre TLS — los `accepted_source_hashes` del catálogo son orientativos (identidad de caché + auditoría), no una puerta estricta — de modo que una lista rotada nunca se rechaza por desviarse de un hash fijado. El nivel de barrera de amenazas de Lava se mantiene con hash fijado.
 4. **`BlocklistParser`** analiza/normaliza/deduplica localmente (formatos auto / plano / hosts / adblock / dnsmasq), luego **`DomainRuleSet.lavaSecProtectedDomains`** elimina los dominios protegidos (apple.com, icloud.com, lavasecurity.com/.app, google.com, accounts.google.com, …) para que una lista del upstream nunca pueda bloquear dominios de Lava/Apple/proveedor de identidad.
 5. **`FilterSnapshotPreparationService`** fusiona la unión deduplicada y ejecuta la **aplicación autoritativa del presupuesto** (primero el tope del dispositivo, luego el nivel), y luego escribe `filter-snapshot.compact` en el App Group.
 6. `AppViewModel` envía un mensaje de provider `reload-snapshot`; el túnel recarga.
@@ -154,13 +154,13 @@ El lado del Worker refleja esto: su sincronización por admin/cron obtiene cada 
 
 ### C. Copia de seguridad (de conocimiento cero, opcional) — Implementado
 
-Opcional, condicionada a cuenta, y los únicos datos de usuario que aterrizan en el backend — como **texto cifrado opaco**.
+Opcional, requiere cuenta, y los únicos datos de usuario que llegan al backend — como **texto cifrado opaco**.
 
 1. El usuario opcionalmente inicia sesión (solo Apple o Google; **email/contraseña está Descartado**) mediante `id_token` nativo intercambiado en Supabase Auth (`grant_type=id_token`, nonce hasheado). Solo se almacena la sesión de Supabase resultante, local en el dispositivo, en el Keychain.
 2. **`BackupConfigurationPayload`** ensambla un texto plano minimizado (IDs de blocklists habilitadas, dominios permitidos/bloqueados, preferencias del resolutor, preferencias de registro local, libro mayor de LavaGuard). **Excluye** `isPaid`, QA, diagnósticos y las blocklists completas.
 3. **`ZeroKnowledgeBackupEnvelope`** lo sella con **AES-256-GCM** bajo una clave de carga útil aleatoria de 32 bytes; esa clave se envuelve en **ranuras de clave** por secreto mediante **PBKDF2-HMAC-SHA256 (210k iteraciones)** — ranura de secreto del dispositivo, ranura de recuperación asistida, ranura opcional de clave de acceso. La ranura opcional de clave de acceso se envuelve con una salida **WebAuthn PRF / `hmac-secret`** del autenticador (derivada con HKDF); esa salida nunca abandona el cliente, por lo que la ranura de clave de acceso es genuinamente de conocimiento cero — ningún valor en poder del servidor la desenvuelve (`ZeroKnowledgeBackupEnvelope.makeWithPRF`).
 4. **`BackupSyncService`** sube **solo texto cifrado + metadatos no secretos** a `user_backups` de Supabase directamente mediante PostgREST, delimitado por **RLS** por usuario. (No existe ruta de subida del Worker; el Worker toca `user_backups` solo para eliminarlo durante la eliminación de la cuenta.)
-5. **Recuperación:** restauración fluida en el mismo dispositivo mediante la ranura de secreto del dispositivo; fuera del dispositivo mediante la **frase de recuperación CVCV de 8 palabras** (~105 bits) combinada con una porción de recuperación en poder del servidor mediante SHA256 (de dos factores — ninguna mitad por sí sola descifra); o, cuando se selló una ranura de clave de acceso, mediante la salida WebAuthn PRF / `hmac-secret` del lado del cliente (sin involucrar ningún valor en poder del servidor). El servidor nunca registra claves de acceso, emite desafíos WebAuthn ni almacena ningún secreto de recuperación.
+5. **Recuperación:** restauración sin fricciones en el mismo dispositivo mediante la ranura de secreto del dispositivo; fuera del dispositivo mediante la **frase de recuperación CVCV de 8 palabras** (~105 bits) combinada con una porción de recuperación en poder del servidor mediante SHA256 (de dos factores — ninguna mitad por sí sola descifra); o, cuando se selló una ranura de clave de acceso, mediante la salida WebAuthn PRF / `hmac-secret` del lado del cliente (sin involucrar ningún valor en poder del servidor). El servidor nunca registra claves de acceso, emite desafíos WebAuthn ni almacena ningún secreto de recuperación.
 
 Consulta [Cuentas y copia de seguridad](./accounts-and-backup.md).
 
@@ -169,7 +169,7 @@ Consulta [Cuentas y copia de seguridad](./accounts-and-backup.md).
 Tres procesos (app, túnel, widget) se coordinan a través del App Group `group.com.lavasec`:
 
 - **El control = mensajes de provider de NETunnelProviderSession**, **no** notificaciones de Darwin. `AppViewModel` codifica un `LavaSecProviderMessage {kind, operationID}` y llama a `session.sendProviderMessage`; el `handleAppMessage` del túnel hace switch sobre el kind (`reload-snapshot` / `reload-protection-pause` / `reload-configuration` / `clear-*` / `flush-tunnel-health`).
-- **Los archivos compartidos** transportan reglas/config/salud (`filter-snapshot.compact`, `app-configuration.json`, `tunnel-health.json`); **los almacenes de UserDefaults compartidos** (`ProtectionSessionStore` / `ProtectionPauseStore`) transportan el estado de sesión + pausa.
+- **Los archivos compartidos** transportan reglas/config/salud (`filter-snapshot.compact`, `app-configuration.json`, `tunnel-health.json`); **los almacenes de UserDefaults compartidos** (`ProtectionSessionStore` / `ProtectionPauseStore`) transportan el estado de sesión y pausa.
 - **`LavaProtectionCommandService`** ejecuta comandos de pausa/reanudación de Live-Activity / AppIntent bajo un bloqueo de archivo `flock` con deduplicación por revisión y denegación cuando se requiere autenticación; **la reconexión lo evita** para reiniciar el túnel directamente (`startVPNTunnel`).
 - **Connect-On-Demand** se habilita solo *después* de que el túnel confirme la conexión, nunca en la instalación del perfil — de modo que un perfil de onboarding recién instalado no pueda levantar un túnel imposible de apagar.
 

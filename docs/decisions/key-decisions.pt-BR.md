@@ -30,7 +30,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Contexto.** O produto é um filtro com privacidade em primeiro lugar para usuários não técnicos (pais, idosos), distribuído pela App Store de consumo, sem necessidade de conta. Os provedores concorrentes do NetworkExtension e as APIs de DNS gerenciado são restritos a dispositivos supervisionados/gerenciados por MDM ou não cobrem todo o DNS de um aplicativo, e um modelo do lado do resolvedor encaminharia o fluxo de domínios do usuário para fora do dispositivo.
 
-**Justificativa.** O packet tunnel é o único provedor que (a) funciona para dispositivos de consumo não gerenciados e (b) permite que cada decisão de DNS aconteça no dispositivo, o que é a base da promessa de privacidade: *toda a filtragem de DNS acontece no dispositivo; a Lava nunca roteia sua navegação pelos seus servidores e nunca recebe o fluxo de domínios que você visita.* A contrapartida aceita em troca é o **teto de memória de ~50 MiB por extensão** do iOS sob o qual o tunnel deve operar — uma restrição que molda várias decisões posteriores abaixo.
+**Justificativa.** O packet tunnel é o único provedor que (a) funciona para dispositivos de consumo não gerenciados e (b) permite que cada decisão de DNS aconteça no dispositivo, o que é a base da promessa de privacidade: *toda a filtragem de DNS acontece no dispositivo; a Lava nunca roteia sua navegação pelos seus servidores e nunca recebe o fluxo de domínios que você visita.* A contrapartida aceita é o **teto de memória de ~50 MiB por extensão** do iOS sob o qual o tunnel deve operar — uma restrição que molda várias decisões posteriores abaixo.
 
 **Status.** **Adotada** (fundacional; no código desde o protótipo inicial).
 
@@ -52,9 +52,9 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Decisão.** Entregar quatro transportes upstream criptografados ao lado do DNS em texto puro e de um fallback de DNS do dispositivo, extraídos para o LavaSecCore: **DoH** (URLSession), **DoH3** (DoH preferindo HTTP/3), **DoT** (`NWConnection`s em pool, até 4/endpoint, com atualização por obsolescência de ociosidade e uma nova tentativa com conexão nova) e **DoQ** (DNS-over-QUIC). Roteamento, degradação para DNS em texto puro, failover por endpoint com uma barreira de backoff e fallback para o DNS do dispositivo ficam no `ResolverOrchestrator`.
 
-**Contexto.** Encaminhar consultas não bloqueadas em texto claro para um resolvedor vaza o exato fluxo de domínios que o modelo no dispositivo deve proteger. Os transportes foram construídos incrementalmente (DoH → DoH3 → DoT → DoQ).
+**Contexto.** Encaminhar consultas não bloqueadas em texto claro para um resolvedor vaza justamente o fluxo de domínios que o modelo no dispositivo deve proteger. Os transportes foram construídos incrementalmente (DoH → DoH3 → DoT → DoQ).
 
-**Justificativa.** O transporte upstream criptografado mantém as consultas não bloqueadas privadas de ponta a ponta. O **DoH3** é rotulado de forma puramente observacional — `assumesHTTP3Capable=true` é definido e o protocolo negociado é observado, e a interface anota `DoH3` (sem barra) **somente quando uma negociação h3 é realmente observada**, nunca prometida, porque h3 é best-effort por conexão e uma afirmação fixa exageraria o comportamento por trás de firewalls que bloqueiam UDP. O pooling de DoT com atualização de ociosidade foi uma correção direta para o Cloudflare fechar silenciosamente conexões DoT ociosas.
+**Justificativa.** O transporte upstream criptografado mantém as consultas não bloqueadas privadas de ponta a ponta. O **DoH3** é rotulado de forma puramente observacional — `assumesHTTP3Capable=true` é definido e o protocolo negociado é observado, e a interface anota `DoH3` (sem barra) **somente quando uma negociação h3 é realmente observada**, nunca prometida, porque h3 é best-effort por conexão e uma afirmação fixa exageraria o comportamento atrás de firewalls que bloqueiam UDP. O pooling de DoT com atualização de ociosidade foi uma correção direta para o Cloudflare fechar silenciosamente conexões DoT ociosas.
 
 **Status.** **Adotada** (todos os quatro transportes presentes e conectados).
 
@@ -66,7 +66,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Contexto.** A RFC 9250 mapeia cada consulta DNS para seu próprio stream QUIC, então o reuso verdadeiro precisa da API multi-stream `NWConnectionGroup`/`openStream`, que é **apenas iOS 26.0+**, enquanto o piso de implantação é o iOS 17. Um caminho de reuso restrito ao iOS 26 foi, ainda assim, implementado (compilado em Debug+Release contra o SDK do Xcode 26) e **testado em dispositivo no iOS 26.5** contra o DoQ da AdGuard.
 
-**Justificativa.** O caminho de reuso falhou em todas as tentativas no dispositivo (`openStream`/`receive` deram erro, depois o fallback atingiu "Socket is not connected"), medindo **líquido pior** que a baseline por consulta (controle: 34 handshakes / 35 consultas, todas bem-sucedidas). Isso confirmou empiricamente a orientação da Apple DTS de "segurar o QUIC com o novo Network framework", então o trabalho foi revertido em vez de entregue; apenas os docs e a justificativa do teste de barreira retêm o achado para que não seja tentado novamente antes de a API amadurecer.
+**Justificativa.** O caminho de reuso falhou em todas as tentativas no dispositivo (`openStream`/`receive` deram erro, depois o fallback atingiu "Socket is not connected"), medindo **líquido pior** que a baseline por consulta (controle: 34 handshakes / 35 consultas, todas bem-sucedidas). Isso confirmou empiricamente a orientação da Apple DTS de "adiar o QUIC com o novo Network framework", então o trabalho foi revertido em vez de entregue; apenas os docs e a justificativa do teste de barreira retêm o achado para que não seja tentado novamente antes de a API amadurecer.
 
 **Status.** **Revertida** (adiada até o piso de implantação alcançar o iOS 26). Descreva DoQ como conexões novas por consulta.
 
@@ -78,7 +78,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Contexto.** Uma refatoração (issue 407) propôs um protocolo único sobre todos os transportes.
 
-**Justificativa.** Os transportes são dissimilares demais — executores criptografados assíncronos (DoH/DoT/DoQ) versus transportes síncronos multi-endereço em texto puro/do dispositivo — então um protocolo unificador seria uma abstração pior do que o seam injetável de closures existente, que já mantém a execução de fio testável.
+**Justificativa.** Os transportes são dissimilares demais — executores criptografados assíncronos (DoH/DoT/DoQ) versus transportes síncronos multi-endereço em texto puro/do dispositivo — então um protocolo unificador seria uma abstração pior do que o seam injetável de closures existente, que já mantém a execução do protocolo testável.
 
 **Status.** **Revertida** / não será implementada (encerrada como uma abstração ruim).
 
@@ -90,7 +90,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Contexto.** O login de conta opcional (somente Apple + Google) habilita a restauração de configurações entre dispositivos. O servidor nunca deve conseguir ler as blocklists, allowlists, escolha de resolvedor ou outras configurações de um usuário.
 
-**Justificativa.** O texto plano e os segredos de descriptografia existem apenas no dispositivo; o servidor mantém um envelope opaco por usuário. A recuperação assistida é deliberadamente de dois fatores — `SHA256("LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase)` (entrada delimitada por NUL) requer **ambos** o share mantido pelo servidor e a frase de recuperação de 8 palavras do usuário (~105 bits), de modo que nenhuma metade sozinha descriptografa. O material de desbloqueio é armazenado localmente no dispositivo (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **não** no iCloud Keychain sincronizável — um endurecimento de privacidade que reverteu o design sincronizável do plano original. O **slot de passkey também é genuinamente de conhecimento zero**: ele é envolvido com uma saída de autenticador WebAuthn **PRF / `hmac-secret`** (derivada por HKDF-SHA256) que nunca deixa o cliente, de modo que nenhum valor mantido pelo servidor pode desfazer o envoltório. Não há tabela de passkey com service-role e nenhuma barreira de WebAuthn-assertion no Worker — o design anterior de passkey com barreira no servidor foi abandonado, removendo todo o estado de passkey do lado do servidor (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`).
+**Justificativa.** O texto plano e os segredos de descriptografia existem apenas no dispositivo; o servidor mantém um envelope opaco por usuário. A recuperação assistida é deliberadamente de dois fatores — `SHA256("LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase)` (entrada delimitada por NUL) requer **ambos** o share mantido pelo servidor e a frase de recuperação de 8 palavras do usuário (~105 bits), de modo que nenhuma metade sozinha descriptografa. O material de desbloqueio é armazenado localmente no dispositivo (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **não** no iCloud Keychain sincronizável — um endurecimento de privacidade que reverteu o design sincronizável do plano original. O **slot de passkey também é genuinamente de conhecimento zero**: ele é envolvido com uma saída de autenticador WebAuthn **PRF / `hmac-secret`** (derivada por HKDF-SHA256) que nunca deixa o cliente, de modo que nenhum valor mantido pelo servidor pode desfazê-lo. Não há tabela de passkey com service-role e nenhuma barreira de WebAuthn-assertion no Worker — o design anterior de passkey com barreira no servidor foi abandonado, removendo todo o estado de passkey do lado do servidor (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`).
 
 **Status.** **Adotada** (modelo sem senha, recuperação assistida e um slot de passkey de conhecimento zero derivado de PRF, tudo no código). Tornar a passkey um fator recuperável totalmente pronto para produção em dispositivos físicos (Associated Domains / hospedagem AASA para o modelo PRF) é **Proposta** (backlog).
 
@@ -126,7 +126,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 **Contexto.** O limite antigo era uma **contagem** de listas (free 3 / pago 10). Uma lista pode conter 1K ou 1M de regras, então a contagem era um proxy desonesto para o recurso realmente restrito — o teto de memória de 50 MiB do NE.
 
-**Justificativa.** As regras mapeiam para memória real, então qualquer combinação de listas que caiba é permitida. A imposição autoritativa roda em tempo de compilação sobre a união deduplicada em `FilterSnapshotPreparationService` (barreira de dispositivo primeiro, depois o limite do tier); o medidor de interface em tempo de seleção usa uma soma por lista com uma margem de teto suave de 1.10. Configs acima do orçamento são rejeitadas deterministicamente (mantendo a proteção desligada) em vez de deixar o tunnel sofrer jetsam.
+**Justificativa.** As regras mapeiam para memória real, então qualquer combinação de listas que caiba é permitida. A imposição definitiva roda em tempo de compilação sobre a união deduplicada em `FilterSnapshotPreparationService` (barreira de dispositivo primeiro, depois o limite do tier); o medidor de interface em tempo de seleção usa uma soma por lista com uma margem de teto suave de 1.10. Configs acima do orçamento são rejeitadas deterministicamente (mantendo a proteção desligada) em vez de deixar o tunnel sofrer jetsam.
 
 **Status.** **Adotada** no código (`SubscriptionPolicy.swift`), entregue na **v1.0.0**, que **Substituiu** o limite de contagem de listas. O orçamento de regras é agora a barreira de tier ativa; os limites por domínio também foram elevados na 1.0 (Free 25 / Plus 1.000 domínios permitidos e bloqueados). Veja [`../product/features.md`](../product/features.md).
 
@@ -158,7 +158,7 @@ Leitura relacionada: modelo de distribuição do catálogo em [`../legal/gpl-sou
 
 ## Apêndice — outras reversões e rejeições registradas
 
-Estas são menores, mas foram decisões genuínas com uma virada registrada; listadas para completude.
+Estas são decisões menores, mas cada uma teve uma virada registrada.
 
 | Decisão | Justificativa | Status |
 |---|---|---|
@@ -166,6 +166,6 @@ Estas são menores, mas foram decisões genuínas com uma virada registrada; lis
 | Login por e-mail/senha | Ser dono de senhas adiciona o ônus de reset/MFA/bloqueio/vazamento/sequestro enquanto Apple + Google bastam; recuperação que contorne quebraria o conhecimento zero | **Revertida** / nunca entregue (somente Apple + Google) |
 | Allowed Exceptions Guardrails (LAV-5) | A precedência de barreiras foi entregue via a reformulação mais simples de edição de filter-list; o pagamento nunca deve contornar a barreira de ameaça de alta confiança | **Revertida** (lane `dropped/` criada) |
 | Lockdown de promoção de branch do TestFlight | Lockdown inicial reconsiderado; substituído por um lockdown de runner planejado para após o open-source | **Revertida**, substituída por um plano de backlog |
-| Canal de controle app↔extensão | `sendProviderMessage` (`NETunnelProviderSession`) é o **único caminho de controle app→tunnel** — ele carrega o estado tipado e versionado e dirige autoritativamente o run loop da extensão. O observador `CFNotificationCenter` do lado da extensão anterior nunca disparava de forma confiável no dispositivo e foi **removido** (afirmado ausente por testes de introspecção de fonte). As notificações Darwin sobrevivem apenas na direção **tunnel→app**, como um cutucão de health-changed. | **Adotada** (provider-message é o único controle app→tunnel; Darwin é apenas health tunnel→app) |
+| Canal de controle app↔extensão | `sendProviderMessage` (`NETunnelProviderSession`) é o **único caminho de controle app→tunnel** — ele carrega o estado tipado e versionado e dirige autoritativamente o run loop da extensão. O observador `CFNotificationCenter` do lado da extensão anterior nunca disparava de forma confiável no dispositivo e foi **removido** (afirmado ausente por testes de introspecção de fonte). As notificações Darwin sobrevivem apenas na direção **tunnel→app**, como um aviso de health-changed. | **Adotada** (provider-message é o único controle app→tunnel; Darwin é apenas health tunnel→app) |
 
 > Invariante de segurança transversal referenciada ao longo do documento: o pagamento nunca contorna a **barreira de ameaça** não permissível e validada por hash. A precedência de decisão é **barreira de ameaça > allowlist local (exceções permitidas) > blocklist > permitir por padrão.**

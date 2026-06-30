@@ -10,7 +10,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 > **Público-alvo:** design + engenharia trabalhando no aplicativo iOS da Lava Security.
 > **Autoridade:** Onde este documento e um plano divergirem, **o código prevalece** — as divergências são apontadas no texto. O status reflete a realidade confirmada no código, não a aspiração do plano. Legenda de status: **Implementado** (entregue e confirmado no código), **Em andamento** (parcialmente concluído), **Planejado** (projetado, não construído), **Descartado** (rejeitado ou revertido).
 
-Este documento cobre a filosofia de design, o vocabulário de profundidade LavaTier, o mascote Guardian, as convenções de texto e nomenclatura, a UX de onboarding e a internacionalização. Para o encanamento arquitetural por trás dessas superfícies (targets, ciclo de vida da VPN, a fiação do modelo de estado Guardian/proteção), veja [o cliente iOS](../architecture/ios-client.md); para o enquadramento do produto, veja [a visão geral do produto](../product/overview.md).
+Este documento cobre a filosofia de design, o vocabulário de profundidade LavaTier, o mascote Guardian, as convenções de texto e nomenclatura, a UX de onboarding e a internacionalização. Para a infraestrutura arquitetural por trás dessas superfícies (targets, ciclo de vida da VPN, a fiação do modelo de estado Guardian/proteção), veja [o cliente iOS](../architecture/ios-client.md); para o enquadramento do produto, veja [a visão geral do produto](../product/overview.md).
 
 ---
 
@@ -40,13 +40,13 @@ O design system é uma camada SwiftUI real e tokenizada, ao lado do vocabulário
 
 A lacuna residual restante é o punhado de pontos de chamada `.red` puro ainda não migrados para `LavaStyle.dangerRed` (veja §1).
 
-> **Rotatividade de componentes (v1.0).** `LavaTabOverviewCard` foi removido; os blocos de cabeçalho de Filtro e Atividade agora compartilham `LavaInfoCard` + `LavaOverviewMetricBlock` para que se alinhem em tamanho e posição. Novos componentes compartilhados chegaram junto com a redesenhação de Filtro/Atividade: `FiltersFlowDiagram` (o diagrama "Telefone → Lava → Internet"), `ActivityFlowBar` / `ActivityFlowStatRow` (o resumo de fluxo de requisições), `NetworkActivityPrivacyInfoPanel` e `LavaGuardLookPickerSheet` (o seletor de Guard em bottom-sheet). Os fluxos de importar/compartilhar substituíram seu cabeçalho personalizado no conteúdo por um `importFlowToolbar` nativo.
+> **Rotatividade de componentes (v1.0).** `LavaTabOverviewCard` foi removido; os blocos de cabeçalho de Filtro e Atividade agora compartilham `LavaInfoCard` + `LavaOverviewMetricBlock` para que se alinhem em tamanho e posição. Novos componentes compartilhados chegaram junto com o redesenho de Filtro/Atividade: `FiltersFlowDiagram` (o diagrama "Telefone → Lava → Internet"), `ActivityFlowBar` / `ActivityFlowStatRow` (o resumo de fluxo de requisições), `NetworkActivityPrivacyInfoPanel` e `LavaGuardLookPickerSheet` (o seletor de Guard em bottom-sheet). Os fluxos de importar/compartilhar substituíram seu cabeçalho personalizado no conteúdo por um `importFlowToolbar` nativo.
 
 ---
 
 ## 2. LavaTier — Floor / Window / Workshop **(Implementado)**
 
-`LavaTier` é o vocabulário de profundidade leve que codifica "núcleo calmo, profundidade conquistada" diretamente na camada de tokens. É um vocabulário mais alguns padrões de tokens — não um re-tema completo — e é entregue como um enum em lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, conectado a superfícies representativas em vez de readaptar cada view.
+`LavaTier` é o vocabulário de profundidade leve que codifica "núcleo calmo, profundidade conquistada" diretamente na camada de tokens. É um vocabulário mais alguns padrões de tokens — não um re-tema completo — e é entregue como um enum em lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, conectado a superfícies representativas, e não a todas as views.
 
 | Tier | Profundidade | Significado |
 |---|---|---|
@@ -84,7 +84,7 @@ Restrições do grafo que vale conhecer: a única saída de `sleeping` é `wakin
 
 > **`retrying` vs `concerned` — a distinção de tom mais importante.** Ambos sinalizam "não perfeitamente saudável", mas se leem de forma muito diferente e não devem ser confundidos:
 > - **`retrying`** é o rosto *despreocupado e autocurativo*: pálpebras relaxadas (~0,80), olhos nivelados, boca reta e **sem inclinação de preocupação**. O movimento é carregado pelo **selo de status, não pelo rosto** — a autorrecuperação transitória nunca deve alarmar. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
-> - **`concerned`** é uma preocupação *gentil, que pede ajuda*: sobrancelhas internas erguidas (`concernAmount` 1, `mouthCurve` -0.22) lendo-se como "eu poderia usar uma mãozinha", **nunca um olhar severo**. Problemas genuínos devem convidar à ajuda, não repreender. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
+> - **`concerned`** é uma preocupação *gentil, que pede ajuda*: sobrancelhas internas erguidas (`concernAmount` 1, `mouthCurve` -0.22) que se lê como "eu bem que aceitaria uma ajudinha", **nunca um olhar severo**. Problemas genuínos devem convidar à ajuda, não repreender. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
 
 ### 3.2 Mapeamento conectividade → expressão (6 → 4)
 

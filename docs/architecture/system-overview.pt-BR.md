@@ -19,7 +19,7 @@ Lava Security é um aplicativo iOS com foco em privacidade que filtra DNS **loca
 
 > Toda a filtragem de DNS acontece no dispositivo; o Lava nunca roteia sua navegação através de seus servidores e nunca recebe o fluxo de domínios que você visita — o backend guarda apenas metadados do catálogo, um backup criptografado opaco por usuário e diagnósticos anonimizados que você escolhe enviar.
 
-Tudo abaixo está a serviço de manter essa frase verdadeira. A arquitetura é deliberadamente pequena no lado do servidor: o dispositivo faz o trabalho, e o backend nunca vê uma consulta.
+Tudo abaixo serve para manter essa frase verdadeira. A arquitetura é deliberadamente pequena no lado do servidor: o dispositivo faz o trabalho, e o backend nunca vê uma consulta.
 
 ## 3. Componentes
 
@@ -125,13 +125,13 @@ A propriedade mais importante de todas: **o caminho do resolvedor de DNS criptog
 Este é o caminho quente e o núcleo de privacidade. Ele roda inteiramente dentro do `LavaSecTunnel`; nada aqui chega aos servidores do Lava.
 
 1. O túnel de pacotes intercepta uma consulta de DNS (servidor de DNS do túnel `10.255.0.1`).
-2. O **`DNSQueryDispatcher`** aplica a precedência de consulta: **bootstrap > pause > filter**. Bootstrap-em-primeiro é uma invariante rígida — o próprio hostname do resolvedor é resolvido antes de qualquer filtragem, para que o resolvedor jamais possa bloquear a si mesmo.
+2. O **`DNSQueryDispatcher`** aplica a precedência de consulta: **bootstrap > pause > filter**. O bootstrap em primeiro lugar é uma invariante rígida — o próprio hostname do resolvedor é resolvido antes de qualquer filtragem, para que o resolvedor jamais possa bloquear a si mesmo.
 3. Se não for bootstrap e não estiver pausado, o domínio é avaliado contra o **`CompactFilterSnapshot`** (carregado do App Group via mmap zero-copy `Data(contentsOf:options:[.mappedIfSafe])`). A precedência de decisão é **barreira de ameaças > lista de permissões local (exceções permitidas) > blocklist > permitir-por-padrão**; domínios inválidos são bloqueados.
 4. **Bloqueado** → o túnel responde localmente (sem contato com o upstream). **Permitido** → a consulta é entregue ao **`ResolverOrchestrator`**.
 5. O `ResolverOrchestrator` roteia para o transporte configurado — **`DoH3` / `DoT` / `DoQ` / DNS simples (`IP`)** — com failover por endpoint atrás de um portão de backoff, degradação para DNS simples quando um plano criptografado não tem endpoints, e **fallback para DNS do dispositivo** quando o primário não retorna resposta e o plano permite.
 6. A resposta do resolvedor é devolvida ao SO. O fluxo de consultas do usuário vai apenas para o **resolvedor público escolhido pelo usuário**, nunca para o Lava.
 
-Notas de transporte (convenções literais): `DoH3` (sem barra) é anotado **somente quando uma negociação h3 é de fato observada** — preferido, nunca prometido. O **`DoT`** mantém um pool de até 4 NWConnections por endpoint com atualização por obsolescência de inatividade + uma tentativa de reconexão fresca. O **`DoQ`** abre uma **conexão QUIC fresca por consulta** (sem reutilização); o pool de 4 vias dá concorrência, não reutilização de handshake — a reutilização de conexão foi construída, testada em dispositivo e **revertida** (adiada até o piso de implantação iOS-26). Veja [Filtragem de DNS & Blocklists](./dns-filtering-and-blocklists.md).
+Notas de transporte (convenções literais): `DoH3` (sem barra) é anotado **somente quando uma negociação h3 é de fato observada** — preferido, nunca prometido. O **`DoT`** mantém um pool de até 4 NWConnections por endpoint com atualização por inatividade obsoleta + uma tentativa com conexão nova. O **`DoQ`** abre uma **conexão QUIC nova por consulta** (sem reutilização); o pool de 4 vias dá concorrência, não reutilização de handshake — a reutilização de conexão foi construída, testada em dispositivo e **revertida** (adiada até o piso de implantação iOS-26). Veja [Filtragem de DNS & Blocklists](./dns-filtering-and-blocklists.md).
 
 ### B. Busca de catálogo + carregamento de blocklist (source-url-only) — Implementado
 
@@ -148,13 +148,13 @@ O lado do Worker espelha isso: sua sincronização por admin/cron busca cada ups
 
 **Modelo de orçamento (duas camadas):**
 - **Barreira do dispositivo (todos, nunca um paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3.262.236 regras** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — um alvo de 32 MB sob o teto de ~50 MiB da NE. Configurações acima do orçamento são rejeitadas deterministicamente em vez de deixar o túnel ser eliminado por jetsam.
-- **Teto de tier (`FeatureLimits`):** **Free 500K regras / Plus 2M regras**, que se liga abaixo da barreira do dispositivo. Isso substituiu o antigo limite de **contagem** de listas habilitadas (free 3 / paid 10) — limites de contagem de listas estão obsoletos.
+- **Teto de tier (`FeatureLimits`):** **Free 500K regras / Plus 2M regras**, que prevalece abaixo da barreira do dispositivo. Isso substituiu o antigo limite de **contagem** de listas habilitadas (free 3 / paid 10) — limites de contagem de listas estão obsoletos.
 
 > **Fonte da verdade do habilitado-por-padrão:** o padrão gratuito enviado é o **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). Ele é derivado no dispositivo a partir da flag `defaultEnabled` de cada fonte curada (`BlocklistSource.recommendedDefaultSourceIDs`), que espelha a coluna `default_enabled` do catálogo do backend, gerada a partir da mesma especificação canônica de catálogo.
 
 ### C. Backup (conhecimento zero, opt-in) — Implementado
 
-Opcional, restrito a conta, e os únicos dados de usuário que aterrissam no backend — como **texto cifrado opaco**.
+Opcional, restrito a conta, e os únicos dados de usuário que chegam ao backend — como **texto cifrado opaco**.
 
 1. O usuário opcionalmente faz login (apenas Apple ou Google; **e-mail/senha foi Descartado**) via `id_token` nativo trocado no Supabase Auth (`grant_type=id_token`, nonce com hash). Apenas a sessão Supabase resultante é armazenada, local no dispositivo, no Keychain.
 2. O **`BackupConfigurationPayload`** monta um texto-claro minimizado (IDs de blocklist habilitadas, domínios permitidos/bloqueados, preferências de resolvedor, preferências de log local, ledger do LavaGuard). Ele **exclui** `isPaid`, QA, diagnósticos e blocklists completas.
@@ -218,6 +218,6 @@ Este conjunto de documentos usa um único vocabulário de status. A **pasta da r
 **Status das coisas mencionadas nesta página:**
 
 - **Implementado:** os quatro alvos iOS + App Group; plano de controle por mensagens de provider; filtragem de DNS no dispositivo com transportes DoH3/DoT/DoQ/IP; busca de catálogo source-url-only + parse local; orçamento de regras de filtro (Free 500K / Plus 2M) + barreira do dispositivo de ~3,26M; onboarding de múltiplas páginas; segurança por código de acesso/biometria; Live Activity única deduplicada; backup de conhecimento zero; auth Apple + Google; exclusão de conta; espelhamento de direitos; sondas de QA; a camada de tokens `LavaDesignSystem` (`LavaTokens`/`LavaComponents`/`LavaConfirmationDialog`/`LavaIcon`/`LavaScaffold`), incluindo o modelo de profundidade `LavaTier` (Floor/Window/Workshop = `calm`/`celebratory`/`technical`), os modificadores `.lavaTier(_:)` / `.lavaTierMetadata()` conectados a superfícies representativas (ex.: `SettingsView`), e os tokens `dangerRed` e `LavaSpacing` — travados por `Tests/LavaSecCoreTests/LavaDesignTokensSourceTests.swift`.
-- **Em progresso:** continuação do lançamento da camada de tokens do design-system para mais superfícies (o modelo de profundidade `LavaTier` e a camada de tokens são enviados — veja abaixo — mas um `LavaColorRole` dedicado ainda não está presente, então os acentos ainda resolvem para cores cruas).
-- **Planejado:** o mini-jogo easter-egg do Lava Guard; expressões extras do mascote (o mascote tem exatamente **7** estados); recuperação por passkey totalmente pronta para produção em dispositivos físicos (Associated Domains / AASA); reverificação JWS da App Store no lado do servidor (`verification_status` é `client_verified_storekit`); um token `LavaColorRole` dedicado para que os acentos do design-system resolvam através de um papel semântico em vez de cores cruas.
+- **Em progresso:** continuação do lançamento da camada de tokens do design-system para mais superfícies (o modelo de profundidade `LavaTier` e a camada de tokens são enviados — veja abaixo — mas um `LavaColorRole` dedicado ainda não está presente, então os acentos ainda resolvem para cores brutas).
+- **Planejado:** o mini-jogo easter-egg do Lava Guard; expressões extras do mascote (o mascote tem exatamente **7** estados); recuperação por passkey totalmente pronta para produção em dispositivos físicos (Associated Domains / AASA); reverificação JWS da App Store no lado do servidor (`verification_status` é `client_verified_storekit`); um token `LavaColorRole` dedicado para que os acentos do design-system resolvam através de um papel semântico em vez de cores brutas.
 - **Descartado:** reutilização de conexão DoQ (conexões frescas por consulta); login por e-mail/senha (apenas Apple + Google); o design de espelho GPL raw-R2 (substituído por source-url-only).

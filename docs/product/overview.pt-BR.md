@@ -7,23 +7,23 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 # Visão geral do produto
 
-Bem-vindo ao Lava Security. Esta página é a porta de entrada do conjunto de documentação: uma introdução curta e simples sobre o que é o Lava, o que ele promete e onde ler mais.
+Bem-vindo ao Lava Security. Esta página apresenta o que é o Lava, o que ele promete e onde ler mais.
 
 ## O que é o Lava
 
 O Lava Security é um app iOS com prioridade na privacidade que filtra DNS localmente no dispositivo por meio de um [túnel de pacotes NetworkExtension no dispositivo](../architecture/ios-client.md), bloqueando domínios conhecidos como arriscados e indesejados sem rotear sua navegação pelos servidores do Lava. O túnel de pacotes (`LavaSecTunnel`, um `NEPacketTunnelProvider`) analisa cada consulta DNS no telefone, verifica o domínio solicitado contra um snapshot de filtro compilado e mapeado em memória, e encaminha somente as consultas permitidas para o upstream. Não há nenhum proxy operado pelo Lava pelo qual seu tráfego passe: a filtragem é uma decisão local, tomada no seu dispositivo.
 
-O iOS rotula isso como uma "VPN" porque um túnel de pacotes é a única forma de um app filtrar DNS em todo o sistema — mas o Lava é **filtragem de DNS/blocklist**, não roteamento de tráfego. Seja honesto quanto ao escopo: o Lava é filtragem local de domínios DNS, **não** uma garantia de que todo domínio ou URL malicioso seja bloqueado. Ele enxerga domínios, não caminhos de página, então não consegue bloquear uma página ruim em um host de outra forma confiável. A proteção também não é ativada automaticamente no momento em que o onboarding termina — a aba **Guard** no app é a fonte autoritativa sobre se a proteção está atualmente ativa.
+O iOS rotula isso como uma "VPN" porque um túnel de pacotes é a única forma de um app filtrar DNS em todo o sistema — mas o Lava é **filtragem de DNS/blocklist**, não roteamento de tráfego. Seja honesto quanto ao escopo: o Lava é filtragem local de domínios DNS, **não** uma garantia de que todo domínio ou URL malicioso seja bloqueado. Ele enxerga domínios, não caminhos de página, então não consegue bloquear uma página maliciosa em um host que, no resto, é confiável. A proteção também não é ativada automaticamente no momento em que o onboarding termina — a aba **Guard** no app é a fonte autoritativa sobre se a proteção está atualmente ativa.
 
 ## A promessa de privacidade
 
 > Toda a filtragem de DNS acontece no dispositivo; o Lava nunca roteia sua navegação pelos servidores do Lava e nunca recebe o fluxo de domínios que você visita — o backend guarda apenas metadados de catálogo, um backup criptografado opaco por usuário e diagnósticos anonimizados que você opta por enviar.
 
-Esta frase é canônica. Todo o restante destes documentos deve ser consistente com ela. Pagar pelo tier opcional **não** move a filtragem para o servidor nem dá ao Lava um fluxo dos domínios visitados. Quando um recurso toca um servidor, os documentos detalham o que **não** é enviado — suas consultas DNS rotineiras, seu histórico de navegação e qualquer texto em claro permanecem todos no dispositivo. Veja [o backend e o modelo de dados](../architecture/backend-and-data.md) para o panorama completo.
+Esta frase é canônica; todo o restante destes documentos é consistente com ela. Pagar pelo tier opcional **não** move a filtragem para o servidor nem dá ao Lava um fluxo dos domínios visitados. Quando um recurso toca um servidor, os documentos detalham o que **não** é enviado — suas consultas DNS rotineiras, seu histórico de navegação e qualquer texto em claro permanecem todos no dispositivo. Veja [o backend e o modelo de dados](../architecture/backend-and-data.md) para o panorama completo.
 
 ## Para quem é
 
-O Lava é feito para qualquer pessoa que queira uma navegação mais segura sem ter que gerenciá-la. O público inclui deliberadamente usuários não técnicos — pais configurando proteção para a família, pessoas mais velhas e qualquer um que não queira pensar em DNS de jeito nenhum. A experiência padrão simplesmente funciona: ative a proteção e uma blocklist conservadora começa a filtrar, sem necessidade de conta. Ao mesmo tempo, usuários avançados podem acessar controles mais profundos (blocklists personalizadas, resolvedores alternativos) quando os quiserem.
+O Lava é feito para qualquer pessoa que queira uma navegação mais segura sem ter que gerenciá-la. O público inclui usuários não técnicos — pais configurando proteção para a família, pessoas mais velhas e qualquer um que não queira pensar em DNS de jeito nenhum. A experiência padrão simplesmente funciona: ative a proteção e uma blocklist conservadora começa a filtrar, sem necessidade de conta. Ao mesmo tempo, usuários avançados podem acessar controles mais profundos (blocklists personalizadas, resolvedores alternativos) quando os quiserem.
 
 A voz em todo o app é simples, calma e prática — o perigo é apresentado como metáfora, não como medo.
 

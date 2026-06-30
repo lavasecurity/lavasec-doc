@@ -28,7 +28,7 @@ ideias de funcionalidades, abra uma issue em
 ## Algo errado nesta documentação?
 
 Toda página tem um aviso **"Esta página foi útil?"** no rodapé — escolher
-*"Poderia ser melhor"* abre uma issue pré-preenchida em
+*"Poderia ser melhor"* abre uma issue pré-preenchida no repositório
 [**lavasecurity/lavasec-doc**](https://github.com/lavasecurity/lavasec-doc/issues).
 Correções e pull requests são bem-vindos.
 

@@ -68,7 +68,7 @@ exposé via une `EnvironmentKey` plus un modificateur `.lavaTier(_:)` et un modi
 
 ## 3. La mascotte Lava, le Soft Shield Guardian **(Implémenté)** {#3-the-soft-shield-guardian-mascot-implemented}
 
-Le **Soft Shield Guardian** est la mascotte de Lava — un bouclier arrondi avec un visage simple qui se déforme — qui exprime visuellement l'état de protection sur l'onglet Protection, la Live Activity, la Dynamic Island et l'onboarding. C'est le porteur le plus visible du ton calme.
+Le **Soft Shield Guardian** est la mascotte de Lava — un bouclier arrondi avec un visage simple qui se déforme — qui exprime visuellement l'état de protection sur l'onglet Garde, la Live Activity, la Dynamic Island et l'onboarding. C'est le porteur le plus visible du ton calme.
 
 Le graphe d'états est indépendant de la plateforme, il vit dans `LavaSecCore` (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift) ; le moteur de rendu SwiftUI est lavasec-ios: Shared/SoftShieldGuardian.swift.
 
@@ -180,7 +180,7 @@ Les décisions de design intégrées au flux :
 
 Les réglages par défaut que le flux installe au premier lancement : résolveur **Device DNS** (`DNSResolverPreset.device`), **repli sur le DNS de l'appareil ACTIVÉ**, journalisation activée (compteurs + historique + activité), et « Continuer sans compte ».
 
-> **Divergence sur la liste de blocage par défaut (le code gagne).** La copie du plan d'onboarding indique HaGeZi Multi Light comme liste de blocage par défaut, mais le défaut du code livré est **Block List Project Phishing + Scam** (`AppConfiguration.lavaRecommendedDefaults`, défini dans lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La vraie barrière de niveau, c'est le **quota de règles de filtrage (Gratuit 500K / Plus 2M)**, *pas* un nombre de listes. Suivi en interne. Pour le modèle de niveaux et la config par défaut recommandée, voir [le catalogue de fonctionnalités](../product/features.md).
+> **Liste de blocage par défaut : source de vérité.** Le défaut du code livré est **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, défini dans lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La vraie barrière de niveau, c'est le **quota de règles de filtrage (Gratuit 500K / Plus 2M)**, *pas* un nombre de listes. Pour le modèle de niveaux et la config par défaut recommandée, voir [le catalogue de fonctionnalités](../product/features.md).
 
 ---
 

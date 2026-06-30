@@ -50,9 +50,9 @@ threat guardrail  >  local allowlist (allowed exceptions)  >  blocklist  >  defa
 | 3 | `blockRules` | block | `.blocklist` |
 | 4 | — | allow | `.defaultAllow` |
 
-Un dominio che fallisce la normalizzazione viene bloccato con motivazione `.invalidDomain` (fail-safe). La stessa precedenza è rispecchiata nella forma binaria su disco (`CompactFilterSnapshot`). Il threat guardrail sta sopra l'allowlist locale per progettazione: **il pagamento non aggira mai il threat guardrail non aggirabile**, e un'eccezione utente non può sbloccare un dominio del guardrail.
+Un dominio che fallisce la normalizzazione viene bloccato con motivazione `.invalidDomain` (fail-safe). La stessa precedenza è rispecchiata nella forma binaria su disco (`CompactFilterSnapshot`). Il threat guardrail sta sopra l'allowlist locale per progettazione: **il pagamento non aggira mai il threat guardrail non-aggirabile**, e un'eccezione utente non può sbloccare un dominio del guardrail.
 
-> Nota: nel working tree attuale `nonAllowableThreatRules` / `guardrailSources` sono vuoti (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`); lo slot di precedenza è collegato e applicato ma viene distribuito ancora senza voci nel guardrail.
+> Nota: nel working tree attuale `nonAllowableThreatRules` / `guardrailSources` sono vuoti (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`); lo slot di precedenza è collegato e applicato ma viene comunque distribuito ancora senza voci nel guardrail.
 
 ### 2.2 Archiviazione delle regole e l'unità di memoria residente
 
@@ -87,7 +87,7 @@ I preset integrati sono Google, Cloudflare, Quad9, Mullvad (ciascuno nelle varia
 
 `DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) esegue DoH su `URLSession`. Ogni richiesta opta per HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`); il loader di Apple ricade nativamente su H2/H1, quindi questo non rende mai irraggiungibile un resolver raggiungibile. Il protocollo negoziato viene letto da `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
 
-La UI annota **`DoH3` (senza slash)** — es. "Quad9 (DoH3)" — **solo quando una negoziazione h3 viene effettivamente osservata** (`DoHHTTPVersion.dohAnnotation`); altrimenti mostra `DoH`. DoH3 è preferito, mai promesso: l'etichetta è osservazionale e con ambito al resolver, mai persistita (il riporto di "DoH3 confermato" tra i riavvii è stato annullato). Le richieste fanno POST di `application/dns-message`; le risposte vengono validate per content-type e lunghezza e l'ID di transazione viene ripristinato prima della riscrittura.
+La UI mostra l'annotazione **`DoH3` (senza slash)** — es. "Quad9 (DoH3)" — **solo quando una negoziazione h3 viene effettivamente osservata** (`DoHHTTPVersion.dohAnnotation`); altrimenti mostra `DoH`. DoH3 è preferito, mai promesso: l'etichetta è osservazionale e con ambito al resolver, mai persistita (il riporto di "DoH3 confermato" tra i riavvii è stato annullato). Le richieste fanno POST di `application/dns-message`; le risposte vengono validate per content-type e lunghezza e l'ID di transazione viene ripristinato prima della riscrittura.
 
 ### 3.3 DoT
 
@@ -106,7 +106,7 @@ La UI annota **`DoH3` (senza slash)** — es. "Quad9 (DoH3)" — **solo quando u
 1. **Routing del trasporto** in base al trasporto configurato.
 2. **Degradazione a plain DNS** quando un piano cifrato non ha endpoint.
 3. **Failover per endpoint** con un gate di backoff — un endpoint in backoff non tocca mai la rete (esito `backed-off`).
-4. **Fallback a Device-DNS** quando il primario non restituisce risposta *e* il piano lo consente (la proprietà del piano è `shouldFallbackToDeviceDNS`, derivata dal campo di configurazione `fallbackToDeviceDNS`); il risultato viene ri-annotato come trasporto del dispositivo. L'esecuzione sulla rete è iniettata dietro executor così che la policy sia testabile in unità; lo stato di backoff resta fuori dalla policy pura.
+4. **Fallback a Device-DNS** quando il primario non restituisce risposta *e* il piano lo consente (la proprietà del piano è `shouldFallbackToDeviceDNS`, derivata dal campo di configurazione `fallbackToDeviceDNS`); il risultato viene ri-annotato come trasporto del dispositivo. L'esecuzione sulla rete è iniettata dietro executor in modo che la policy sia testabile a livello di unità; lo stato di backoff resta fuori dalla policy pura.
 
 ---
 
@@ -135,7 +135,7 @@ Il packet tunnel è soggetto alla **soglia di memoria di ~50 MiB per estensione*
 |---|---|
 | `baselineMegabytes` | 4.0 MB (overhead di processo fisso, misurato ≈3.5 MB, arrotondato per eccesso) |
 | `estimatedBytesPerRule` | 9.0 B dirty resident per regola (misurato ≈8.5 B, arrotondato per eccesso) |
-| `maxResidentMegabytes` | 32.0 MB (soglia obiettivo, lasciando ~10 MB di margine sotto il precipizio jetsam osservato di ~40–46 MB) |
+| `maxResidentMegabytes` | 32.0 MB (soglia obiettivo, lasciando ~10 MB di margine sotto la soglia jetsam osservata di ~40–46 MB) |
 | **`maxFilterRuleCount`** | **((32 − 4) × 1,048,576) / 9 = 3,262,236 regole** |
 
 Questo **guardrail del dispositivo a ~3.26M regole** è il limite di sicurezza inferiore rigido per *ogni* utente, posto sopra qualsiasi tier di abbonamento, e **non è mai un paywall**. Misurazione di riferimento (dispositivo "chimmy", 2026-06-13): **789,831 regole → 9.9 MB di `phys_footprint`**, cioè ≈ baseline + costo per regola.
@@ -146,7 +146,7 @@ Lo snapshot compatto viene caricato con `Data(contentsOf:options:[.mappedIfSafe]
 
 ### 4.4 Applicazione a due livelli (Implementata)
 
-- **Autoritativa (a tempo di compilazione).** `FilterSnapshotPreparationService` (`Sources/LavaSecCore/FilterSnapshotPreparationService.swift:146-176`) applica il budget sull'**unione deduplicata** di tutte le liste abilitate. Il guardrail del dispositivo viene controllato **per primo** (il limite inferiore rigido); il limite di tier vincola al di sotto di esso. Le configurazioni fuori budget vengono rifiutate in modo deterministico — `exceedsDeviceMemoryBudget` o `exceedsTierFilterRuleLimit` — anziché lasciare che il tunnel vada in jetsam. L'errore nomina le due liste che contribuiscono di più, così la correzione è ovvia.
+- **Autoritativa (a tempo di compilazione).** `FilterSnapshotPreparationService` (`Sources/LavaSecCore/FilterSnapshotPreparationService.swift:146-176`) applica il budget sull'**unione deduplicata** di tutte le liste abilitate. Il guardrail del dispositivo viene controllato **per primo** (il limite inferiore rigido); il limite di tier vincola al di sotto di esso. Le configurazioni fuori budget vengono rifiutate in modo deterministico — `exceedsDeviceMemoryBudget` o `exceedsTierFilterRuleLimit` — anziché lasciare che il tunnel finisca in jetsam. L'errore nomina le due liste che contribuiscono di più, così la correzione è ovvia.
 - **Indicativa (UI a tempo di selezione).** `FilterRuleBudget` (`Sources/LavaSecCore/FilterRuleBudget.swift:8-26`) alimenta il misuratore di selezione usando una **somma** per lista con un **margine di soft-ceiling di 1.10** che compensa l'over-count cross-lista del ~7–10% (la somma per lista sovrastima l'unione deduplicata).
 
 ### 4.5 Il parser (Implementato)
@@ -200,7 +200,7 @@ Quel default free è **prodotto da `defaultEnabled`**, non hardcoded. `blockList
 
 **Source-url-only** è il modello di distribuzione di conformità GPL/IP: Lava pubblica soltanto l'URL upstream + gli hash accettati; il dispositivo recupera e analizza le liste da sé. Lava **non** memorizza, replica, trasforma o serve mai byte di blocklist di terze parti. Questo ha **sostituito il design R2-mirror abbandonato** (il piano originale "raw R2 mirror" è stato annullato il 2026-05-25).
 
-Sul lato Worker, `syncOneBlocklist` recupera ogni sorgente upstream e la normalizza+hashifica (calcolando `source_hash`, `normalized_hash`, `entry_count`) ma scrive `raw_r2_key = null` / `normalized_r2_key = null` — solo i metadati JSON del catalogo raggiungono R2. `check-gpl-blocklist-distribution.sh` è il guardrail di CI che applica l'intero modello: nessun codice di mirror/transform, nessun artefatto Lava/URL di download, nessuna sorgente GPL abilitata di default, nessuna scrittura R2 di byte di lista dal Worker, nessun testo "Lava-hosted mirror", nessun `.txt`/`.json` GPL inclusi nel bundle, e `source_url_only` richiesto nelle migrazioni + nei documenti legali.
+Sul lato Worker, `syncOneBlocklist` recupera ogni sorgente upstream, la normalizza e ne calcola l'hash (computando `source_hash`, `normalized_hash`, `entry_count`) ma scrive `raw_r2_key = null` / `normalized_r2_key = null` — solo i metadati JSON del catalogo raggiungono R2. `check-gpl-blocklist-distribution.sh` è il guardrail di CI che applica l'intero modello: nessun codice di mirror/transform, nessun artefatto Lava/URL di download, nessuna sorgente GPL abilitata di default, nessuna scrittura R2 di byte di lista dal Worker, nessun testo "Lava-hosted mirror", nessun `.txt`/`.json` GPL inclusi nel bundle, e `source_url_only` richiesto nelle migrazioni + nei documenti legali.
 
 > **Nota sulla licenza:** il codice Lava first-party viene distribuito sotto **AGPL-3.0** (il file `LICENSE` è la GNU AGPL v3, coerente con il badge del README). Le blocklist di terze parti (incluse HaGeZi, OISD e AdGuard) rimangono sotto le proprie licenze upstream — il modello source-url-only esiste proprio perché Lava possa usarle senza mai ridistribuire byte di liste copyleft. Qui GPL-3.0 è una proprietà delle liste upstream, non dell'app Lava.
 
