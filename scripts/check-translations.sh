@@ -26,7 +26,7 @@ is_variant() { # true if $1 (a .md path) is itself a <locale> translation file
 
 missing=0; stale=0; checked=0
 while IFS= read -r en; do
-  case "$en" in docs/legal/*) continue ;; esac   # English-authoritative
+  case "$en" in docs/legal/*|docs/contributing/*) continue ;; esac   # English-authoritative
   is_variant "$en" && continue                    # skip translation files
   base="${en%.md}"; checked=$((checked+1))
   for L in $LOCALES; do

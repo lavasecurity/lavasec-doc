@@ -14,8 +14,7 @@ risky and unwanted domains without routing your browsing through Lava's servers.
     optional account backup is end-to-end encrypted so Lava can only ever store
     ciphertext.
 
-This site is the public manual for how Lava works — its architecture, its
-behavior, and the decisions behind it. It tracks the open-source
+This site is the public manual for how Lava works: its architecture, behavior, and the decisions behind it. It tracks the open-source
 [iOS client](https://github.com/lavasecurity/lavasec-ios).
 
 ## Start here

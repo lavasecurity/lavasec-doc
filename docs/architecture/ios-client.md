@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > Audience: iOS engineers working in `lavasec-ios`.
 
-Lava Security is a privacy-first iOS app that filters DNS locally on the device through an on-device NetworkExtension packet tunnel, blocking known risky and unwanted domains without routing your browsing through Lava's servers. This document covers how the iOS client is structured: the targets, how the app talks to its tunnel extension, the VPN lifecycle, the Guardian state model, the Live Activity and widget, the onboarding flow, and the app-side state owner (`AppViewModel`).
+Lava Security is a privacy-first iOS app that filters DNS locally on the device through an on-device NetworkExtension packet tunnel, blocking known risky and unwanted domains without routing your browsing through Lava's servers. This document covers how the iOS client is structured: the targets, the app-to-tunnel boundary, the VPN lifecycle, the Guardian state model, the Live Activity and widget, the onboarding flow, and the app-side state owner (`AppViewModel`).
 
 For the whole-system picture (the app, the catalog Worker, and Supabase), see [System Overview](./system-overview.md).
 
@@ -105,7 +105,7 @@ The reusable, NetworkExtension-free lifecycle logic lives in `VPNLifecycleContro
 
 ### Turn-on / turn-off
 
-`enableProtection(...)` (`AppViewModel.swift:5764`) is **cache-first**: when a confirmed-reusable prepared artifact exists for the current configuration, the VPN can come up immediately from cache while an in-flight catalog sync keeps refreshing in the background, and `performCatalogSync` reconciles the running tunnel on completion. It only blocks on the sync when there is nothing valid to start from (e.g. the user just changed the enabled-list set, invalidating the cached artifact identity).
+`enableProtection(...)` (`AppViewModel.swift:5764`) is **cache-first**: when a confirmed-reusable prepared artifact exists for the current configuration, the VPN comes up immediately from cache while an in-flight catalog sync refreshes in the background, and `performCatalogSync` reconciles the running tunnel on completion. It only blocks on the sync when there is nothing valid to start from (e.g. the user just changed the enabled-list set, invalidating the cached artifact identity).
 
 `disableProtection(...)` (`AppViewModel.swift:5972`) turns Connect-On-Demand off *before* stopping the tunnel so iOS does not immediately reconnect it. `setManagerOnDemand(_:on:)` (`AppViewModel.swift:6253`) installs an `NEOnDemandRuleConnect` (interface match `.any`) and saves preferences — saving (not just setting) is required for iOS to honor the change.
 
@@ -185,7 +185,7 @@ Onboarding is presented by `LavaOnboardingView` (`LavaSecApp/OnboardingFlowView.
 
 The shipped starting configuration comes from `OnboardingDefaults` (`Sources/LavaSecCore/OnboardingDefaults.swift`). `AppConfiguration.lavaRecommendedDefaults` enables only the permissive recommended source (Block List Basic), selects **Device DNS** as the resolver — `DNSResolverPreset.device` (id `device-dns`), the network's own DNS; encrypted presets like Google DoH are opt-in and not promoted to default — enables device-DNS fallback, and keeps local logging on — with `protectionEnabled: false`, so protection is only turned on when the user chooses it. `OnboardingDefaultsSummary` formats those choices for display ("Continue without account" is the account default).
 
-Setting `hasSeenLavaOnboarding = true` at the end is what flips `hasCompletedOnboarding`, which in turn arms the launch reconcile path described in [§3](#3-vpn-lifecycle-control). Until then, the mid-onboarding neutralize path keeps any inherited fail-closed tunnel from blocking traffic.
+Setting `hasSeenLavaOnboarding = true` at the end is what flips `hasCompletedOnboarding`, which in turn arms the launch reconcile path described in [§3](#3-vpn-lifecycle-control). Until then, the mid-onboarding neutralize path stops any inherited fail-closed tunnel from blocking traffic.
 
 ---
 

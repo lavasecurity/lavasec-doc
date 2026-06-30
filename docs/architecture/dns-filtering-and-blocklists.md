@@ -25,7 +25,7 @@ For each inbound DNS query the tunnel runs a fixed **query precedence** in `DNSQ
 resolver bootstrap  >  temporary pause  >  filter (block / allow)
 ```
 
-- **bootstrap-first is a hard invariant.** A query that resolves the configured resolver's *own* hostname (the DoH/DoT/DoQ endpoint) must never be blocked or paused, or the tunnel could not bring encrypted DNS up at all. The dispatcher takes lazy closures so each step is read only when reached, preserving short-circuit (no snapshot read when a bootstrap response exists; no pause read when bootstrapping).
+- **bootstrap-first is a hard invariant.** A query that resolves the configured resolver's *own* hostname (the DoH/DoT/DoQ endpoint) must never be blocked or paused, or the tunnel could not bring encrypted DNS up. The dispatcher takes lazy closures so each step is read only when reached, preserving short-circuit (no snapshot read when a bootstrap response exists; no pause read when bootstrapping).
 - **temporary pause** forwards upstream while a user-initiated pause TTL is active.
 - **filter** evaluates the domain against the compiled snapshot and either forwards it or synthesizes a blocked response.
 
@@ -63,7 +63,7 @@ A domain that fails normalization is blocked with reason `.invalidDomain` (fail-
 - **`FilterSnapshot`** — the in-memory compiled filter: `blockRules`, `allowRules`, `nonAllowableThreatRules`, and the resolver preset.
 - **`CompactFilterSnapshot`** — the binary, mmap-friendly on-disk form the tunnel actually reads (magic `LSCFSNP1`, `fileVersion 1`). It is loaded zero-copy via mmap (§4.3).
 
-The app writes both `filter-snapshot.json` and `filter-snapshot.compact` into the App Group; the tunnel decodes the compact artifact. A **warm-startup reuse** path (`FilterArtifactStore`) lets the tunnel reuse the on-disk compact artifact without recompiling, gated by an identity fingerprint + an atomically-written manifest; reuse is rejected (privacy-safe, field-name-only reason) when resolver transport, catalog coverage, or snapshot inputs change.
+The app writes both `filter-snapshot.json` and `filter-snapshot.compact` into the App Group; the tunnel decodes the compact artifact. A **warm-startup reuse** path (`FilterArtifactStore`) lets the tunnel reuse the on-disk compact artifact without recompiling, gated by an identity fingerprint and an atomically-written manifest; reuse is rejected (privacy-safe, field-name-only reason) when resolver transport, catalog coverage, or snapshot inputs change.
 
 ---
 
@@ -85,7 +85,7 @@ Built-in presets are Google, Cloudflare, Quad9, Mullvad (each in IP / DoH / DoT 
 
 ### 3.2 DoH / DoH3
 
-`DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) executes DoH over `URLSession`. Every request opts into HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`); Apple's loader falls back to H2/H1 natively, so this never makes a reachable resolver unreachable. The negotiated protocol is read from `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
+`DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) executes DoH over `URLSession`. Every request opts into HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`); Apple's loader falls back to H2/H1 natively, so it never makes a reachable resolver unreachable. The negotiated protocol is read from `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
 
 The UI annotates **`DoH3` (no slash)** — e.g. "Quad9 (DoH3)" — **only when an h3 negotiation is actually observed** (`DoHHTTPVersion.dohAnnotation`); otherwise it shows `DoH`. DoH3 is preferred, never promised: the label is observational and resolver-scoped, never persisted ("confirmed DoH3" carry-over across restart was reverted). Requests POST `application/dns-message`; responses are content-type and length validated and the transaction ID is restored before write-back.
 
@@ -97,7 +97,7 @@ The UI annotates **`DoH3` (no slash)** — e.g. "Quad9 (DoH3)" — **only when a
 
 `DoQTransport` (`Sources/LavaSecCore/DoQTransport.swift`) keeps a bounded pool of **4 lanes per endpoint**, but **each query opens a fresh QUIC connection** — a full handshake per query. The 4-lane pool provides **concurrency, not handshake reuse**.
 
-**DoQ connection reuse status (Dropped / deferred).** Reuse was reviewed and benchmarked on device (34 fresh handshakes across 35 queries ≈ no reuse), then implemented as an iOS-26-gated multi-stream `NWConnectionGroup` path, device-tested against AdGuard DoQ, and **reverted as net-negative** (stream failures + fallback errors against a real server). RFC 9250 maps each query to its own QUIC stream, so reuse requires `NWConnectionGroup`/`openStream`, which is **iOS 26.0+ only**; the current deployment floor is **iOS 17**. Reuse is deferred until the floor reaches iOS 26. Custom DoQ is rejected on devices that don't support it ("DNS over QUIC is not supported on this device").
+**DoQ connection reuse status (Dropped / deferred).** Reuse was reviewed and benchmarked on device (34 fresh handshakes across 35 queries ≈ no reuse), then implemented as an iOS-26-gated multi-stream `NWConnectionGroup` path, device-tested against AdGuard DoQ, and **reverted as net-negative** (stream failures and fallback errors against a real server). RFC 9250 maps each query to its own QUIC stream, so reuse requires `NWConnectionGroup`/`openStream`, which is **iOS 26.0+ only**; the current deployment floor is **iOS 17**. Reuse is deferred until the floor reaches iOS 26. Custom DoQ is rejected on devices that don't support it ("DNS over QUIC is not supported on this device").
 
 ### 3.5 Resolution policy
 
@@ -112,7 +112,7 @@ The UI annotates **`DoH3` (no slash)** — e.g. "Quad9 (DoH3)" — **only when a
 
 ## 4. Filter-rules budget, NE ceiling, and mmap
 
-The shipped tier metric is the **filter-rules budget**: the total compiled domain **rules** a user can enable. This replaced the old enabled-list **count** cap (free 3 / paid 10), which was a dishonest proxy — one list can be 1K or 1M rules. There are **two layers**: a per-everyone device guardrail, and a per-tier monetization limit below it.
+The shipped tier metric is the **filter-rules budget**: the total compiled domain **rules** a user can enable. This replaced the old enabled-list **count** cap (free 3 / paid 10), a dishonest proxy — one list can be 1K or 1M rules. There are **two layers**: a per-everyone device guardrail, and a per-tier monetization limit below it.
 
 ### 4.1 Tier limits (Implemented)
 

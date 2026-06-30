@@ -5,7 +5,7 @@ iOS, Android, and future clients. It is the public contract for feature
 behavior: what must mean the same thing everywhere, what is intentionally
 platform-native, and what is not promised yet.
 
-The parity docs do not replace implementation plans or tests:
+The parity docs do not replace implementation plans or tests.
 
 - `lavasec-doc` owns the product and behavior contract.
 - Internal plans own delivery state, sequencing, private risks, and
@@ -30,7 +30,7 @@ the plan as the work queue.
 
 ## Feature record format
 
-Every parity-tracked feature should have a stable feature id. Use
+Every parity-tracked feature needs a stable feature id. Use
 `area.capability` names that survive UI copy changes, for example
 `filtering.guardrail-precedence` or `dns.encrypted-transports`.
 
