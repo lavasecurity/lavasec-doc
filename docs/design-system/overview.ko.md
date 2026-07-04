@@ -163,7 +163,7 @@ DNS 전송 중에서는 **DoH**만이 용어집의 번역 금지 항목이다. `
 
 6페이지:
 
-1. **The Internet Is Lava** (`lava`) — 위험을 은유로 표현; 주 액션 "Meet Lava".
+1. **인터넷은 라바예요** (`lava`) — 위험을 은유로 표현; 주 액션 "Meet Lava".
 2. **Lava Stands Guard Here** (`guardIntro`) — guardian 출현 순간.
 3. **Feature Handoff** (`features`) — Lava가 하는 일; "Set Up Protection".
 4. **Install Lava's Local VPN** (`vpn`) — iOS가 DNS 전용 패킷 터널을 "VPN"이라고 부르는 이유를 설명.
@@ -173,7 +173,7 @@ DNS 전송 중에서는 **DoH**만이 용어집의 번역 금지 항목이다. `
 흐름에 내재된 디자인 결정:
 
 - **"Use Default"가 주 액션, "Customize"가 보조 액션.** 비기술적 사용자를 위한 마찰 없는 기본 경로; 제어는 강요되는 것이 아니라 얻어내는 것이다.
-- **위험을 공포가 아닌 은유로 표현**("The Internet Is Lava"), 차분한 톤과 일관됨.
+- **위험을 공포가 아닌 은유로 표현**("인터넷은 라바예요"), 차분한 톤과 일관됨.
 - **흐름은 iOS가 왜 "VPN"이라고 말하는지 설명한다** — 패킷 터널은 DNS를 시스템 전역으로 필터링하는 유일한 방법이다; 트래픽 라우팅이 아니다.
 - **완료 시 보호가 자동으로 켜진다고 절대 주장하지 않는다** — Guard가 권위를 유지한다.
 - 공유 단계 페이지 레이아웃에서 셰브론 전용 뒤로 가기.
