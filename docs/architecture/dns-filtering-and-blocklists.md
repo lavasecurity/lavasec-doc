@@ -26,7 +26,7 @@ resolver bootstrap  >  temporary pause  >  filter (block / allow)
 ```
 
 - **bootstrap-first is a hard invariant.** A query that resolves the configured resolver's *own* hostname (the DoH/DoT/DoQ endpoint) must never be blocked or paused, or the tunnel could not bring encrypted DNS up. The dispatcher takes lazy closures so each step is read only when reached, preserving short-circuit (no snapshot read when a bootstrap response exists; no pause read when bootstrapping).
-- **temporary pause** forwards upstream while a user-initiated pause TTL is active.
+- **temporary pause** forwards upstream while a user-initiated pause TTL is active. These queries are recorded with the distinct `FilterDecisionReason.pausedAllow` ("Allowed on Pause" in Domain History) rather than `.defaultAllow`, so a domain let through only because protection was paused isn't shown or counted as a normal filter-cleared allow — `DiagnosticsStore` also excludes it from Top Domains ranking (`Sources/LavaSecCore/DiagnosticsStore.swift`).
 - **filter** evaluates the domain against the compiled snapshot and either forwards it or synthesizes a blocked response.
 
 A query that passes the filter (action `.allow`) is handed to the resolver path (§3). The tunnel **fails closed** on cold start without a reusable snapshot: it installs a fail-closed runtime snapshot that blocks all traffic rather than resolving unfiltered.
