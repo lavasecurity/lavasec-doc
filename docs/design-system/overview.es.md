@@ -163,7 +163,7 @@ El onboarding de primera ejecución es un flujo de varias páginas — **6 pági
 
 Las 6 páginas:
 
-1. **The Internet Is Lava** (`lava`) — el peligro encuadrado como metáfora; acción principal "Meet Lava".
+1. **Internet es lava** (`lava`) — el peligro encuadrado como metáfora; acción principal "Meet Lava".
 2. **Lava Stands Guard Here** (`guardIntro`) — el momento de emergencia del guardian.
 3. **Feature Handoff** (`features`) — lo que hace Lava; "Set Up Protection".
 4. **Install Lava's Local VPN** (`vpn`) — explica por qué iOS dice "VPN" para un túnel de paquetes solo de DNS.
@@ -173,7 +173,7 @@ Las 6 páginas:
 Decisiones de diseño integradas en el flujo:
 
 - **"Use Default" es la acción principal, "Customize" la secundaria.** Una ruta por defecto sin fricción para usuarios no técnicos; el control se gana, no se impone.
-- **El peligro encuadrado como metáfora, no como miedo** ("The Internet Is Lava"), coherente con el tono tranquilo.
+- **El peligro encuadrado como metáfora, no como miedo** ("Internet es lava"), coherente con el tono tranquilo.
 - **El flujo explica por qué iOS dice "VPN"** — un túnel de paquetes es la única forma de filtrar DNS a nivel de todo el sistema; no es enrutamiento de tráfico.
 - **Nunca afirma que la protección esté activada automáticamente al completar** — Guard sigue siendo la autoridad.
 - Botón Atrás solo con chevron, sobre un diseño compartido de página de paso.
