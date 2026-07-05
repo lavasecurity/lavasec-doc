@@ -53,11 +53,11 @@ Lava Security は、プライバシーを最優先に考えた iOS アプリで�
 
 | 機能 | プラン | 補足 |
 |---|---|---|
-| **ソース URL のみのブロックリスト** | 無料 | Lava が公開するのは、上流の URL と受け入れ可能なハッシュだけです。リストの**バイト**そのものは、端末側で取得・解析します。Lava がサードパーティのブロックリストのバイトを保存・ミラー・変換・配信することは**決してありません**。[GPL ソース URL のみのコンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md)を参照してください。 |
-| **用意されたカタログ（カテゴリ分け）** | 無料で有効化 | 用意されたソースを、多層防御のカテゴリ — Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent — に整理してあります。出どころは HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts、Phishing.Database です。すべての最新の一覧は[ブロックリストカタログ](../legal/blocklist-catalog.md)で公開しており、各プラットフォームは、それが同梱したカタログのバージョンを反映します。 |
-| **無料のデフォルトブロックリスト** | 無料 | インストール直後の状態では、**Block List Basic**（幅広く許容度の高い統合リスト）が有効になっています（`defaultEnabled: true` の印が付いたソース。`DefaultCatalog.recommendedDefaultSourceIDs`）。それ以外はすべてオプトインです。 |
-| **端末上での解析 / 正規化 / 重複排除** | 無料 | `BlocklistParser` は auto/plain/hosts/adblock/dnsmasq に対応し、コメント・空行・不正な行を捨て、完全一致の重複を排除し、リストごとに最大 1,000,000 ルールで打ち切ります。複数ホストの `hosts` 行は、最初の 1 つだけでなく、その行のすべてのホストをルールとして出力するようになりました（parser rules version 2）。 |
-| **上流の完全性（TLS + 用意した URL）** | 無料 | コミュニティリストのバイトは、厳選した上流の `source_url` から直接 TLS 経由で取得し、サイズ + フォーマット + ルール数の上限を満たすことを条件に受け入れます。カタログの `accepted_source_hashes` は**参考情報**（キャッシュの識別 + 監査）であって、固い関門ではありません。つまり、よく更新されるリストが、固定したハッシュとずれたという理由で拒否されることはありません。Lava の**安全ガードレール**ティア（Lava が厳選した、許可不可のリスト）は、厳密にハッシュ固定のままです。 |
+| **ソース URL のみのブロックリスト** | 無料 | Lava が公開するのは、上流の URL と受け入れ可能なハッシュだけです。リストの**バイト**そのものは、端末が自分で取得・解析します。Lava がサードパーティのブロックリストのバイトを保存・ミラー・変換・配信することは**決してありません**。[GPL ソース URL のみのコンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md)を参照してください。 |
+| **用意されたカタログ（カテゴリ別）** | 無料で有効化 | 用意されたソースは、Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent という防御深度カテゴリに整理されています。提供元は HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts、Phishing.Database です。完全な最新セットは [Blocklist Catalog](../legal/blocklist-catalog.md) にあります。 |
+| **無料のデフォルトブロックリスト** | 無料 | 入れたばかりの状態では、**Block List Basic** と **StevenBlack Unified Hosts** が有効になります。どちらも permissive ライセンスの source-url-only デフォルトで、`defaultEnabled: true` が付いています（`DefaultCatalog.recommendedDefaultSourceIDs`）。それ以外はオプトインです。 |
+| **端末上での解析 / 正規化 / 重複排除** | 無料 | `BlocklistParser` は auto/plain/hosts/adblock/dnsmasq に対応し、コメント・空行・不正な行を捨て、完全一致の重複を排除し、リストごとに最大 1,000,000 ルールで打ち切ります。複数ホストの `hosts` 行は、いまや最初の 1 つだけでなく、その行に並ぶ**すべて**のホストをルールとして出力します（parser rules version 2）。 |
+| **上流の完全性（TLS + 用意された URL）** | 無料 | コミュニティリストのバイト列は、用意された上流 `source_url` から TLS で直接取得され、サイズ + フォーマット + ルール数の上限のもとで受け入れられます。カタログの `accepted_source_hashes` は**参考情報**（キャッシュ識別 + 監査）であり、硬いゲートではありません。頻繁に更新されるリストが、ピン留めハッシュからずれたという理由で拒否されることはありません。Lava の **threat-guardrail** 層（Lava が選定し、許可不可）は厳密にハッシュでピン留めされます。 |
 | **保護ドメインのフィルター** | 無料 | 解析したどのソースからも、保護対象の Lava / Apple / ID プロバイダーのドメイン（apple.com、icloud.com、lavasecurity.app、google.com、accounts.google.com、…）を取り除きます。これにより、上流のリストがアプリ・トンネル・サインインを壊すことはありません。 |
 | **許可する例外（許可リスト）** | 無料 | ユーザーが管理する許可リストで、ブロックリストに載っていてもドメインを許可します。無料の上限は、許可するドメイン 25 件 / ブロックするドメイン 25 件（`FeatureLimits.free`）。 |
 | **フィルタールール上限（プランの指標）** | 無料 / Plus | リリース済みのプランの指標は、コンパイル後のドメイン**ルール**の合計数です。 **無料 500K / Plus 2M**（`lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` の `maxFilterRules`）。以前のリスト数の上限に代わるものです。プランの上限を超える設定は `exceedsTierFilterRuleLimit` を出します。 |
@@ -127,7 +127,7 @@ Lava Security は、プライバシーを最優先に考えた iOS アプリで�
 | **複数ページの初回起動フロー** | 無料 | `OnboardingFlowView` — 6 ページ: `lava, guardIntro, features, vpn, notifications, done`。（プロファイルのインストールと通知の確認は、最初にまとめてではなく、適切なステップで行われます。） |
 | **ローカル VPN プロファイルのインストール** | 無料 | オンボーディング中にローカル VPN の設定をインストールしますが、Connect-On-Demand は有効にしません。そのため完了時に保護が黙って自動でオンになることはなく、ガードの面が常に正のままです。 |
 | **通知許可の確認** | 無料 | 通知のステップで、フロー内で確認します。 |
-| **おすすめのデフォルトを適用** | 無料 | Device DNS リゾルバー、デバイス DNS フォールバックをオン、ローカルログをオン（カウント + 履歴 + アクティビティ）、Block List Basic を有効化、アカウントなしで続ける（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
+| **おすすめのデフォルトを適用** | 無料 | Device DNS リゾルバー、デバイス DNS フォールバックをオン、ローカルログをオン（カウント + 履歴 + アクティビティ）、Block List Basic + StevenBlack Unified Hosts を有効化、アカウントなしで続ける（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
 
 ---
 

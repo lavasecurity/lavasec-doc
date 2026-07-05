@@ -180,7 +180,7 @@ Decisões de design embutidas no fluxo:
 
 Os padrões de primeira execução que o fluxo instala: resolvedor **Device DNS** (`DNSResolverPreset.device`), **fallback de Device DNS ATIVADO**, registro ativado (contagens + histórico + atividade) e "Continuar sem conta".
 
-> **Fonte da verdade da blocklist padrão.** O padrão entregue no código é **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, definido em lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). O verdadeiro portão de tier é o **orçamento de regras de filtro (Free 500K / Plus 2M)**, *não* uma contagem de listas. Para o modelo de tiers e a configuração recomendada por padrão, veja [o catálogo de funcionalidades](../product/features.md).
+> **Fonte da verdade da blocklist padrão.** O padrão entregue no código é **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, definido em lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). O verdadeiro portão de tier é o **orçamento de regras de filtro (Free 500K / Plus 2M)**, *não* uma contagem de listas. Para o modelo de tiers e a configuração recomendada por padrão, veja [o catálogo de funcionalidades](../product/features.md).
 
 ---
 

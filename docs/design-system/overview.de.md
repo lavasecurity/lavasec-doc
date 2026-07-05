@@ -180,7 +180,7 @@ Designentscheidungen, die fest in den Ablauf eingebaut sind:
 
 Die Erststart-Standards, die der Ablauf installiert: **Device DNS**-Resolver (`DNSResolverPreset.device`), **Geräte-DNS-Ausweichoption AN**, Logging an (Zähler + Verlauf + Aktivität) und „Ohne Konto fortfahren".
 
-> **Standard-Sperrliste, Quelle der Wahrheit.** Der ausgelieferte Code-Standard ist **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, definiert in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Das eigentliche Tier-Gate ist das **Filter-Regel-Budget (Free 500K / Plus 2M)**, *nicht* eine Listenanzahl. Für das Tier-Modell und die empfohlene Standard-Konfiguration siehe [den Feature-Katalog](../product/features.md).
+> **Maßgebliche Standard-Sperrlisten-Quelle.** Der ausgelieferte Code-Standard ist **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, definiert in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Das eigentliche Tier-Gate ist das **Filter-Regel-Budget (Free 500K / Plus 2M)**, *nicht* eine Listenanzahl. Für das Tier-Modell und die empfohlene Standard-Konfiguration siehe [den Feature-Katalog](../product/features.md).
 
 ---
 

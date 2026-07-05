@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 正規化防護欄（僅中繼資料） {#33-normalization-guardrails-metadata-only}
 
-Worker 端的正規化（`normalizeBlocklist`）會過濾受保護網域、強制上限，並去重＋排序。這純粹是為了計算可信的中繼資料；對於**社群清單**，裝置在下載時**不會**以雜湊把關 — 它從精選的 `source_url` 透過 TLS 擷取，並在上限內解析（目錄中已接受的雜湊屬於建議性質），因此這個 Worker 端正規化本身並不是一道安全邊界。（Lava Security 的威脅防護欄層級在裝置上仍以雜湊釘選，而 `source_url` 出處則在發布時落實 — URL 變更必須使用新的 `list_id`。）關鍵常數：
+Worker 端的正規化（`normalizeBlocklist`）會過濾受保護網域、強制上限，並去重＋排序。這純粹是為了計算可信的中繼資料；對**社群清單**而言，裝置**不會**用雜湊作為下載閘門——它會透過 TLS 從精選 `source_url` 擷取，並在上限內剖析（目錄的 accepted hashes 是建議性資料），因此 Worker 端正規化本身不是安全邊界。（Lava 的 threat-guardrail 層在裝置上仍維持雜湊釘選，且 `source_url` 來源在發布時強制檢查——URL 變更必須使用新的 `list_id`。）關鍵常數：
 
 - `PROTECTED_SUFFIXES` — 移除任何符合 Apple／iCloud／`mzstatic`／Lava Security 網域／Supabase／Cloudflare／Google／GitHub 的規則，因此遭污染的上游無法封鎖 Lava Security 自身的基礎設施或登入提供者。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。
@@ -114,9 +114,9 @@ Worker 端的正規化（`normalizeBlocklist`）會過濾受保護網域、強�
 
 ### 3.5 種子來源與預設啟用 {#35-seeded-sources-default-enabled}
 
-精選來源透過遷移以 source-url-only 中繼資料形式植入種子，由權威的[封鎖清單目錄](../legal/blocklist-catalog.md)規格產生（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）。類別擴充遷移加入了縱深防禦類別（nsfw／social／gambling／piracy），將全新安裝的預設值重新對齊為 **Block List Basic**，並重新啟用 AdGuard DNS Filter 作為一個經法律顧問標記、預設關閉的選項。狀態：**已實作**。
+精選來源透過遷移以 source-url-only 中繼資料形式植入種子，並由規範的 [Blocklist Catalog](../legal/blocklist-catalog.md) 產生（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）。分類擴充遷移加入防禦深度類別（nsfw／social／gambling／piracy），將全新安裝預設對齊為 **Block List Basic + StevenBlack Unified Hosts**，並將 AdGuard DNS Filter 重新啟用為需法務旗標、預設關閉的選項。狀態：**已實作**。
 
-> **目錄預設值與用戶端一致。** 目錄的 `default_enabled` 集合為 **{Block List Basic}** — 一份廣泛、寬鬆的合併清單，取代了較早的 Phishing ＋ Scam 配對 — 與 iOS 建議預設值（`AppConfiguration.lavaRecommendedDefaults`）一致。提供的 `default_enabled` 欄位與隨附的 iOS `DefaultCatalog` 都由同一份權威規格產生，因此兩者依建構方式即一致（這解決了較早的用戶端↔後端預設值不一致問題）。請注意 `default_enabled` 屬於資訊性質：真正的方案閘門是**篩選規則預算（免費 500K ／ Plus 2M）**，而非清單數量。發布 URL（而非位元組）的法律依據見 [GPL source-url-only 合規決策](../legal/gpl-source-url-only-compliance-decision.md)。
+> **目錄預設值與用戶端一致。** 目錄的 `default_enabled` 集合現在為 **{Block List Basic、StevenBlack Unified Hosts}**，這些是寬鬆授權、僅來源 URL 的預設，與 iOS 建議預設值（`AppConfiguration.lavaRecommendedDefaults`）一致。提供出去的 `default_enabled` 欄位與 iOS 內建 `DefaultCatalog` 都由同一份規範目錄產生，因此兩者按建構即一致。請注意 `default_enabled` 屬於資訊性質：真正的方案閘門是**篩選規則預算（免費 500K ／ Plus 2M）**，而非清單數量。發布 URL（而非位元組）的法律依據見 [GPL source-url-only 合規決策](../legal/gpl-source-url-only-compliance-decision.md)。
 
 ## 4. Supabase Postgres {#4-supabase-postgres}
 

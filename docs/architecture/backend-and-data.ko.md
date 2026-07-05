@@ -114,9 +114,9 @@ Worker 측 정규화(`normalizeBlocklist`)는 보호된 도메인을 필터링�
 
 ### 3.5 시드된 소스 및 default-enabled
 
-큐레이션된 소스는 표준 [Blocklist Catalog](../legal/blocklist-catalog.md) 명세에서 생성되어 마이그레이션을 통해 source-url-only 메타데이터로 시딩됩니다(HaGeZi, OISD, The Block List Project, Phishing.Database, StevenBlack, AdGuard, 1Hosts). 카테고리 확장 마이그레이션은 방어 심층(defensive-depth) 카테고리(nsfw/social/gambling/piracy)를 추가하고, 새 설치 기본값을 **Block List Basic**으로 재정렬하며, AdGuard DNS Filter를 법무 검토 플래그가 붙은 기본 비활성화 옵션으로 다시 활성화합니다. 상태: **Implemented**.
+큐레이션된 소스는 표준 [Blocklist Catalog](../legal/blocklist-catalog.md) 명세에서 생성되어 마이그레이션을 통해 source-url-only 메타데이터로 시딩됩니다(HaGeZi, OISD, The Block List Project, Phishing.Database, StevenBlack, AdGuard, 1Hosts). 카테고리 확장 마이그레이션은 방어 심층(defensive-depth) 카테고리(nsfw/social/gambling/piracy)를 추가하고, 새 설치 기본값을 **Block List Basic + StevenBlack Unified Hosts**로 재정렬하며, AdGuard DNS Filter를 법무 검토 플래그가 붙은 기본 비활성화 옵션으로 다시 활성화합니다. 상태: **Implemented**.
 
-> **카탈로그 기본값은 클라이언트와 일치합니다.** 카탈로그의 `default_enabled` 집합은 **{Block List Basic}**입니다 — 이전의 Phishing + Scam 쌍을 대체하는 광범위하고 관대한 결합 목록 — iOS 권장 기본값(`AppConfiguration.lavaRecommendedDefaults`)과 일치합니다. 제공되는 `default_enabled` 컬럼과 번들된 iOS `DefaultCatalog`는 모두 동일한 표준 명세에서 생성되므로, 구성상 일치합니다(이로써 이전의 클라이언트↔백엔드 기본값 불일치가 해결됩니다). `default_enabled`는 정보 제공용임에 유의하세요: 실제 티어 게이트는 목록 수가 아니라 **필터-규칙 예산(Free 500K / Plus 2M)**입니다. URL을 게시하는(바이트가 아닌) 법적 근거는 [GPL source-url-only compliance decision](../legal/gpl-source-url-only-compliance-decision.md)에 있습니다.
+> **카탈로그 기본값은 클라이언트와 일치합니다.** 카탈로그의 `default_enabled` 집합은 **{Block List Basic, StevenBlack Unified Hosts}**입니다 — iOS 권장 기본값(`AppConfiguration.lavaRecommendedDefaults`)과 일치하는, 허용적 라이선스의 source-url-only 기본값입니다. 제공되는 `default_enabled` 컬럼과 번들된 iOS `DefaultCatalog`는 모두 동일한 표준 명세에서 생성되므로, 구성상 일치합니다. `default_enabled`는 정보 제공용임에 유의하세요: 실제 티어 게이트는 목록 수가 아니라 **필터-규칙 예산(Free 500K / Plus 2M)**입니다. URL을 게시하는(바이트가 아닌) 법적 근거는 [GPL source-url-only compliance decision](../legal/gpl-source-url-only-compliance-decision.md)에 있습니다.
 
 ## 4. Supabase Postgres
 

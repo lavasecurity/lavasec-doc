@@ -55,7 +55,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기에서 로컬�
 |---|---|---|
 | **소스 URL 전용 차단 목록** | Free | Lava는 업스트림 URL + 허용된 해시만 게시하며, 기기가 직접 목록 **바이트**를 페치/파싱합니다. Lava는 제3자 차단 목록 바이트를 **절대** 저장, 미러링, 변환, 제공하지 않습니다. [GPL 소스 URL 전용 준수 결정](../legal/gpl-source-url-only-compliance-decision.md) 참조. |
 | **큐레이션된 카탈로그(분류됨)** | 활성화 무료 | 방어 심층화 카테고리로 구성된 큐레이션 소스 — Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling, Piracy & Torrent — HaGeZi, The Block List Project, OISD, StevenBlack, AdGuard, 1Hosts, Phishing.Database 제공. 전체 최신 집합은 [Blocklist Catalog](../legal/blocklist-catalog.md)에 게시되어 있으며, 각 플랫폼은 함께 출시된 카탈로그 버전을 반영합니다. |
-| **무료 기본 차단 목록** | Free | 새로 설치하면 **Block List Basic** — 광범위하고 관대한 결합 목록(소스에 `defaultEnabled: true` 플래그; `DefaultCatalog.recommendedDefaultSourceIDs`)이 활성화됩니다. 나머지 모든 것은 옵트인입니다. |
+| **무료 기본 차단 목록** | Free | 새로 설치하면 **Block List Basic**과 **StevenBlack Unified Hosts**가 활성화됩니다 — 둘 다 `defaultEnabled: true`가 붙은 허용적 라이선스의 source-url-only 기본값입니다(`DefaultCatalog.recommendedDefaultSourceIDs`). 나머지 모든 것은 옵트인입니다. |
 | **기기 내 파싱 / 정규화 / 중복 제거** | Free | `BlocklistParser`는 auto/plain/hosts/adblock/dnsmasq를 지원하고, 주석/공백/유효하지 않은 항목을 삭제하며, 정확히 일치하는 문자열을 중복 제거하고, 목록당 1,000,000개 규칙으로 상한을 둡니다. 다중 호스트 `hosts` 줄은 이제 첫 번째뿐만 아니라 줄의 **모든** 호스트를 방출합니다(파서 규칙 버전 2). |
 | **업스트림 무결성(TLS + 큐레이션 URL)** | Free | 커뮤니티 목록 바이트는 큐레이션된 업스트림 `source_url`에서 직접 TLS로 페치되며 크기 + 형식 + 규칙 수 상한을 조건으로 수락됩니다. 카탈로그의 `accepted_source_hashes`는 **권고용**(캐시 식별 + 감사)이며 하드 게이트가 아닙니다 — 빠르게 회전하는 목록이 고정된 해시에서 벗어났다고 해서 거부되지 않습니다. Lava의 **위협 가드레일** 등급(Lava 큐레이션, 허용 불가)은 엄격하게 해시 고정 상태를 유지합니다. |
 | **보호 도메인 필터** | Free | 파싱된 모든 소스에서 보호된 Lava / Apple / 신원 제공자 도메인(apple.com, icloud.com, lavasecurity.app, google.com, accounts.google.com 등)이 제거되어, 업스트림 목록이 앱, 터널, 로그인을 망가뜨릴 수 없습니다. |
@@ -127,7 +127,7 @@ Lava Security는 NetworkExtension 패킷 터널을 통해 **기기에서 로컬�
 | **다중 페이지 첫 실행 플로우** | Free | `OnboardingFlowView` — 6페이지: `lava, guardIntro, features, vpn, notifications, done`. (프로파일 설치와 알림 프롬프트는 미리가 아니라 적절한 단계에서 발생합니다.) |
 | **로컬 VPN 프로파일 설치** | Free | 온보딩 중 Connect-On-Demand를 활성화하지 **않고** 로컬 VPN 구성을 설치하므로, 완료 시점에 보호가 조용히 자동으로 켜지지 않습니다 — Guard 표면이 권위를 유지합니다. |
 | **알림 권한 프롬프트** | Free | 알림 단계에서 플로우 내에서 요청됩니다. |
-| **권장 기본값 적용** | Free | Device DNS 리졸버, device-DNS 폴백 켜짐, 로컬 로깅 켜짐(카운트 + 기록 + 활동), Block List Basic 활성화, 계정 없이 계속(`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`, `lavaRecommendedDefaults`). |
+| **권장 기본값 적용** | Free | Device DNS 리졸버, device-DNS 폴백 켜짐, 로컬 로깅 켜짐(카운트 + 기록 + 활동), Block List Basic + StevenBlack Unified Hosts 활성화, 계정 없이 계속(`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`, `lavaRecommendedDefaults`). |
 
 ---
 

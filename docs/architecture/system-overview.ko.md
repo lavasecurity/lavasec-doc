@@ -150,7 +150,7 @@ Worker 측은 이를 미러링합니다: 관리자/cron 동기화가 각 업스�
 - **기기 가드레일 (모두에게 적용, 결코 유료 장벽이 아님):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 규칙** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — ~50 MiB NE 상한 아래의 32 MB 목표. 예산을 초과하는 구성은 터널이 jetsam되도록 두지 않고 결정론적으로 거부됩니다.
 - **티어 상한 (`FeatureLimits`):** **Free 500K 규칙 / Plus 2M 규칙**으로, 기기 가드레일보다 아래에서 적용됩니다. 이것은 기존의 활성화 목록 **개수** 상한(free 3 / paid 10)을 대체했습니다 — 목록 개수 상한은 더 이상 사용되지 않습니다.
 
-> **기본 활성화 진실의 원천:** 출시된 무료 기본값은 **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`)입니다. 이것은 각 큐레이션된 소스의 `defaultEnabled` 플래그(`BlocklistSource.recommendedDefaultSourceIDs`)로부터 기기 내에서 도출되며, 이는 동일한 정식 카탈로그 사양에서 생성된 백엔드 카탈로그 `default_enabled` 컬럼을 미러링합니다.
+> **기본 활성화 진실의 원천:** 출시된 무료 기본값은 **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`)입니다. 이것은 각 큐레이션된 소스의 `defaultEnabled` 플래그(`BlocklistSource.recommendedDefaultSourceIDs`)로부터 기기 내에서 도출되며, 이는 동일한 정식 카탈로그 사양에서 생성된 백엔드 카탈로그 `default_enabled` 컬럼을 미러링합니다.
 
 ### C. 백업 (제로 지식, 선택 가입) — 구현됨
 

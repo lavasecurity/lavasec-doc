@@ -38,7 +38,7 @@ Lava 是為任何想要更安全瀏覽、又不想費心管理的人而打造。
 ## 高階能力 {#high-level-capabilities}
 
 - **本機 DNS 篩選**——封包通道引擎會剖析 DNS、將每個網域與已編譯的快照進行評估，並將獲允許的查詢以裝置 DNS 後援的方式往上游轉發。請參閱 [iOS 用戶端](../architecture/ios-client.md)以及 [DNS 篩選與封鎖清單](../architecture/dns-filtering-and-blocklists.md)。
-- **精選封鎖清單，僅來源網址**——Lava 只發布上游清單網址（加上供快取識別與稽核之用的建議雜湊值）；裝置會透過 TLS 擷取每一份清單，並在本機於大小／規則上限之下剖析，而且 Lava 絕不鏡像或提供第三方封鎖清單的位元組。社群清單並未以雜湊值釘選——TLS 加上精選網址就是其完整性邊界——而 Lava 的威脅防護欄層級則維持以雜湊值強制執行。出貨的預設會啟用 **Block List Basic**（`AppConfiguration.lavaRecommendedDefaults`，定義於 `OnboardingDefaults.swift`）；HaGeZi、OISD、AdGuard、1Hosts 等 copyleft 來源為選擇性加入。請參閱 [DNS 篩選與封鎖清單](../architecture/dns-filtering-and-blocklists.md)。
+- **精選封鎖清單，僅來源網址**——Lava 只發布上游清單網址（加上用於快取識別與稽核的建議性雜湊）；裝置透過 TLS 擷取每份清單，並在大小／規則上限內於本機剖析，Lava 絕不鏡像或提供第三方封鎖清單的位元組。社群清單不以雜湊鎖定——TLS 加上精選 URL 是完整性邊界——而 Lava 的 threat-guardrail 層仍維持雜湊強制檢查。出貨的預設會啟用 **Block List Basic + StevenBlack Unified Hosts**（`AppConfiguration.lavaRecommendedDefaults`，定義於 `OnboardingDefaults.swift`）；copyleft 來源（如 HaGeZi、OISD、AdGuard、1Hosts）為選擇性加入。請參閱 [DNS 篩選與封鎖清單](../architecture/dns-filtering-and-blocklists.md)。
 - **加密的 DNS 傳輸**——DoH（附帶觀測用的 DoH3 註記）、DoT（連線池化，可重複使用並刷新）以及 DoQ（每次查詢使用全新連線）。三者皆已實作；Device DNS（網路本身的解析器）是出貨的預設，加密的預設組合為選擇性加入（`AppConfiguration.lavaRecommendedDefaults`，定義於 `Sources/LavaSecCore/OnboardingDefaults.swift`）。內建的解析器預設組合（Google／Cloudflare／Quad9 的 DoH 與 DoT 變體）為免費；只有完全自訂的解析器才是付費解鎖。請參閱 [DNS 篩選與封鎖清單](../architecture/dns-filtering-and-blocklists.md)。
 - **允許例外（允許清單）**——手動加入網域，使其在封鎖清單之外仍被允許；威脅防護欄仍然優先。請參閱[產品功能總覽](features.md)。
 - **Soft Shield Guardian**——防護分頁、即時動態與動態島上的吉祥物，以 7 種表情狀態表達防護狀態。請參閱[設計系統](../design-system/overview.md)。

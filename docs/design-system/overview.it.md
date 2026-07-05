@@ -180,7 +180,7 @@ Decisioni di design integrate nel flusso:
 
 I valori predefiniti del primo avvio che il flusso installa: resolver **Device DNS** (`DNSResolverPreset.device`), **fallback Device DNS ON**, logging attivo (conteggi + cronologia + attività) e "Continue without account."
 
-> **Fonte di verità della blocklist predefinita.** Il valore predefinito nel codice rilasciato è **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, definito in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Il vero gate di tier è il **budget di regole del filtro (Free 500K / Plus 2M)**, *non* un conteggio di liste. Per il modello dei tier e la configurazione predefinita raccomandata, vedi [il catalogo delle funzionalità](../product/features.md).
+> **Fonte di verità della blocklist predefinita.** Il valore predefinito nel codice rilasciato è **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, definito in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). Il vero gate di tier è il **budget di regole del filtro (Free 500K / Plus 2M)**, *non* un conteggio di liste. Per il modello dei tier e la configurazione predefinita raccomandata, vedi [il catalogo delle funzionalità](../product/features.md).
 
 ---
 

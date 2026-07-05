@@ -181,7 +181,7 @@ DNS 这些传输方式里，只有 **DoH** 是词汇表里的「不翻译」条�
 
 这套流程装上的首次启动默认值是：**Device DNS** 解析器（`DNSResolverPreset.device`）、**Device DNS 回退开启**、日志开启（计数 + 历史 + 活动），以及「不使用账户继续」。
 
-> **默认拦截列表的权威来源。** 上线代码里的默认值是 **Block List Basic**（`AppConfiguration.lavaRecommendedDefaults`，定义在 lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift）。真正决定档位的是 **过滤规则预算（免费 500K / Plus 2M）**，*不是* 列表数量。档位模型和推荐默认配置，请看 [功能目录](../product/features.md)。
+> **默认拦截列表的事实来源。** 上线代码里的默认是 **Block List Basic + StevenBlack Unified Hosts**（`AppConfiguration.lavaRecommendedDefaults`，定义在 lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift）。真正卡住档位的是 **过滤规则预算（免费 500K / Plus 200 万）**，*不是* 列表数量。档位模型和推荐默认配置，请看 [功能目录](../product/features.md)。
 
 ---
 

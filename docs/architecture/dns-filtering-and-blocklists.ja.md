@@ -174,29 +174,29 @@ UI は **`DoH3`（スラッシュなし）** を注記します。たとえば�
 
 端末側では、`BlocklistCatalogSynchronizer`（`BlocklistCatalogSync.swift`）が次を行います:
 
-1. リストのバイトを `source.sourceURL` から直接取得し、サイズ上限を課します。
-2. SHA-256 を計算し、そのチェックサムがカタログの `accepted_source_hashes` に含まれている場合だけバイトを受け入れます。
-3. 不一致の場合は、直近で正常だったローカルキャッシュにフォールバックするか、**フェイルクローズ** します（`checksumMismatch`） — ただしそのソースが上流の直接ローテーションを明示的に許している場合は別です。
+1. リストのバイトを `source.sourceURL` から TLS で直接取得し、サイズ上限を課します。
+2. コミュニティソースでは、サイズ／フォーマット／ルール数の上限を通った取得済みバイトを、配信された内容として受け入れます。カタログの `accepted_source_hashes` は参考情報（キャッシュ識別 + 監査）であり、硬いゲートではありません。
+3. Lava の threat-guardrail ソースでは、ハッシュピン留め検証とフェイルクローズ動作を維持します。
 4. ローカルでパース／正規化／重複排除します。
 5. パース済みのすべてのルールセットを `DomainRuleSet.lavaSecProtectedDomains`（`AppConfiguration.swift:262-276`）でフィルタリングし、上流のリストが Lava／Apple／ID プロバイダーのドメインを決してブロックできないようにします。
 
-**保護対象ドメインのセット**（有効化の前に除外される）: `apple.com`、`icloud.com`、`mzstatic.com`、`itunes.apple.com`、`apps.apple.com`、`lavasecurity.com`、`lavasecurity.app`、`api.lavasecurity.app`、`lavasec.app`、`lavasec.example`、`accounts.google.com`、`google.com`（すべてサフィックス一致）。Worker はメタデータを計算するときに同等の `PROTECTED_SUFFIXES` フィルターを適用しますが、端末はそれとは関係なく再検証します。
+**保護対象ドメインのセット**（有効化の前に除外される）: `apple.com`、`icloud.com`、`mzstatic.com`、`itunes.apple.com`、`apps.apple.com`、`lavasecurity.com`、`lavasecurity.app`、`api.lavasecurity.app`、`lavasec.app`、`lavasec.example`、`accounts.google.com`、`google.com`（すべてサフィックス一致）。Worker はメタデータを計算するときに同等の `PROTECTED_SUFFIXES` フィルターを適用し、端末も有効化の前に保護ドメインフィルターをもう一度適用します。
 
 ### 5.2 用意されたソース（実装済み） {#52-curated-sources}
 
-`DefaultCatalog.curatedSources` は、正規の [Blocklist Catalog](../legal/blocklist-catalog.md) から生成されており、現在は 7 つのカテゴリーにまたがる **32** 個のソースです: Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。ソースのファミリーには The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts が含まれます。
+`DefaultCatalog.curatedSources` は正規の [Blocklist Catalog](../legal/blocklist-catalog.md) から生成され、現在は **32** 個のソースを 7 つのカテゴリ（Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent）に分けて含んでいます。ソースファミリーには The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts が含まれます。
 
-`guardrailSources` は空です。GPL のソース（HaGeZi、OISD、AdGuard）はカタログには見えますが、**オプトイン／デフォルトは OFF** です。Worker は起動時の同期／公開を `source_url_only` と承認済みの GPL プレフィックス（`hagezi-`、`oisd-`、`adguard-`）に限定します。
+`guardrailSources` は空です。GPL のソース（HaGeZi、OISD、AdGuard）はカタログには見えますが、**オプトイン／デフォルトは OFF** です。Worker は起動時の同期／公開を `source_url_only` と許可済み GPL プレフィックス（`hagezi-`、`oisd-`、`adguard-`）に限定します。
 
 ### 5.3 無料ユーザー向けにデフォルトで有効なリスト（実装済み） {#53-default-enabled-lists-for-free-users}
 
-無料デフォルト設定は `OnboardingDefaults.lavaRecommendedDefaults` で、これは **Block List Basic** — 広範で、許容度の高いライセンスの統合リスト（広告 ＋ トラッキング ＋ マルウェア ＋ フィッシング／詐欺）— を有効化し、リゾルバープリセットはデバイス DNS（`resolverPresetID = DNSResolverPreset.device.id`）、暗号化されたデバイス DNS フォールバックは **オン**（`usesEncryptedDeviceDNSFallback = true`）で、**Mullvad DoH**（`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`）へルーティングします: 端末自身の DNS が詰まった場合、許可された名前解決は一時的に Mullvad DoH 経由で運ばれ、その後は自動的に端末の DNS に戻ります。（素の `AppConfiguration()` イニシャライザはこのフォールバックを **オフ** にしているのがデフォルトです — 有効になるのは、推奨されるオンボーディングのデフォルトを受け入れたときだけです。）これは以前の Block List Project Phishing ＋ Scam のペアに取って代わるものです: Basic の統合された範囲がそれらを包含しており、両方とも引き続きオプトインで選択できるリストとして残っています。
+実際の無料デフォルト設定は `OnboardingDefaults.lavaRecommendedDefaults` で、**Block List Basic + StevenBlack Unified Hosts**（permissive ライセンスの source-url-only デフォルト）を有効化し、リゾルバープリセットはデバイス DNS（`resolverPresetID = DNSResolverPreset.device.id`）、デバイス DNS フォールバックはオンです。これは以前の Block List Project Phishing + Scam の組み合わせを置き換えるもので、より広いデフォルト範囲にそれらが含まれ、両方とも引き続きオプトインのリストとして選択できます。
 
-その無料デフォルトは **`defaultEnabled` から作られる** もので、ハードコードされているわけではありません。`blockListProjectBasic` は `defaultEnabled: true` を設定しており、`DefaultCatalog.recommendedDefaultSourceIDs` は `curatedSources.filter(\.defaultEnabled)` から導出されます。`defaultEnabled` は「新規インストール時のデフォルトの唯一の真実の出どころ」であり、バックエンドカタログの `default_enabled` カラムを反映しています。`recommendedDefaultSourceIDs` を経由して `OnboardingDefaults` に流れ込む `defaultEnabled` が、実際に機能している仕組みです — あるソースのフラグを切り替えればデフォルトが変わります。
+その無料デフォルトは **`defaultEnabled` から作られる** もので、ハードコードされているわけではありません。`blockListProjectBasic` と `stevenBlackUnifiedHosts` はどちらも `defaultEnabled: true` を設定しており、`DefaultCatalog.recommendedDefaultSourceIDs` は `curatedSources.filter(\.defaultEnabled)` から導出されます。`recommendedDefaultSourceIDs` を通って `OnboardingDefaults` に流れ込む `defaultEnabled` が、生きた仕組みです — あるソースのフラグを切り替えればデフォルトが変わります。
 
-> **デフォルトの真実の出どころ（1 つの生成された仕様）。** カタログは単一の正規の仕様（[Blocklist Catalog](../legal/blocklist-catalog.md)）から生成され、iOS の `DefaultCatalog` とバックエンドのシードの両方を作り出すので、端末と配信される `/v1/catalog` のメタデータは構造的に一致します。新規インストール時のデフォルトは **Block List Basic** で、その `defaultEnabled: true` フラグから来ています。実際のプランのゲートはリスト件数ではなく、500K/2M のフィルタールール上限です。
+> **デフォルトの真実の出どころ（1 つの生成仕様）。** カタログは単一の正規仕様（[Blocklist Catalog](../legal/blocklist-catalog.md)）から生成され、iOS の `DefaultCatalog` とバックエンド seed の両方を作るため、端末と配信される `/v1/catalog` メタデータは構造上そろいます。新規インストール時のデフォルトは **Block List Basic + StevenBlack Unified Hosts** で、それぞれの `defaultEnabled: true` フラグによるものです。実際のゲートは 500K/2M のフィルタールール上限で、リスト数ではありません。
 
-### 5.4 source-url-only の GPL 配布モデル（実装済み） {#54-source-url-only-gpl-distribution-model}
+### 5.4 source-url-only の GPL 配布モデル {#54-source-url-only-gpl-distribution-model}
 
 **source-url-only** は、GPL／知財コンプライアンスの配布モデルです。Lava は上流の URL ＋ 受け入れ可能なハッシュだけを公開し、端末がリストを自分で取得してパースします。Lava は第三者のブロックリストのバイトを **決して** 保存・ミラー・変換・配信しません。これは **放棄された R2 ミラー設計に取って代わった** ものです（元々の「生の R2 ミラー」プランは 2026-05-25 に差し戻されました）。
 
@@ -223,7 +223,7 @@ Worker 側では、`syncOneBlocklist` が各上流ソースを取得して正規
 | コンパクトスナップショットのゼロコピー mmap | 実装済み |
 | source-url-only カタログ ＋ 上流からの直接取得 ＋ ハッシュ検証 | 実装済み |
 | 保護対象ドメインのフィルター | 実装済み |
-| 無料デフォルト = Block List Basic | 実装済み（生成されたカタログ ＋ iOS／バックエンドの射影が一致） |
+| 無料デフォルト = Block List Basic + StevenBlack Unified Hosts | 実装済み（生成カタログ + iOS／バックエンド投影が一致） |
 | ファーストパーティの Lava コードのライセンス | AGPL-3.0（`LICENSE`）；第三者リストは上流では GPL-3.0 のまま |
 
 ---

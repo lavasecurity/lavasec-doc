@@ -174,27 +174,27 @@ Der **Blocklisten-Katalog** ist die veröffentlichte Liste der verfügbaren Quel
 
 Auf dem Gerät macht `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`) Folgendes:
 
-1. Holt die Listen-Bytes direkt von `source.sourceURL` und erzwingt dabei eine Größenobergrenze.
-2. Berechnet SHA-256 und akzeptiert die Bytes nur, wenn die Prüfsumme in den `accepted_source_hashes` des Katalogs steht.
-3. Bei Nichtübereinstimmung fällt es auf den zuletzt funktionierenden lokalen Cache zurück oder **fällt geschlossen aus** (`checksumMismatch`) — es sei denn, die Quelle erlaubt direkte Upstream-Rotation ausdrücklich.
+1. Holt die Listen-Bytes per TLS direkt von `source.sourceURL` und erzwingt dabei eine Größenobergrenze.
+2. Für Community-Quellen akzeptiert es die geholten Bytes nach Größen-, Format- und Regelanzahlgrenzen so, wie sie geliefert wurden; die `accepted_source_hashes` im Katalog sind beratend (Cache-Identität + Audit), keine harte Schranke.
+3. Für Lava-Threat-Guardrail-Quellen bleiben hash-gepinnte Verifikation und Fail-Closed-Verhalten erhalten.
 4. Parst/normalisiert/dedupliziert lokal.
 5. Filtert jeden geparsten Regelsatz durch `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:262-276`), damit eine Upstream-Liste niemals Lava-/Apple-/Identity-Provider-Domains blockieren kann.
 
-Das **Set geschützter Domains** (vor der Aktivierung herausgefiltert): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (alle suffix-abgeglichen). Der Worker wendet beim Berechnen der Metadaten einen gleichwertigen `PROTECTED_SUFFIXES`-Filter an; das Gerät validiert trotzdem nochmal selbst.
+Das **Set geschützter Domains** (vor der Aktivierung herausgefiltert): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (alle suffix-abgeglichen). Der Worker wendet beim Berechnen der Metadaten einen gleichwertigen `PROTECTED_SUFFIXES`-Filter an; das Gerät wendet den Schutzdomain-Filter vor der Aktivierung erneut an.
 
 ### 5.2 Kuratierte Quellen (Umgesetzt) {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` wird aus dem kanonischen [Blocklisten-Katalog](../legal/blocklist-catalog.md) generiert und führt aktuell **32** Quellen über sieben Kategorien hinweg: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling sowie Piracy & Torrent. Zu den Quellfamilien gehören The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard und 1Hosts.
+`DefaultCatalog.curatedSources` wird aus dem kanonischen [Blocklist Catalog](../legal/blocklist-catalog.md) erzeugt und enthält derzeit **32** Quellen in sieben Kategorien: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling und Piracy & Torrent. Die Quellfamilien umfassen The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard und 1Hosts.
 
 `guardrailSources` ist leer. GPL-Quellen (HaGeZi, OISD, AdGuard) sind im Katalog sichtbar, aber **opt-in / standardmäßig AUS**; der Worker beschränkt Launch-Sync/-Publish auf `source_url_only` plus die freigegebenen GPL-Präfixe (`hagezi-`, `oisd-`, `adguard-`).
 
 ### 5.3 Standardmäßig aktivierte Listen für kostenlose Nutzer (Umgesetzt) {#53-default-enabled-lists-for-free-users-implemented}
 
-Die Free-Standardkonfiguration ist `OnboardingDefaults.lavaRecommendedDefaults`, die **Block List Basic** aktiviert — eine breite, permissiv lizenzierte kombinierte Liste (Werbung + Tracking + Malware + Phishing/Scam) — mit dem Geräte-DNS-Resolver-Preset (`resolverPresetID = DNSResolverPreset.device.id`) und **eingeschalteter** verschlüsselter Geräte-DNS-Ausweichoption (`usesEncryptedDeviceDNSFallback = true`), die zu **Mullvad DoH** routet (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`): Wenn das geräteeigene DNS hängenbleibt, werden erlaubte Lookups vorübergehend über Mullvad DoH abgewickelt und kehren dann automatisch zum geräteeigenen DNS zurück. (Der schlichte `AppConfiguration()`-Initializer setzt diese Ausweichoption standardmäßig **aus** — sie wird nur durch Annahme der empfohlenen Onboarding-Standardwerte aktiviert.) Das löst das frühere Paar Block List Project Phishing + Scam ab: Die kombinierte Abdeckung von Basic schließt sie ein, und beide bleiben optional auswählbare Listen.
+Die tatsächliche Free-Standardkonfiguration ist `OnboardingDefaults.lavaRecommendedDefaults`, die **Block List Basic + StevenBlack Unified Hosts** aktiviert — permissiv lizenzierte source-url-only Standards —, mit dem Geräte-DNS-Resolver-Preset (`resolverPresetID = DNSResolverPreset.device.id`) und aktivierter Geräte-DNS-Ausweichoption. Das ersetzt das frühere Block-List-Project-Phishing-+-Scam-Paar; die breitere Standardabdeckung schließt diese Quellen ein, und beide bleiben als opt-in Listen auswählbar.
 
-Dieser Free-Standard wird **von `defaultEnabled` erzeugt**, nicht hartcodiert. `blockListProjectBasic` setzt `defaultEnabled: true`, und `DefaultCatalog.recommendedDefaultSourceIDs` wird aus `curatedSources.filter(\.defaultEnabled)` abgeleitet. `defaultEnabled` ist "the single source of truth for the fresh-install default" und spiegelt damit die `default_enabled`-Spalte des Backend-Katalogs. Über `recommendedDefaultSourceIDs` fließt es in `OnboardingDefaults` ein und ist der lebende Mechanismus — kippe das Flag an einer Quelle, um den Standard zu ändern.
+Dieser Free-Standard wird **von `defaultEnabled` erzeugt**, nicht hartcodiert. `blockListProjectBasic` und `stevenBlackUnifiedHosts` setzen `defaultEnabled: true`, und `DefaultCatalog.recommendedDefaultSourceIDs` wird aus `curatedSources.filter(\.defaultEnabled)` abgeleitet. Über `recommendedDefaultSourceIDs` fließt `defaultEnabled` in `OnboardingDefaults` ein und ist der lebende Mechanismus — kippe das Flag an einer Quelle, um den Standard zu ändern.
 
-> **Maßgebliche Standard-Quelle (eine generierte Spezifikation).** Der Katalog wird aus einer einzigen kanonischen Spezifikation generiert ([Blocklisten-Katalog](../legal/blocklist-catalog.md)), die sowohl den iOS-`DefaultCatalog` als auch den Backend-Seed erzeugt, sodass das Gerät und die ausgelieferten `/v1/catalog`-Metadaten per Konstruktion übereinstimmen. Der Fresh-Install-Standard ist **Block List Basic**, über sein `defaultEnabled: true`-Flag. Das echte Tier-Gate ist das Filter-Regel-Budget von 500K/2M, keine Listenanzahl.
+> **Maßgebliche Standard-Quelle (eine generierte Spezifikation).** Der Katalog wird aus einer einzigen kanonischen Spezifikation ([Blocklist Catalog](../legal/blocklist-catalog.md)) generiert, die sowohl den iOS-`DefaultCatalog` als auch den Backend-Seed erzeugt; Gerät und ausgelieferte `/v1/catalog`-Metadaten stimmen dadurch konstruktionsbedingt überein. Der Fresh-Install-Standard ist **Block List Basic + StevenBlack Unified Hosts**, über ihre `defaultEnabled: true`-Flags. Das echte Limit ist das Filterregel-Budget von 500K/2M, keine Listenanzahl.
 
 ### 5.4 Source-url-only-Verteilmodell für GPL (Umgesetzt) {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -223,7 +223,7 @@ Auf der Worker-Seite holt `syncOneBlocklist` jede Upstream-Quelle und normalisie
 | Zero-copy-mmap des Compact-Snapshots | Umgesetzt |
 | Source-url-only-Katalog + direkter Upstream-Abruf + Hash-Validierung | Umgesetzt |
 | Geschützte-Domains-Filter | Umgesetzt |
-| Free-Standard = Block List Basic | Umgesetzt (generierter Katalog + iOS-/Backend-Projektionen stimmen überein) |
+| Free-Standard = Block List Basic + StevenBlack Unified Hosts | Umgesetzt (generierter Katalog + iOS-/Backend-Projektionen stimmen überein) |
 | Lizenz des First-Party-Lava-Codes | AGPL-3.0 (`LICENSE`); Drittanbieter-Listen bleiben upstream GPL-3.0 |
 
 ---

@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 正規化のガードレール（メタデータのみ） {#33-normalization-guardrails-metadata-only}
 
-Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。 **コミュニティリスト** については、端末はダウンロードを **ハッシュゲートしません** — 端末は厳選された `source_url` から TLS 越しに取得し、上限の下で解析します（カタログの承認済みハッシュは参考情報です）。したがって、この Worker 側の正規化はそれ自体がセキュリティ境界ではありません。（Lava の脅威ガードレール層は端末側でハッシュにピン留めされたままで、`source_url` の出所は公開時に強制されます — URL の変更は新しい `list_id` を使わなければなりません。）主要な定数:
+Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。**コミュニティリスト**について、端末はダウンロードをハッシュでゲート**しません**。用意された `source_url` から TLS で取得し、上限のもとで解析します（カタログの accepted hashes は参考情報です）。そのため、この Worker 側の正規化だけがセキュリティ境界になるわけではありません。（Lava の threat-guardrail 層は端末上で引き続きハッシュピン留めされ、`source_url` の由来は公開時に強制されます。URL を変える場合は新しい `list_id` が必要です。）主要な定数:
 
 - `PROTECTED_SUFFIXES` — Apple/iCloud/`mzstatic`/Lava Security のドメイン/Supabase/Cloudflare/Google/GitHub にマッチするルールをすべて取り除きます。これにより、毒入りの上流が Lava 自身のインフラやサインインプロバイダをブロックできないようにします。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。
@@ -114,9 +114,9 @@ Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメイン�
 
 ### 3.5 シードされたソースとデフォルト有効 {#35-seeded-sources--default-enabled}
 
-用意されたソースは、正典の [ブロックリストカタログ](../legal/blocklist-catalog.md) 仕様（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）から生成され、マイグレーション経由で source-url-only のメタデータとしてシードされます。カテゴリ拡張のマイグレーションは、多層防御のカテゴリ（nsfw／social／gambling／piracy）を追加し、新規インストールのデフォルトを **Block List Basic** に整え直し、AdGuard DNS Filter を弁護士フラグ付き・デフォルト無効の選択肢として再有効化します。ステータス: **実装済み**。
+用意されたソースは、正規の [Blocklist Catalog](../legal/blocklist-catalog.md) から生成され、マイグレーション経由で source-url-only メタデータとしてシードされます（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）。カテゴリ拡張マイグレーションは防御深度カテゴリ（nsfw/social/gambling/piracy）を追加し、新規インストール時のデフォルトを **Block List Basic + StevenBlack Unified Hosts** にそろえ、AdGuard DNS Filter を法務フラグ付き・デフォルトオフの選択肢として再有効化します。ステータス: **実装済み**。
 
-> **カタログのデフォルトはクライアントと一致。** カタログの `default_enabled` 集合は **{Block List Basic}** で、これは以前の Phishing ＋ Scam のペアを置き換える、幅広く寛容な統合リストであり、iOS の推奨デフォルト（`AppConfiguration.lavaRecommendedDefaults`）と一致します。配信される `default_enabled` カラムと、同梱される iOS の `DefaultCatalog` は、どちらも同じ正典の仕様から生成されるので、構造上一致します（これにより、以前のクライアント↔バックエンドのデフォルトの食い違いが解消されます）。注意: `default_enabled` は参考情報です。本当のプランのゲートはリストの数ではなく、 **filter-rules budget（無料プラン 500K / Plus 2M）** です。バイト列ではなく URL を公開する法的根拠は [GPL source-url-only コンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md) にあります。
+> **カタログのデフォルトはクライアントと一致。** カタログの `default_enabled` 集合は **{Block List Basic, StevenBlack Unified Hosts}** です。どちらも permissive ライセンスの source-url-only デフォルトで、iOS の推奨デフォルト（`AppConfiguration.lavaRecommendedDefaults`）と一致します。配信される `default_enabled` カラムと iOS 同梱の `DefaultCatalog` は同じ正規仕様から生成されるため、構造上そろいます。注意: `default_enabled` は参考情報です。本当のプランのゲートはリストの数ではなく、 **filter-rules budget（無料プラン 500K / Plus 2M）** です。バイト列ではなく URL を公開する法的根拠は [GPL source-url-only コンプライアンス判断](../legal/gpl-source-url-only-compliance-decision.md) にあります。
 
 ## 4. Supabase Postgres {#4-supabase-postgres}
 

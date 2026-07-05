@@ -53,12 +53,12 @@ Lava Security 是一款隐私优先的 iOS App，它通过 NetworkExtension 数�
 
 | 功能 | 档位 | 说明 |
 |---|---|---|
-| **只发布来源 URL 的拦截列表** | 免费 | Lava Security 只发布上游 URL 加上认可的哈希值；列表的**字节内容**由设备自己去抓、自己去解析。Lava Security **绝不**存储、镜像、转换或提供第三方拦截列表的字节。详见 [GPL 只发布来源 URL 的合规决定](../legal/gpl-source-url-only-compliance-decision.md)。 |
-| **精选目录（已分类）** | 可免费启用 | 精选来源按纵深防御的类别组织——安全与威胁情报、多用途、广告与追踪器、社交媒体、成人内容、赌博、盗版与种子——来自 HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts 和 Phishing.Database。完整的当前集合发布在[拦截列表目录](../legal/blocklist-catalog.md)里；每个平台所反映的是它发布时所附带的目录版本。 |
-| **默认免费拦截列表** | 免费 | 新装的 App 会启用 **Block List Basic**——一份范围广、较宽松的合并列表（该来源标了 `defaultEnabled: true`；`DefaultCatalog.recommendedDefaultSourceIDs`）。其余一切都需要主动开启。 |
+| **只发布来源 URL 的拦截列表** | 免费 | Lava Security 只发布上游 URL 加上认可的哈希值；列表的**字节内容**由设备自己去抓、自己去解析。Lava Security **绝不**存储、镜像、转换或分发第三方拦截列表的字节。详见 [GPL 只发布来源 URL 的合规决定](../legal/gpl-source-url-only-compliance-decision.md)。 |
+| **精选目录（分类）** | 可免费启用 | 精选来源按防御深度类别组织：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent，来源包括 HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts、Phishing.Database。完整当前集合发布在 [Blocklist Catalog](../legal/blocklist-catalog.md)。 |
+| **默认免费拦截列表** | 免费 | 新装的 App 会启用 **Block List Basic** 加 **StevenBlack Unified Hosts**——宽松授权、只发来源 URL 的默认来源，标了 `defaultEnabled: true`（`DefaultCatalog.recommendedDefaultSourceIDs`）。其他来源都需要手动开启。 |
 | **在设备上解析／规范化／去重** | 免费 | `BlocklistParser` 支持 auto/plain/hosts/adblock/dnsmasq，会丢掉注释／空行／无效项，对完全相同的字符串去重，每个列表最多 1,000,000 条规则。一条带多个主机的 `hosts` 行现在会把该行上的**每一个**主机都生成出来，而不是只取第一个（解析器规则版本 2）。 |
-| **上游完整性（TLS + 精选 URL）** | 免费 | 社区列表的字节是直接从精选上游 `source_url` 经 TLS 抓取的，在符合大小 + 格式 + 规则数量上限的前提下被接受；目录里的 `accepted_source_hashes` 只是**参考性的**（缓存标识 + 审计），不是硬性闸门——一份快速轮换的列表绝不会因为偏离了某个固定的哈希值而被拒。Lava Security 的**安全护栏**档（由 Lava Security 精选、不可被放行）则严格保持哈希固定。 |
-| **受保护域名过滤** | 免费 | 每个解析出来的来源都会剔除掉受保护的 Lava Security / Apple / 身份提供方域名（apple.com、icloud.com、lavasecurity.app、google.com、accounts.google.com……），这样上游列表就无法破坏 App、隧道或登录。 |
+| **上游完整性（TLS + 精选 URL）** | 免费 | 社区列表字节会直接通过 TLS 从精选上游 `source_url` 抓取，并在大小 + 格式 + 规则数上限内接受；目录里的 `accepted_source_hashes` 是**提示性数据**（缓存身份 + 审计），不是硬门槛——快速轮换的列表不会因为偏离钉死的哈希而被拒绝。Lava 的 **threat-guardrail** 层（Lava 精选、不可允许）仍严格哈希钉死。 |
+| **受保护域名过滤** | 免费 | 每个解析出来的来源都会剔除掉受保护的 Lava Security / Apple / 身份提供方域名（apple.com、icloud.com、lavasecurity.app、google.com、accounts.google.com……），这样上游列表就没法搞坏 App、隧道或登录。 |
 | **允许例外（允许列表）** | 免费 | 由用户管理的允许列表，让某些域名即便在拦截列表里也能放行。免费上限：25 个允许的 / 25 个已拦截域名（`FeatureLimits.free`）。 |
 | **过滤规则配额（档位指标）** | 免费 / Plus | 上线的档位指标是编译后的域名**规则**总数：**免费 500K / Plus 2M**（`lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` 里的 `maxFilterRules`）。取代了原先按列表数量算的上限。超出档位的配置会触发 `exceedsTierFilterRuleLimit`。 |
 | **更高的域名上限** | Plus | 1,000 个允许的 / 1,000 个已拦截域名（`FeatureLimits.plus`）。 |
@@ -127,7 +127,7 @@ Lava Security 是一款隐私优先的 iOS App，它通过 NetworkExtension 数�
 | **多页首次运行流程** | 免费 | `OnboardingFlowView` —— 6 个页面：`lava, guardIntro, features, vpn, notifications, done`。（配置文件安装和通知请求都安排在合适的步骤，不会一开始就弹出。） |
 | **安装本地 VPN 配置文件** | 免费 | 在引导期间装好本地 VPN 配置，但**不**启用按需连接，这样完成时防护绝不会悄悄自动开着——以 Guard 界面为准。 |
 | **请求通知权限** | 免费 | 在流程中的通知那一步请求。 |
-| **应用推荐的默认值** | 免费 | Device DNS 解析器、退回设备 DNS 开启、本地日志开启（计数 + 历史 + 活动）、Block List Basic 启用、不使用账户继续（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`，`lavaRecommendedDefaults`）。 |
+| **应用推荐的默认值** | 免费 | Device DNS 解析器、退回设备 DNS 开启、本地日志开启（计数 + 历史 + 活动）、Block List Basic + StevenBlack Unified Hosts 启用、不使用账户继续（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`，`lavaRecommendedDefaults`）。 |
 
 ---
 

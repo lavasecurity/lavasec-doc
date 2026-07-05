@@ -180,7 +180,7 @@ Guardian 尊重隱私遮蔽：當介面處於隱私遮蔽狀態時，表情可�
 
 該流程安裝的首次執行預設值：**裝置 DNS** 解析器（`DNSResolverPreset.device`）、**裝置 DNS 後援開啟**、記錄開啟（計數 + 歷史記錄 + 活動），以及「不建立帳號繼續」。
 
-> **預設封鎖清單的事實來源。** 已上線的程式碼預設是 **Block List Basic**（`AppConfiguration.lavaRecommendedDefaults`，定義於 lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift）。真正的方案閘門是 **filter-rules budget（Free 500K／Plus 2M）**，*而非*清單數量。關於方案模型與建議的預設配置，請參閱 [功能目錄](../product/features.md)。
+> **預設封鎖清單真相來源。** 已上線的程式碼預設是 **Block List Basic + StevenBlack Unified Hosts**（`AppConfiguration.lavaRecommendedDefaults`，定義於 lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift）。真正的方案閘門是 **filter-rules budget（Free 500K／Plus 2M）**，*而非*清單數量。關於方案模型與建議的預設配置，請參閱 [功能目錄](../product/features.md)。
 
 ---
 

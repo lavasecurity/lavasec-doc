@@ -174,27 +174,27 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 
 在设备上，`BlocklistCatalogSynchronizer`（`BlocklistCatalogSync.swift`）会：
 
-1. 直接从 `source.sourceURL` 拉取列表字节，并执行大小上限。
-2. 计算 SHA-256，只有当校验和在目录的 `accepted_source_hashes` 里时才接受这些字节。
-3. 若对不上，就回落到上一份正常的本地缓存，或者**故障即关闭**（`checksumMismatch`）——除非该来源明确允许直接做上游轮换。
+1. 通过 TLS 直接从 `source.sourceURL` 拉取列表字节，并执行大小上限。
+2. 对社区来源，在通过大小 / 格式 / 规则数上限后，按抓到的内容接受；目录里的 `accepted_source_hashes` 是提示性数据（缓存身份 + 审计），不是硬门槛。
+3. 对 Lava threat-guardrail 来源，保留哈希钉死校验和故障即关闭行为。
 4. 在本地解析/归一化/去重。
 5. 把每一份解析出来的规则集都过一遍 `DomainRuleSet.lavaSecProtectedDomains`（`AppConfiguration.swift:262-276`），这样上游列表就永远没法拦掉 Lava / Apple / 身份提供方的域名。
 
-**受保护域名集合**（在启用前会被过滤掉）：`apple.com`、`icloud.com`、`mzstatic.com`、`itunes.apple.com`、`apps.apple.com`、`lavasecurity.com`、`lavasecurity.app`、`api.lavasecurity.app`、`lavasec.app`、`lavasec.example`、`accounts.google.com`、`google.com`（全部按后缀匹配）。Worker 在计算元数据时会套用一个等价的 `PROTECTED_SUFFIXES` 过滤器；不管怎样，设备端都会再校验一遍。
+**受保护域名集合**（在启用前会被过滤掉）：`apple.com`、`icloud.com`、`mzstatic.com`、`itunes.apple.com`、`apps.apple.com`、`lavasecurity.com`、`lavasecurity.app`、`api.lavasecurity.app`、`lavasec.app`、`lavasec.example`、`accounts.google.com`、`google.com`（全部按后缀匹配）。Worker 在计算元数据时会套用一个等价的 `PROTECTED_SUFFIXES` 过滤器；设备在启用前也会再次套用受保护域名过滤。
 
 ### 5.2 精选来源（已实现） {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` 由规范化的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成，目前共 **32** 个来源，分布在七个类别中：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling，以及 Piracy & Torrent。来源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard 以及 1Hosts。
+`DefaultCatalog.curatedSources` 由规范的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成，目前有 **32** 个来源，分布在七个类别：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。来源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts。
 
-`guardrailSources` 是空的。GPL 来源（HaGeZi、OISD、AdGuard）在目录里是可见的，但**需要手动开启 / 默认是关的**；Worker 会把上线时的同步/发布限定在 `source_url_only` 加上已获放行的 GPL 前缀（`hagezi-`、`oisd-`、`adguard-`）范围内。
+`guardrailSources` 是空的。GPL 来源（HaGeZi、OISD、AdGuard）在目录里可见，但**需要手动开启 / 默认是关的**；Worker 会把上线时的同步/发布限定在 `source_url_only` 加上已核准的 GPL 前缀（`hagezi-`、`oisd-`、`adguard-`）范围内。
 
 ### 5.3 免费用户默认启用的列表（已实现） {#53-default-enabled-lists-for-free-users-implemented}
 
-免费默认配置是 `OnboardingDefaults.lavaRecommendedDefaults`，它会启用 **Block List Basic**——一份覆盖面广、采用宽松许可证的合并列表（广告 + 跟踪 + 恶意软件 + 钓鱼/诈骗）——搭配 device-DNS 解析器预设（`resolverPresetID = DNSResolverPreset.device.id`），并**开启**加密的 Device-DNS 回落（`usesEncryptedDeviceDNSFallback = true`），回落到 **Mullvad DoH**（`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`）：万一设备自己的 DNS 卡住了，被放行的查询会暂时经由 Mullvad DoH 来承载，随后再自动回到设备自身的 DNS。（裸的 `AppConfiguration()` 初始化器默认把这个回落**关掉**——只有在接受推荐的引导默认值时它才会被启用。）这取代了早先的 Block List Project Phishing + Scam 这一对：Basic 的合并覆盖已经把它们囊括进去了，而这两者仍然是可手动开启的列表。
+实际的免费默认配置是 `OnboardingDefaults.lavaRecommendedDefaults`，它会启用 **Block List Basic + StevenBlack Unified Hosts**——宽松授权、只发来源 URL 的默认来源——搭配 device-DNS 解析器预设（`resolverPresetID = DNSResolverPreset.device.id`），并开启 device-DNS 回落。这取代了较早的 Block List Project Phishing + Scam 组合；更广的默认覆盖已经包含它们，而两者仍可作为可选列表启用。
 
-这套免费默认是**由 `defaultEnabled` 产生的**，不是写死的。`blockListProjectBasic` 设了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs` 是由 `curatedSources.filter(\.defaultEnabled)` 推导出来的。`defaultEnabled` 是「全新安装默认值的唯一事实来源」，与后端目录的 `default_enabled` 列相对应。它经由 `recommendedDefaultSourceIDs` 一路流到 `OnboardingDefaults`，是真正生效的机制——把某个来源上的这个标志翻一下，就能改默认值。
+这套免费默认是**由 `defaultEnabled` 产生的**，不是写死的。`blockListProjectBasic` 和 `stevenBlackUnifiedHosts` 都设了 `defaultEnabled: true`，而 `DefaultCatalog.recommendedDefaultSourceIDs` 是由 `curatedSources.filter(\.defaultEnabled)` 推导出来的。`defaultEnabled` 经由 `recommendedDefaultSourceIDs` 一路流到 `OnboardingDefaults`，是真正生效的机制——把某个来源上的这个标志翻一下，就能改默认值。
 
-> **默认值的事实来源（一份生成出来的规范）。** 目录是由一份规范化的、唯一的规格文档（[Blocklist Catalog](../legal/blocklist-catalog.md)）生成的，它同时产出 iOS 端的 `DefaultCatalog` 和后端的种子数据，所以设备和对外提供的 `/v1/catalog` 元数据天然就是一致的。全新安装的默认是 **Block List Basic**，源自它的 `defaultEnabled: true` 标志。真正的分层关卡是 500K/2M 的过滤规则预算，而不是列表数量。
+> **默认值的事实来源（同一份生成式规范）。** 目录由单一规范（[Blocklist Catalog](../legal/blocklist-catalog.md)）生成，同时产出 iOS `DefaultCatalog` 和后端种子，所以设备和 `/v1/catalog` 提供的元数据按构建就保持一致。全新安装默认值是 **Block List Basic + StevenBlack Unified Hosts**，来自它们的 `defaultEnabled: true` 标志。真正的方案门是 500K/2M 的过滤规则预算，而不是列表数量。
 
 ### 5.4 只发布来源 URL 的 GPL 分发模型（已实现） {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -223,7 +223,7 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 | compact 快照的零拷贝 mmap | 已实现 |
 | 只发布来源 URL 的目录 + 直接上游拉取 + 哈希校验 | 已实现 |
 | 受保护域名过滤 | 已实现 |
-| 免费默认 = Block List Basic | 已实现（生成出来的目录 + iOS/后端投影彼此一致） |
+| 免费默认 = Block List Basic + StevenBlack Unified Hosts | 已实现（生成式目录与 iOS／后端投影一致） |
 | 第一方 Lava Security 代码许可证 | AGPL-3.0（`LICENSE`）；第三方列表上游保持 GPL-3.0 |
 
 ---

@@ -139,7 +139,7 @@ Lava Security はプライバシー最優先の iOS アプリで、DNS を **端
 
 1. 端末はカタログの **メタデータ** を Worker から取得します: `GET https://api.lavasecurity.app/v1/catalog` → R2（`catalog/latest.json`）からそのまま配信される JSON で、`sources[]` + `guardrails[]` に分かれ、各エントリが `source_url` + `accepted_source_hashes` を持ちます。
 2. 有効なソースごとに、端末はリストの **バイトを `source_url` から直接** ダウンロードします（アップストリーム、つまり HaGeZi、OISD、Block List Project など）。Lava からではありません。
-3. 端末は取得したバイトを、サイズ/ルールの上限の下でローカルにパースします。コミュニティのリストは TLS 越しに配信されたものとして受け入れられます。カタログの `accepted_source_hashes` は参考用（キャッシュの識別 + 監査）であり、厳格なゲートではありません。そのため、ローテーションされたリストが、ピン留めしたハッシュからずれたという理由で拒否されることはありません。Lava の脅威ガードレールの層はハッシュにピン留めされたままです。
+3. 端末は取得したバイト列をサイズ／ルール上限のもとでローカル解析します。コミュニティリストは TLS で配信された内容として受け入れます。カタログの `accepted_source_hashes` は参考情報（キャッシュ識別 + 監査）であり、硬いゲートではないため、頻繁に更新されるリストがピン留めハッシュからずれたという理由で拒否されることはありません。Lava の threat-guardrail 層は引き続きハッシュでピン留めされます。
 4. **`BlocklistParser`** がローカルでパース/正規化/重複排除します（auto / plain / hosts / adblock / dnsmasq 形式）。その後 **`DomainRuleSet.lavaSecProtectedDomains`** が保護ドメイン（apple.com、icloud.com、lavasecurity.com/.app、google.com、accounts.google.com、…）を取り除くので、アップストリームのリストが Lava/Apple/ID プロバイダーのドメインをブロックすることはあり得ません。
 5. **`FilterSnapshotPreparationService`** が重複排除した和集合をマージし、**最終的な予算の強制** を行い（まず端末の上限、次にプラン）、`filter-snapshot.compact` を App Group に書き込みます。
 6. `AppViewModel` が `reload-snapshot` のプロバイダーメッセージを送り、トンネルが再読み込みします。
@@ -150,7 +150,7 @@ Worker 側もこれを反映します。admin/cron の同期が各アップス�
 - **端末ガードレール（全員対象、決して有料の壁ではない）:** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 ルール** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`。これは ~50 MiB の NE 上限の下に置いた 32 MB のターゲットです。予算を超える設定は、トンネルが jetsam で落ちるに任せるのではなく、確定的に拒否されます。
 - **プランの上限（`FeatureLimits`）:** **無料 500K ルール / Plus 2M ルール** で、端末ガードレールより下に効きます。これは旧来の有効リストの **件数** 上限（無料 3 / 有料 10）を置き換えたもので、リスト件数の上限はもう使われていません。
 
-> **デフォルト有効が何かの正:** 実際に出荷されている無料のデフォルトは **Block List Basic** です（`OnboardingDefaults.lavaRecommendedDefaults`）。これは、用意された各ソースの `defaultEnabled` フラグ（`BlocklistSource.recommendedDefaultSourceIDs`）から端末上で導出されます。このフラグは、同じ正規のカタログ仕様から生成されるバックエンドのカタログの `default_enabled` 列を反映しています。
+> **デフォルト有効に関する注意（コードが正）:** 実際に出荷されている無料のデフォルトは **Block List Basic + StevenBlack Unified Hosts** です（`OnboardingDefaults.lavaRecommendedDefaults`）。これらは、用意された各ソースの `defaultEnabled` フラグ（`BlocklistSource.recommendedDefaultSourceIDs`）から端末上で導出されます。これが端末上の正であり、バックエンドのカタログの `default_enabled` 列を反映しています。
 
 ### C. バックアップ（ゼロ知識、オプトイン） — 実装済み {#c-backup-zero-knowledge-opt-in-implemented}
 

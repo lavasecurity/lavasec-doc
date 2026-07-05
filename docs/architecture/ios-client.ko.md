@@ -173,7 +173,7 @@ Live Activity의 `LavaActivityAttributes.ProtectionState`(`Shared/LavaActivityAt
 
 온보딩은 `LavaOnboardingView`(`LavaSecApp/OnboardingFlowView.swift`)에 의해 제시되며 `RootView`(`RootView.swift:32`)에 선언된 `@AppStorage("hasSeenLavaOnboarding")` 플래그로 게이팅됩니다. 플로우는 `OnboardingPage`들의 시퀀스입니다(`OnboardingFlowView.swift:403-409`): `lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`.
 
-배포되는 시작 설정은 `OnboardingDefaults`(`Sources/LavaSecCore/OnboardingDefaults.swift`)에서 옵니다. `AppConfiguration.lavaRecommendedDefaults`는 관대한 권장 소스(Block List Basic)만 활성화하고, 리졸버로 **Device DNS**를 선택하며 — `DNSResolverPreset.device`(id `device-dns`), 네트워크 자체의 DNS이며, Google DoH 같은 암호화 프리셋은 옵트인이고 기본값으로 승격되지 않음 — device-DNS fallback을 활성화하고, 로컬 로깅을 켠 상태로 유지합니다 — `protectionEnabled: false`로, 보호는 사용자가 선택할 때만 켜집니다. `OnboardingDefaultsSummary`는 이 선택들을 표시용으로 포맷합니다("Continue without account"가 계정 기본값입니다).
+배포되는 시작 설정은 `OnboardingDefaults`(`Sources/LavaSecCore/OnboardingDefaults.swift`)에서 옵니다. `AppConfiguration.lavaRecommendedDefaults`는 관대한 권장 소스(Block List Basic + StevenBlack Unified Hosts)를 활성화하고, 리졸버로 **Device DNS**를 선택하며 — `DNSResolverPreset.device`(id `device-dns`), 네트워크 자체의 DNS이며, Google DoH 같은 암호화 프리셋은 옵트인이고 기본값으로 승격되지 않음 — device-DNS fallback을 활성화하고, 로컬 로깅을 켠 상태로 유지합니다 — `protectionEnabled: false`로, 보호는 사용자가 선택할 때만 켜집니다. `OnboardingDefaultsSummary`는 이 선택들을 표시용으로 포맷합니다("Continue without account"가 계정 기본값입니다).
 
 마지막에 `hasSeenLavaOnboarding = true`를 설정하는 것이 `hasCompletedOnboarding`을 뒤집으며, 이는 다시 [§3](#3-vpn-lifecycle-control)에서 설명한 시작 재조정 경로를 무장시킵니다. 그때까지는 온보딩 도중 무력화 경로가 상속된 fail-closed 터널이 트래픽을 차단하지 못하도록 유지합니다.
 

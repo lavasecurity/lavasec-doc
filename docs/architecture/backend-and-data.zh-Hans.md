@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 归一化护栏（只算元数据） {#33-normalization-guardrails-metadata-only}
 
-Worker 端的归一化（`normalizeBlocklist`）会过滤掉受保护的域名、强制各项上限，并去重 + 排序。这纯粹是为了算出可信的元数据；对于**社区列表**，设备**不会**对下载做哈希门控 —— 它会通过 TLS 从精选的 `source_url` 抓取，并在各项上限内解析（目录里那些已认可的哈希只是参考性的），所以这套 Worker 端的归一化本身并不是一道安全边界。（Lava 的威胁护栏层在设备上仍然是哈希钉死的，而 `source_url` 的来源出处在发布时会被强制校验 —— URL 一旦变更必须改用一个新的 `list_id`。）几个关键常量：
+Worker 端的归一化（`normalizeBlocklist`）会过滤掉受保护的域名、强制各项上限，并去重 + 排序。这纯粹是为了算出可信的元数据；对**社区列表**来说，设备**不会**把哈希当成下载闸门——它会通过 TLS 从精选 `source_url` 抓取，并在上限内解析（目录里的 accepted hashes 是提示性数据），所以 Worker 端归一化本身并不是一道安全边界。（Lava 的 threat-guardrail 层在设备上仍保持哈希钉死，且 `source_url` 来源在发布时强制校验——URL 变更必须使用新的 `list_id`。）几个关键常量：
 
 - `PROTECTED_SUFFIXES` —— 把任何命中 Apple/iCloud/`mzstatic`/Lava Security 域名/Supabase/Cloudflare/Google/GitHub 的规则都剥掉，这样就算上游被投毒，也没法拦掉 Lava 自家的基础设施或登录服务商。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。
@@ -114,9 +114,9 @@ Worker 端的归一化（`normalizeBlocklist`）会过滤掉受保护的域名�
 
 ### 3.5 预置来源与默认启用 {#35-seeded-sources-default-enabled}
 
-精选来源通过迁移以「只发 source-url」的元数据形式预置进来，由规范的 [拦截列表目录](../legal/blocklist-catalog.md) 规格生成（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）。那个类别扩展迁移加上了纵深防御类别（nsfw/social/gambling/piracy），把全新安装的默认重新对齐到 **Block List Basic**，并把 AdGuard DNS Filter 重新启用为一个经法务标注、默认关闭的选项。状态：**已实现**。
+精选来源通过迁移以「只发 source-url」的元数据形式预置进来，并由规范的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成（HaGeZi、OISD、The Block List Project、Phishing.Database、StevenBlack、AdGuard、1Hosts）。分类扩展迁移加入防御深度类别（nsfw/social/gambling/piracy），把全新安装默认值对齐为 **Block List Basic + StevenBlack Unified Hosts**，并把 AdGuard DNS Filter 重新启用为带法务标记、默认关闭的选项。状态：**已实现**。
 
-> **目录默认值和客户端对齐。** 目录的 `default_enabled` 集合是 **{Block List Basic}** —— 一份范围广、较宽松的合并列表，取代了早先的钓鱼 + 诈骗那一对 —— 与 iOS 推荐的默认（`AppConfiguration.lavaRecommendedDefaults`）一致。对外提供的 `default_enabled` 列和 iOS 内置的 `DefaultCatalog` 都从同一份规范规格生成，所以它们天然就一致（这就解决了早先客户端↔后端默认值不一致的问题）。注意 `default_enabled` 只是说明性的：真正的方案门是**过滤规则配额（免费方案 500K / Plus 200 万）**，不是列表数量。发布 URL（而非字节）的法律依据见 [GPL 只发 source-url 合规决定](../legal/gpl-source-url-only-compliance-decision.md)。
+> **目录默认值和客户端对齐。** 目录的 `default_enabled` 集合现在是 **{Block List Basic、StevenBlack Unified Hosts}**，这些是宽松授权、只发来源 URL 的默认来源，与 iOS 推荐默认值（`AppConfiguration.lavaRecommendedDefaults`）一致。对外提供的 `default_enabled` 列和 iOS 内置 `DefaultCatalog` 都由同一份规范目录生成，所以按构建就保持一致。注意 `default_enabled` 只是说明性的：真正的方案门是**过滤规则配额（免费方案 500K / Plus 200 万）**，不是列表数量。发布 URL（而非字节）的法律依据见 [GPL 只发 source-url 合规决定](../legal/gpl-source-url-only-compliance-decision.md)。
 
 ## 4. Supabase Postgres {#4-supabase-postgres}
 

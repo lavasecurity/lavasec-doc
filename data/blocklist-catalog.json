@@ -337,9 +337,9 @@
       "parse_format": "hosts",
       "redistribution_mode": "source_url_only",
       "warning_level": "normal",
-      "default_enabled": false,
+      "default_enabled": true,
       "size_hint": "medium",
-      "counsel_status": "required"
+      "counsel_status": "approved"
     },
     {
       "id": "blocklistproject-ads",
