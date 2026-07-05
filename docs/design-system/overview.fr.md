@@ -180,7 +180,7 @@ Les décisions de design intégrées au flux :
 
 Les réglages par défaut que le flux installe au premier lancement : résolveur **Device DNS** (`DNSResolverPreset.device`), **repli sur le DNS de l'appareil ACTIVÉ**, journalisation activée (compteurs + historique + activité), et « Continuer sans compte ».
 
-> **Liste de blocage par défaut : source de vérité.** Le défaut du code livré est **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, défini dans lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La vraie barrière de niveau, c'est le **quota de règles de filtrage (Gratuit 500K / Plus 2M)**, *pas* un nombre de listes. Pour le modèle de niveaux et la config par défaut recommandée, voir [le catalogue de fonctionnalités](../product/features.md).
+> **Source de vérité des listes de blocage par défaut.** Le défaut du code livré est **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, défini dans lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La vraie barrière de niveau, c'est le **quota de règles de filtrage (Gratuit 500K / Plus 2M)**, *pas* un nombre de listes. Pour le modèle de niveaux et la config par défaut recommandée, voir [le catalogue de fonctionnalités](../product/features.md).
 
 ---
 

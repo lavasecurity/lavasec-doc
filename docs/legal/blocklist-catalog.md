@@ -7,7 +7,7 @@ This is the canonical index of the curated blocklist sources Lava offers — the
 
 Every source is **source-URL-only**: the app fetches the upstream list directly from the project's own URL and processes it locally on your device. Lava does not mirror, modify, or redistribute any third-party list data. Each source keeps its own license; see [Third-Party Notices](third-party-notices.md) and the [Open-Source List Data Terms](open-source-list-data-terms-carveout.md).
 
-**Enabled by default on a fresh install:** Block List Basic. Everything else is opt-in. Copyleft (GPL-3.0) and aggregated lists are never enabled for you automatically — you choose them.
+**Enabled by default on a fresh install:** Block List Basic, StevenBlack Unified Hosts. Everything else is opt-in. Copyleft (GPL-3.0) lists are never enabled for you automatically — you choose them.
 
 ## Security & Threat Intel
 
@@ -39,7 +39,7 @@ All-in-one lists that block ads, trackers, malware, phishing, and more from a si
 | HaGeZi Multi Ultimate mini | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/ultimate.mini-onlydomains.txt) |
 | OISD Big | OISD | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_big.txt) |
 | OISD Small | OISD | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_small.txt) |
-| StevenBlack Unified Hosts | Steven Black | MIT | Medium |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) |
+| StevenBlack Unified Hosts | Steven Black | MIT | Medium | ✓ | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) |
 
 ## Ads & Trackers
 

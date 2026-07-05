@@ -1,9 +1,9 @@
 # GPL Blocklist Launch Decision
 
-Last reviewed: 2026-06-21
+Last reviewed: 2026-07-05
 Review type: Engineering self-review (not a formal legal opinion)
 Engineering owner: Lava Security
-Launch status: HaGeZi, OISD, and AdGuard GPL-3.0 sources ship as opt-in, off-by-default, source-url-only catalog options. 1Hosts (MPL-2.0) ships under the same source-url-only posture. The canonical manifest's `counsel_status` field is review bookkeeping, not a runtime gate.
+Launch status: HaGeZi, OISD, and AdGuard GPL-3.0 sources ship as opt-in, off-by-default, source-url-only catalog options. 1Hosts (MPL-2.0) ships under the same source-url-only posture. StevenBlack Unified Hosts is MIT-cleared, counsel-approved, source-url-only, and may be default-enabled.
 
 This document records Lava Security's engineering decision. It is not legal
 advice. The decision was self-reviewed against the upstream licenses and project
@@ -15,8 +15,9 @@ before any copyleft source becomes default-enabled or Lava-hosted.
 Lava does not publish GPL blocklist bytes. Curated copyleft sources are
 source-url-only options that the app fetches directly from upstream only when
 the user selects them. The fresh-install default is Block List Basic
-(Unlicense), and user-provided Pi-hole-compatible HTTPS URLs are fetched
-directly by the user's device.
+(Unlicense) plus StevenBlack Unified Hosts (MIT, counsel-approved), and
+user-provided Pi-hole-compatible HTTPS URLs are fetched directly by the user's
+device.
 
 Because Lava never conveys the list bytes, the GPL-3.0 distribution obligations
 attach to the upstream projects' own distribution, not to Lava. The app being
@@ -30,11 +31,11 @@ were ever bundled in future.
 | R2 blocklist objects | Not written for third-party blocklist content |
 | Worker blocklist routes | No public `/v1/blocklists/.../domains.txt` artifact route |
 | Active curated GPL catalog entries | HaGeZi, OISD, and AdGuard source-url-only metadata only |
-| App defaults | Block List Basic (the source flagged `defaultEnabled: true`); Unlicense |
+| App defaults | Block List Basic (Unlicense) plus StevenBlack Unified Hosts (MIT, counsel-approved) |
 | Custom URLs | User-provided, paid, fetched on-device, not sent to Lava servers |
 | On-device cache | Raw downloaded lists and compiled snapshots stay local to the device |
 | IPA content | Third-party list content is not bundled in production app artifacts |
-| Off-by-default | Copyleft sources ship `defaultEnabled: false`; the fresh-install set is `DefaultCatalog.recommendedDefaultSourceIDs`, currently Block List Basic. |
+| Off-by-default | Copyleft sources ship `defaultEnabled: false`; the fresh-install set is `DefaultCatalog.recommendedDefaultSourceIDs`, currently Block List Basic plus StevenBlack Unified Hosts. |
 
 ## Source Decisions
 
@@ -44,6 +45,7 @@ were ever bundled in future.
 | OISD | GPL-3.0 | Shipped: source-url-only, off by default | Show attribution/license/source URL; do not bundle, proxy, transform, or default-enable. |
 | AdGuard DNS Filter | GPL-3.0 | Shipped: source-url-only, off by default | Same copyright posture as HaGeZi/OISD. Non-copyright note: "AdGuard" is a commercial trademark; use the name nominatively to identify the source only, with no implied endorsement. |
 | 1Hosts | MPL-2.0 | Shipped: source-url-only, off by default | MPL-2.0 is weak / file-level copyleft; under source-url-only Lava neither modifies nor redistributes the list, so share-alike obligations are not triggered. |
+| StevenBlack Unified Hosts | MIT | Shipped: source-url-only, default-enabled after counsel approval | MIT-cleared aggregated hosts distribution; Lava links to upstream and never mirrors or modifies the bytes. Other StevenBlack variants remain opt-in unless separately approved. |
 
 ## Upstream Terms Checked
 
@@ -86,12 +88,11 @@ posture means it is not redistributing those bytes in any case.
 
 ## Launch Decision
 
-Ship with Block List Basic as the fresh-install default and copyleft sources
-(GPL-3.0, MPL-2.0) as opt-in, off-by-default, source-url-only choices.
-Off-by-default is enforced by each source's `defaultEnabled: false`; the
-fresh-install set is derived from `DefaultCatalog.recommendedDefaultSourceIDs`.
-The `counsel_status` field in the canonical catalog manifest is a
-review-tracking annotation, not a runtime control.
+Ship with Block List Basic plus counsel-approved StevenBlack Unified Hosts as
+the fresh-install default and copyleft sources (GPL-3.0, MPL-2.0) as opt-in,
+off-by-default, source-url-only choices. Off-by-default is enforced by each
+copyleft source's `defaultEnabled: false`; the fresh-install set is derived
+from `DefaultCatalog.recommendedDefaultSourceIDs`.
 
 Default-enabling any copyleft source would require a deliberate catalog change to
 its `defaultEnabled` flag and a counsel check first; Lava-hosting one would

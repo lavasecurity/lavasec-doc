@@ -174,13 +174,13 @@ The **blocklist catalog** is the published list of available sources. The **lava
 
 On device, `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`):
 
-1. Fetches list bytes directly from `source.sourceURL`, enforcing a size cap.
-2. Computes SHA-256 and accepts the bytes only if the checksum is in the catalog's `accepted_source_hashes`.
-3. On mismatch, falls back to the last-good local cache, or **fails closed** (`checksumMismatch`) — unless the source explicitly allows direct upstream rotation.
+1. Fetches list bytes directly from `source.sourceURL` over TLS, enforcing a size cap.
+2. For community sources, accepts the fetched bytes as served after size/format/rule-count caps; the catalog's `accepted_source_hashes` are advisory (cache identity + audit), not a hard gate.
+3. For Lava threat-guardrail sources, keeps hash-pinned verification and fail-closed behavior.
 4. Parses/normalizes/dedups locally.
 5. Filters every parsed rule set through `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:262-276`) so an upstream list can never block Lava/Apple/identity-provider domains.
 
-The **protected-domain set** (filtered out before activation): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (all suffix-matched). The Worker applies an equivalent `PROTECTED_SUFFIXES` filter when computing metadata; the device re-validates regardless.
+The **protected-domain set** (filtered out before activation): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (all suffix-matched). The Worker applies an equivalent `PROTECTED_SUFFIXES` filter when computing metadata; the device applies the protected-domain filter again before activation.
 
 ### 5.2 Curated sources (Implemented)
 
@@ -190,11 +190,11 @@ The **protected-domain set** (filtered out before activation): `apple.com`, `icl
 
 ### 5.3 Default-enabled lists for free users (Implemented)
 
-The free default config is `OnboardingDefaults.lavaRecommendedDefaults`, which enables **Block List Basic** — a broad, permissively licensed combined list (ads + tracking + malware + phishing/scam) — with the device-DNS resolver preset (`resolverPresetID = DNSResolverPreset.device.id`) and the encrypted Device-DNS fallback **on** (`usesEncryptedDeviceDNSFallback = true`), routing to **Mullvad DoH** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`): if the device's own DNS wedges, allowed lookups are carried transiently over Mullvad DoH and then return to the device's DNS automatically. (The bare `AppConfiguration()` initializer defaults this fallback **off** — it is enabled only by accepting the recommended onboarding defaults.) This supersedes the earlier Block List Project Phishing + Scam pair: Basic's combined coverage subsumes them, and both remain selectable opt-in lists.
+The free default config is `OnboardingDefaults.lavaRecommendedDefaults`, which enables **Block List Basic + StevenBlack Unified Hosts** — permissively licensed, source-url-only defaults — with the device-DNS resolver preset (`resolverPresetID = DNSResolverPreset.device.id`) and device-DNS fallback on. This supersedes the earlier Block List Project Phishing + Scam pair: the broader default coverage subsumes them, and both remain selectable opt-in lists.
 
-That free default is **produced by `defaultEnabled`**, not hardcoded. `blockListProjectBasic` sets `defaultEnabled: true`, and `DefaultCatalog.recommendedDefaultSourceIDs` is derived from `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` is "the single source of truth for the fresh-install default," mirroring the backend catalog's `default_enabled` column. Flowing through `recommendedDefaultSourceIDs` into `OnboardingDefaults`, it is the live mechanism — flip the flag on a source to change the default.
+That free default is **produced by `defaultEnabled`**, not hardcoded. `blockListProjectBasic` and `stevenBlackUnifiedHosts` set `defaultEnabled: true`, and `DefaultCatalog.recommendedDefaultSourceIDs` is derived from `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` is "the single source of truth for the fresh-install default," mirroring the backend catalog's `default_enabled` column. Flowing through `recommendedDefaultSourceIDs` into `OnboardingDefaults`, it is the live mechanism — flip the flag on a source to change the default.
 
-> **Default source-of-truth (one generated spec).** The catalog is generated from a single canonical spec ([Blocklist Catalog](../legal/blocklist-catalog.md)) that produces both the iOS `DefaultCatalog` and the backend seed, so the device and the served `/v1/catalog` metadata agree by construction. The fresh-install default is **Block List Basic**, off its `defaultEnabled: true` flag. The real tier gate is the 500K/2M filter-rules budget, not a list count.
+> **Default source-of-truth (one generated spec).** The catalog is generated from a single canonical spec ([Blocklist Catalog](../legal/blocklist-catalog.md)) that produces both the iOS `DefaultCatalog` and the backend seed, so the device and the served `/v1/catalog` metadata agree by construction. The fresh-install default is **Block List Basic + StevenBlack Unified Hosts**, off their `defaultEnabled: true` flags. The real tier gate is the 500K/2M filter-rules budget, not a list count.
 
 ### 5.4 Source-url-only GPL distribution model (Implemented)
 
@@ -223,7 +223,7 @@ On the Worker side, `syncOneBlocklist` fetches each upstream source and normaliz
 | Zero-copy mmap of compact snapshot | Implemented |
 | Source-url-only catalog + direct upstream fetch + hash validation | Implemented |
 | Protected-domain filter | Implemented |
-| Free default = Block List Basic | Implemented (generated catalog + iOS/backend projections agree) |
+| Free default = Block List Basic + StevenBlack Unified Hosts | Implemented (generated catalog + iOS/backend projections agree) |
 | First-party Lava code license | AGPL-3.0 (`LICENSE`); third-party lists stay GPL-3.0 upstream |
 
 ---

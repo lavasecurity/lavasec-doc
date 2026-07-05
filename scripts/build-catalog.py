@@ -145,8 +145,10 @@ def validate(doc: dict) -> tuple[list[dict], list[dict]]:
             if not src.get("license_text_url"):
                 errors.append(f"source {sid!r} is GPL-3.0 and must set license_text_url")
         if src.get("provider") == "stevenblack":
-            if src.get("default_enabled") is True:
-                errors.append(f"source {sid!r} (StevenBlack) must NOT be default_enabled until counsel-cleared")
+            if src.get("default_enabled") is True and src.get("counsel_status") != "approved":
+                errors.append(
+                    f"source {sid!r} (StevenBlack) must be counsel_status='approved' before default_enabled"
+                )
 
     empty = category_ids - used_categories
     if empty:
@@ -202,8 +204,8 @@ def render_page(categories: list[dict], sources: list[dict]) -> str:
         )
         lines.append(
             f"**Enabled by default on a fresh install:** {pretty}. "
-            "Everything else is opt-in. Copyleft (GPL-3.0) and aggregated lists are "
-            "never enabled for you automatically — you choose them."
+            "Everything else is opt-in. Copyleft (GPL-3.0) lists are never enabled "
+            "for you automatically — you choose them."
         )
         lines.append("")
 

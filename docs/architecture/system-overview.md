@@ -150,7 +150,7 @@ The Worker side mirrors this: its admin/cron sync fetches each upstream, hashes/
 - **Device guardrail (everyone, never a paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 rules** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — a 32 MB target under the ~50 MiB NE ceiling. Over-budget configs are rejected deterministically rather than letting the tunnel jetsam.
 - **Tier ceiling (`FeatureLimits`):** **Free 500K rules / Plus 2M rules**, which binds below the device guardrail. This replaced the old enabled-list **count** cap (free 3 / paid 10) — list-count caps are obsolete.
 
-> **Default-enabled source of truth:** the shipped free default is **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). It is derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which mirrors the backend catalog `default_enabled` column generated from the same canonical catalog spec.
+> **Default-enabled source of truth:** the shipped free default is **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`). It is derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which mirrors the backend catalog `default_enabled` column generated from the same canonical catalog spec.
 
 ### C. Backup (zero-knowledge, opt-in) — Implemented
 

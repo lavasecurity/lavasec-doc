@@ -174,13 +174,13 @@ compact 스냅샷은 `Data(contentsOf:options:[.mappedIfSafe])`(`LavaSecTunnel/P
 
 기기에서 `BlocklistCatalogSynchronizer`(`BlocklistCatalogSync.swift`)는:
 
-1. `source.sourceURL`에서 목록 바이트를 직접 가져오며 크기 상한을 강제합니다.
-2. SHA-256을 계산하고 체크섬이 카탈로그의 `accepted_source_hashes`에 있을 때만 바이트를 수락합니다.
-3. 불일치 시, 마지막으로 양호했던 로컬 캐시로 폴백하거나 **fail closed**합니다(`checksumMismatch`) — 소스가 직접 업스트림 로테이션을 명시적으로 허용하는 경우는 예외입니다.
+1. `source.sourceURL`에서 TLS로 목록 바이트를 직접 가져오며 크기 상한을 강제합니다.
+2. 커뮤니티 소스의 경우, 크기/형식/규칙 수 상한을 통과한 가져온 바이트를 제공된 그대로 수락합니다. 카탈로그의 `accepted_source_hashes`는 권고용(캐시 식별 + 감사)이며 하드 게이트가 아닙니다.
+3. Lava threat-guardrail 소스의 경우, 해시 고정 검증과 fail-closed 동작을 유지합니다.
 4. 로컬에서 파싱/정규화/중복 제거합니다.
 5. 파싱된 모든 규칙 세트를 `DomainRuleSet.lavaSecProtectedDomains`(`AppConfiguration.swift:262-276`)로 필터링하여, 업스트림 목록이 Lava/Apple/신원 제공자 도메인을 절대 차단할 수 없게 합니다.
 
-**보호 도메인 세트**(활성화 전에 걸러짐): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com`(모두 접미사 매칭). Worker는 메타데이터를 계산할 때 동등한 `PROTECTED_SUFFIXES` 필터를 적용하며, 기기는 그와 무관하게 재검증합니다.
+**보호 도메인 세트**(활성화 전에 걸러짐): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com`(모두 접미사 매칭). Worker는 메타데이터를 계산할 때 동등한 `PROTECTED_SUFFIXES` 필터를 적용하며, 기기도 활성화 전에 보호 도메인 필터를 다시 적용합니다.
 
 ### 5.2 큐레이션된 소스 (구현됨)
 
@@ -190,11 +190,11 @@ compact 스냅샷은 `Data(contentsOf:options:[.mappedIfSafe])`(`LavaSecTunnel/P
 
 ### 5.3 무료 사용자를 위한 기본 활성 목록 (구현됨)
 
-무료 기본 구성은 `OnboardingDefaults.lavaRecommendedDefaults`이며, **Block List Basic** — 광범위하고 허용적인 라이선스의 결합 목록(광고 + 추적 + 멀웨어 + 피싱/스캠) — 을 device-DNS 리졸버 프리셋(`resolverPresetID = DNSResolverPreset.device.id`)과 함께 활성화하고, 암호화 Device-DNS 폴백을 **켠**(`usesEncryptedDeviceDNSFallback = true`) 상태로 **Mullvad DoH**(`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`)로 라우팅합니다: 기기 자체의 DNS가 막히면 허용된 조회가 일시적으로 Mullvad DoH로 운반되었다가 자동으로 기기의 DNS로 돌아옵니다. (기본 `AppConfiguration()` 초기화기는 이 폴백을 **꺼진** 상태로 기본 설정합니다 — 권장 온보딩 기본값을 수락해야만 활성화됩니다.) 이는 이전의 Block List Project Phishing + Scam 쌍을 대체합니다: Basic의 결합 커버리지가 그것들을 포섭하며, 둘 다 opt-in 선택 가능 목록으로 남아 있습니다.
+무료 기본 구성은 `OnboardingDefaults.lavaRecommendedDefaults`이며, **Block List Basic + StevenBlack Unified Hosts** — 허용적 라이선스의 source-url-only 기본값 — 을 device-DNS 리졸버 프리셋(`resolverPresetID = DNSResolverPreset.device.id`)과 device-DNS 폴백 켜짐으로 활성화합니다. 이는 이전의 Block List Project Phishing + Scam 쌍을 대체합니다: 더 넓은 기본 커버리지가 그것들을 포섭하며, 둘 다 opt-in 선택 가능 목록으로 남아 있습니다.
 
-그 무료 기본값은 하드코딩된 것이 아니라 **`defaultEnabled`에 의해 생성**됩니다. `blockListProjectBasic`이 `defaultEnabled: true`를 설정하고, `DefaultCatalog.recommendedDefaultSourceIDs`는 `curatedSources.filter(\.defaultEnabled)`에서 파생됩니다. `defaultEnabled`는 "신규 설치 기본값의 단일 진실의 원천"으로, 백엔드 카탈로그의 `default_enabled` 컬럼을 미러링합니다. `recommendedDefaultSourceIDs`를 거쳐 `OnboardingDefaults`로 흐르는 이것이 살아있는 메커니즘입니다 — 소스의 플래그를 뒤집으면 기본값이 바뀝니다.
+그 무료 기본값은 하드코딩된 것이 아니라 **`defaultEnabled`에 의해 생성**됩니다. `blockListProjectBasic`과 `stevenBlackUnifiedHosts`가 `defaultEnabled: true`를 설정하고, `DefaultCatalog.recommendedDefaultSourceIDs`는 `curatedSources.filter(\.defaultEnabled)`에서 파생됩니다. `defaultEnabled`는 "신규 설치 기본값의 단일 진실의 원천"으로, 백엔드 카탈로그의 `default_enabled` 컬럼을 미러링합니다. `recommendedDefaultSourceIDs`를 거쳐 `OnboardingDefaults`로 흐르는 이것이 살아있는 메커니즘입니다 — 소스의 플래그를 뒤집으면 기본값이 바뀝니다.
 
-> **기본값 진실의 원천(하나의 생성된 스펙).** 카탈로그는 iOS `DefaultCatalog`와 백엔드 시드를 모두 생성하는 단일 표준 스펙([Blocklist Catalog](../legal/blocklist-catalog.md))에서 생성되므로, 기기와 제공되는 `/v1/catalog` 메타데이터는 구성상 일치합니다. 신규 설치 기본값은 그 `defaultEnabled: true` 플래그에 따라 **Block List Basic**입니다. 실제 티어 게이트는 목록 개수가 아니라 500K/2M 필터 규칙 예산입니다.
+> **기본값 진실의 원천(하나의 생성된 스펙).** 카탈로그는 iOS `DefaultCatalog`와 백엔드 시드를 모두 생성하는 단일 표준 스펙([Blocklist Catalog](../legal/blocklist-catalog.md))에서 생성되므로, 기기와 제공되는 `/v1/catalog` 메타데이터는 구성상 일치합니다. 신규 설치 기본값은 각각의 `defaultEnabled: true` 플래그에 따라 **Block List Basic + StevenBlack Unified Hosts**입니다. 실제 티어 게이트는 목록 개수가 아니라 500K/2M 필터 규칙 예산입니다.
 
 ### 5.4 Source-url-only GPL 배포 모델 (구현됨)
 
@@ -221,9 +221,9 @@ Worker 측에서 `syncOneBlocklist`는 각 업스트림 소스를 가져와 정�
 | 필터 규칙 예산 (Free 500K / Plus 2M) | 구현됨 |
 | ~3.26M 규칙 기기 가드레일 (50 MiB NE 상한 아래 32 MB 목표) | 구현됨 |
 | compact 스냅샷의 zero-copy mmap | 구현됨 |
-| Source-url-only 카탈로그 + 직접 업스트림 가져오기 + 해시 검증 | 구현됨 |
+| Source-url-only 카탈로그 + TLS 직접 업스트림 가져오기 + 권고용 해시 | 구현됨 |
 | 보호 도메인 필터 | 구현됨 |
-| 무료 기본값 = Block List Basic | 구현됨 (생성된 카탈로그 + iOS/백엔드 프로젝션 일치) |
+| 무료 기본값 = Block List Basic + StevenBlack Unified Hosts | 구현됨 (생성된 카탈로그 + iOS/백엔드 프로젝션 일치) |
 | 일급 Lava 코드 라이선스 | AGPL-3.0 (`LICENSE`); 제3자 목록은 업스트림에서 GPL-3.0 유지 |
 
 ---

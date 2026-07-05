@@ -173,7 +173,7 @@ Live Activity の `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 オンボーディングは `LavaOnboardingView`（`LavaSecApp/OnboardingFlowView.swift`）が提示し、`RootView`（`RootView.swift:32`）で宣言された `@AppStorage("hasSeenLavaOnboarding")` フラグでゲートされます。流れは `OnboardingPage` の並び（`OnboardingFlowView.swift:403-409`）です: `lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`。
 
-出荷される初期構成は `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）から来ます。`AppConfiguration.lavaRecommendedDefaults` は、控えめなおすすめソース（Block List Basic）だけを有効にし、リゾルバーとして **デバイス DNS** を選び — `DNSResolverPreset.device`（id `device-dns`）、ネットワーク自身の DNS。Google DoH のような暗号化プリセットはオプトインで、デフォルトには昇格しません — デバイス DNS フォールバックを有効にし、ローカルログをオンのままにします — そして `protectionEnabled: false` なので、保護はユーザーが選んだときだけオンになります。`OnboardingDefaultsSummary` がそれらの選択を表示用に整えます（「アカウントなしで続ける」がアカウントのデフォルトです）。
+出荷される初期構成は `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）から来ます。`AppConfiguration.lavaRecommendedDefaults` は、控えめなおすすめソース（Block List Basic + StevenBlack Unified Hosts）を有効にし、リゾルバーとして **デバイス DNS** を選び — `DNSResolverPreset.device`（id `device-dns`）、ネットワーク自身の DNS。Google DoH のような暗号化プリセットはオプトインで、デフォルトには昇格しません — デバイス DNS フォールバックを有効にし、ローカルログをオンのままにします — そして `protectionEnabled: false` なので、保護はユーザーが選んだときだけオンになります。`OnboardingDefaultsSummary` がそれらの選択を表示用に整えます（「アカウントなしで続ける」がアカウントのデフォルトです）。
 
 最後に `hasSeenLavaOnboarding = true` を設定することが、`hasCompletedOnboarding` を反転させ、それが [§3](#3-vpn-lifecycle-control) で説明した起動時の調整経路を起動可能にします。それまでは、オンボーディング中の中和経路が、引き継いだフェイルクローズドのトンネルがトラフィックをブロックしないよう抑えます。
 

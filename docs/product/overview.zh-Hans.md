@@ -38,7 +38,7 @@ Lava 面向任何想要更安全地上网、又不想费心打理的人。目标
 ## 高层能力 {#high-level-capabilities}
 
 - **本地 DNS 过滤** —— 数据包隧道引擎负责解析 DNS、拿每个域名去比对已编译的快照，并把允许的查询转发到上游，同时带有设备 DNS 兜底。见 [iOS 客户端](../architecture/ios-client.md)和 [DNS 过滤与拦截列表](../architecture/dns-filtering-and-blocklists.md)。
-- **精选拦截列表，仅源地址** —— Lava 只发布上游列表的 URL（外加用于缓存标识和审计的参考性哈希）；设备通过 TLS 抓取每一份列表，并在大小／规则上限之内本地解析，Lava 从不镜像或分发第三方拦截列表的字节。社区列表不做哈希钉定——TLS 加上精选的 URL 就是完整性边界——而 Lava 的威胁防线层级则保持哈希强制校验。出厂默认会启用 **Block List Basic**（`AppConfiguration.lavaRecommendedDefaults`，定义在 `OnboardingDefaults.swift`）；HaGeZi、OISD、AdGuard、1Hosts 等 copyleft 来源需要自行选择开启。见 [DNS 过滤与拦截列表](../architecture/dns-filtering-and-blocklists.md)。
+- **精选拦截列表，仅源地址** —— Lava 只发布上游列表的 URL（加上用于缓存身份和审计的提示性哈希）；设备通过 TLS 抓取每份列表，并在大小 / 规则上限内本地解析，Lava 从不镜像或分发第三方拦截列表的字节。社区列表不会被哈希钉死——TLS 加精选 URL 才是完整性边界——而 Lava 的 threat-guardrail 层仍强制哈希校验。出厂默认会启用 **Block List Basic + StevenBlack Unified Hosts**（`AppConfiguration.lavaRecommendedDefaults`，定义在 `OnboardingDefaults.swift`）；copyleft 来源（如 HaGeZi、OISD、AdGuard、1Hosts）需要自行选择开启。见 [DNS 过滤与拦截列表](../architecture/dns-filtering-and-blocklists.md)。
 - **加密 DNS 传输** —— DoH（带观测性的 DoH3 标注）、DoT（连接池，复用并刷新）以及 DoQ（每次查询都新建连接）。这三种都已实现；Device DNS（网络自带的解析器）是出厂默认，加密预设需要自行选择开启（`AppConfiguration.lavaRecommendedDefaults`，定义在 `Sources/LavaSecCore/OnboardingDefaults.swift`）。内置的解析器预设（Google／Cloudflare／Quad9 的 DoH 和 DoT 变体）免费；只有完全自定义的解析器才是付费解锁项。见 [DNS 过滤与拦截列表](../architecture/dns-filtering-and-blocklists.md)。
 - **允许例外（允许列表）** —— 手动把某些域名加进来，即便它们在拦截列表上也予以放行；威胁防线依然优先。见[产品功能概览](features.md)。
 - **The Soft Shield Guardian** —— Guard 标签页、Live Activity 和灵动岛上的吉祥物，用 7 种表情状态表达防护状态。见[设计系统](../design-system/overview.md)。

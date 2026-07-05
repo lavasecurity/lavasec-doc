@@ -180,7 +180,7 @@ Decisiones de diseño integradas en el flujo:
 
 Los valores por defecto de primera ejecución que instala el flujo: resolver **Device DNS** (`DNSResolverPreset.device`), **fallback de Device DNS ACTIVADO**, registro activado (recuentos + historial + actividad) y "Continue without account."
 
-> **Fuente de verdad de la blocklist por defecto.** El valor por defecto del código lanzado es **Block List Basic** (`AppConfiguration.lavaRecommendedDefaults`, definido en lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La verdadera puerta de nivel es el **presupuesto de reglas del filtro (Free 500K / Plus 2M)**, *no* un recuento de listas. Para el modelo de niveles y la configuración recomendada por defecto, consulta [el catálogo de funcionalidades](../product/features.md).
+> **Fuente de verdad de la blocklist por defecto.** El valor por defecto del código lanzado es **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, definido en lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). La verdadera puerta de nivel es el **presupuesto de reglas del filtro (Free 500K / Plus 2M)**, *no* un recuento de listas. Para el modelo de niveles y la configuración recomendada por defecto, consulta [el catálogo de funcionalidades](../product/features.md).
 
 ---
 

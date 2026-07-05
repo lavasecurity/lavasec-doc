@@ -174,7 +174,7 @@ Live Activity 的 `LavaActivityAttributes.ProtectionState`（`Shared/LavaActivit
 
 引導由 `LavaOnboardingView`（`LavaSecApp/OnboardingFlowView.swift`）呈現，並由宣告於 `RootView`（`RootView.swift:32`）的 `@AppStorage("hasSeenLavaOnboarding")` 旗標把關。此流程是一連串 `OnboardingPage`（`OnboardingFlowView.swift:403-409`）：`lava` → `guardIntro` → `features` → `vpn` → `notifications` → `done`。
 
-發行版的起始設定來自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 只啟用較寬鬆的建議來源（Block List Basic）、選擇 **Device DNS** 作為解析器——`DNSResolverPreset.device`（id `device-dns`），即網路自身的 DNS；像 Google DoH 這類加密預設為選擇性加入（opt-in），不會被提升為預設——啟用 device-DNS 後援，並保持本機記錄開啟——同時 `protectionEnabled: false`，因此防護只有在使用者選擇時才會開啟。`OnboardingDefaultsSummary` 會將這些選擇格式化以供顯示（「Continue without account」為帳號預設）。
+發行版的起始設定來自 `OnboardingDefaults`（`Sources/LavaSecCore/OnboardingDefaults.swift`）。`AppConfiguration.lavaRecommendedDefaults` 會啟用較寬鬆的建議來源（Block List Basic + StevenBlack Unified Hosts）、選擇 **Device DNS** 作為解析器——`DNSResolverPreset.device`（id `device-dns`），即網路自身的 DNS；像 Google DoH 這類加密預設為選擇性加入（opt-in），不會被提升為預設——啟用 device-DNS 後援，並保持本機記錄開啟——同時 `protectionEnabled: false`，因此防護只有在使用者選擇時才會開啟。`OnboardingDefaultsSummary` 會將這些選擇格式化以供顯示（「Continue without account」為帳號預設）。
 
 在最後設定 `hasSeenLavaOnboarding = true`，正是翻轉 `hasCompletedOnboarding` 的動作，而後者接著會啟動 [§3](#3-vpn-lifecycle-control) 中所述的啟動調和路徑。在那之前，引導進行中的中性化路徑會避免任何繼承的 fail-closed 通道封鎖流量。
 

@@ -54,10 +54,10 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | 功能 | 層級 | 備註 |
 |---|---|---|
 | **僅來源 URL 的封鎖清單** | 免費 | Lava Security 只發佈上游 URL ＋ 接受的雜湊值；裝置自行擷取／解析清單**位元組**。Lava Security **絕不**儲存、鏡像、轉換或提供第三方封鎖清單位元組。請參閱 [GPL 僅來源 URL 合規決策](../legal/gpl-source-url-only-compliance-decision.md)。 |
-| **精選目錄（已分類）** | 免費可啟用 | 精選來源依縱深防禦類別組織——Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent——來自 HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts 與 Phishing.Database。完整且目前的清單發佈於 [封鎖清單目錄](../legal/blocklist-catalog.md)；各平台反映其隨附的目錄版本。 |
-| **免費預設封鎖清單** | 免費 | 全新安裝會啟用 **Block List Basic**——一份廣泛、寬鬆的合併清單（標示為 `defaultEnabled: true` 的來源；`DefaultCatalog.recommendedDefaultSourceIDs`）。其他一切皆為選擇性加入。 |
+| **精選目錄（分類）** | 免費可啟用 | 精選來源分成 Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent 等防禦深度類別，來自 HaGeZi、The Block List Project、OISD、StevenBlack、AdGuard、1Hosts、Phishing.Database。完整現行集合發布於 [Blocklist Catalog](../legal/blocklist-catalog.md)。 |
+| **免費預設封鎖清單** | 免費 | 全新安裝會啟用 **Block List Basic** 加 **StevenBlack Unified Hosts**——寬鬆授權、僅來源 URL 的預設來源，標示為 `defaultEnabled: true`（`DefaultCatalog.recommendedDefaultSourceIDs`）。其他來源皆為選擇加入。 |
 | **裝置端解析／正規化／去重** | 免費 | `BlocklistParser` 支援 auto/plain/hosts/adblock/dnsmasq，捨棄註解／空白／無效項，對完全相同的字串去重，每份清單上限 1,000,000 條規則。多主機的 `hosts` 行現在會發出該行上的**每一個**主機，而不只是第一個（解析器規則版本 2）。 |
-| **上游完整性（TLS ＋ 精選 URL）** | 免費 | 社群清單位元組會直接透過 TLS 從精選的上游 `source_url` 擷取，並在符合大小＋格式＋規則數量上限的前提下接受；目錄的 `accepted_source_hashes` 屬於**建議性質**（快取身分＋稽核），並非硬性閘門——快速輪替的清單絕不會因偏離釘選的雜湊值而被拒絕。Lava Security 的**威脅防護欄**層級（Lava Security 精選、不可被允許）則維持嚴格的雜湊釘選。 |
+| **上游完整性（TLS + 精選 URL）** | 免費 | 社群清單位元組會直接透過 TLS 從精選上游 `source_url` 擷取，並在大小 + 格式 + 規則數上限下接受；目錄的 `accepted_source_hashes` 是**建議性資料**（快取識別 + 稽核），不是硬性閘門——快速輪換的清單不會因偏離釘選雜湊而被拒絕。Lava 的 **threat-guardrail** 層（Lava 精選、不可允許）仍嚴格以雜湊釘選。 |
 | **受保護網域篩選** | 免費 | 每個解析後的來源都會剝除受保護的 Lava Security／Apple／身分提供者網域（apple.com、icloud.com、lavasecurity.app、google.com、accounts.google.com 等），使上游清單無法破壞應用程式、通道或登入。 |
 | **允許例外（允許清單）** | 免費 | 使用者管理的允許清單，可在封鎖清單之外允許網域。免費上限：25 個允許／25 個封鎖網域（`FeatureLimits.free`）。 |
 | **篩選規則預算（層級量度）** | 免費／Plus | 已發佈的層級量度為已編譯網域**規則**總數：**免費 500K／Plus 2M**（`lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` 中的 `maxFilterRules`）。取代舊有的清單數量上限。超出層級的設定會呈現 `exceedsTierFilterRuleLimit`。 |
@@ -127,7 +127,7 @@ Lava Security 是一款隱私優先的 iOS 應用程式，透過 NetworkExtensio
 | **多頁首次執行流程** | 免費 | `OnboardingFlowView`——6 頁：`lava, guardIntro, features, vpn, notifications, done`。（描述檔安裝與通知提示會在適當步驟發生，而非一開始。） |
 | **本機 VPN 描述檔安裝** | 免費 | 在引導期間安裝本機 VPN 設定，但**不**啟用 Connect-On-Demand，因此防護絕不會在完成時悄悄自動開啟——Guard 介面維持權威地位。 |
 | **通知權限提示** | 免費 | 在通知步驟於流程中請求。 |
-| **套用建議的預設值** | 免費 | 裝置 DNS 解析器、裝置 DNS 後援開啟、本機記錄開啟（計數＋歷史＋活動）、啟用 Block List Basic、不使用帳號繼續（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
+| **套用建議的預設值** | 免費 | 裝置 DNS 解析器、裝置 DNS 後援開啟、本機記錄開啟（計數＋歷史＋活動）、啟用 Block List Basic + StevenBlack Unified Hosts、不使用帳號繼續（`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`、`lavaRecommendedDefaults`）。 |
 
 ---
 

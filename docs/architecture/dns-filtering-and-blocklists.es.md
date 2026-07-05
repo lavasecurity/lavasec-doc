@@ -174,13 +174,13 @@ El **catálogo de listas de bloqueo** es la lista publicada de fuentes disponibl
 
 En el dispositivo, `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`):
 
-1. Obtiene los bytes de la lista directamente desde `source.sourceURL`, imponiendo un tope de tamaño.
-2. Calcula SHA-256 y acepta los bytes solo si el checksum está en `accepted_source_hashes` del catálogo.
-3. En caso de discrepancia, recae en la última caché local válida, o **falla en cerrado** (`checksumMismatch`) — a menos que la fuente permita explícitamente la rotación upstream directa.
+1. Obtiene los bytes de la lista directamente desde `source.sourceURL` por TLS, imponiendo un tope de tamaño.
+2. Para fuentes comunitarias, acepta los bytes obtenidos tal como se sirven después de los topes de tamaño, formato y recuento de reglas; los `accepted_source_hashes` del catálogo son orientativos (identidad de caché + auditoría), no una barrera estricta.
+3. Para fuentes threat-guardrail de Lava, conserva la verificación por hash fijado y el comportamiento fail-closed.
 4. Parsea/normaliza/deduplica localmente.
 5. Filtra cada conjunto de reglas parseado a través de `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:262-276`) para que una lista upstream nunca pueda bloquear dominios de Lava/Apple/proveedor de identidad.
 
-El **conjunto de dominios protegidos** (filtrados antes de la activación): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (todos por coincidencia de sufijo). El Worker aplica un filtro `PROTECTED_SUFFIXES` equivalente al calcular los metadatos; el dispositivo revalida de todos modos.
+El **conjunto de dominios protegidos** (filtrados antes de la activación): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (todos por coincidencia de sufijo). El Worker aplica un filtro `PROTECTED_SUFFIXES` equivalente al calcular los metadatos; el dispositivo vuelve a aplicar el filtro de dominios protegidos antes de la activación.
 
 ### 5.2 Fuentes curadas (Implementado)
 
@@ -190,11 +190,11 @@ El **conjunto de dominios protegidos** (filtrados antes de la activación): `app
 
 ### 5.3 Listas habilitadas por defecto para usuarios gratuitos (Implementado)
 
-La configuración por defecto gratuita es `OnboardingDefaults.lavaRecommendedDefaults`, que habilita **Block List Basic** — una lista combinada amplia y de licencia permisiva (anuncios + rastreo + malware + phishing/scam) — con el preset de resolutor device-DNS (`resolverPresetID = DNSResolverPreset.device.id`) y el fallback cifrado Device-DNS **activado** (`usesEncryptedDeviceDNSFallback = true`), enrutando a **Mullvad DoH** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`): si el propio DNS del dispositivo se atasca, las búsquedas permitidas se llevan transitoriamente sobre Mullvad DoH y luego regresan al DNS del dispositivo automáticamente. (El inicializador escueto `AppConfiguration()` deja este fallback **desactivado** por defecto — solo se habilita aceptando los valores por defecto recomendados del onboarding.) Esto reemplaza el par anterior Block List Project Phishing + Scam: la cobertura combinada de Basic los subsume, y ambos siguen siendo listas opt-in seleccionables.
+La configuración por defecto gratuita es `OnboardingDefaults.lavaRecommendedDefaults`, que habilita **Block List Basic + StevenBlack Unified Hosts** — valores por defecto source-url-only con licencias permisivas — con el preset de resolutor device-DNS (`resolverPresetID = DNSResolverPreset.device.id`) y fallback de device-DNS activado. Esto reemplaza el par anterior Block List Project Phishing + Scam: la cobertura más amplia del valor por defecto los subsume, y ambos siguen siendo listas opt-in seleccionables.
 
-Ese valor por defecto gratuito está **producido por `defaultEnabled`**, no codificado a mano. `blockListProjectBasic` fija `defaultEnabled: true`, y `DefaultCatalog.recommendedDefaultSourceIDs` se deriva de `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` es "la única fuente de verdad para el valor por defecto de instalación nueva", reflejando la columna `default_enabled` del catálogo del backend. Fluyendo a través de `recommendedDefaultSourceIDs` hacia `OnboardingDefaults`, es el mecanismo vivo — cambia la bandera en una fuente para cambiar el valor por defecto.
+Ese valor por defecto gratuito está **producido por `defaultEnabled`**, no codificado a mano. `blockListProjectBasic` y `stevenBlackUnifiedHosts` fijan `defaultEnabled: true`, y `DefaultCatalog.recommendedDefaultSourceIDs` se deriva de `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` es "la única fuente de verdad para el valor por defecto de instalación nueva", reflejando la columna `default_enabled` del catálogo del backend. Fluyendo a través de `recommendedDefaultSourceIDs` hacia `OnboardingDefaults`, es el mecanismo vivo — cambia la bandera en una fuente para cambiar el valor por defecto.
 
-> **Fuente de verdad del valor por defecto (una spec generada).** El catálogo se genera a partir de una única spec canónica ([Catálogo de listas de bloqueo](../legal/blocklist-catalog.md)) que produce tanto el `DefaultCatalog` de iOS como la semilla del backend, de modo que el dispositivo y los metadatos servidos de `/v1/catalog` coinciden por construcción. El valor por defecto de instalación nueva es **Block List Basic**, derivado de su bandera `defaultEnabled: true`. La verdadera puerta por tier es el presupuesto de reglas de filtro de 500K/2M, no un recuento de listas.
+> **Fuente de verdad del valor por defecto (una spec generada).** El catálogo se genera a partir de una única spec canónica ([Catálogo de listas de bloqueo](../legal/blocklist-catalog.md)) que produce tanto el `DefaultCatalog` de iOS como la semilla del backend, de modo que el dispositivo y los metadatos servidos de `/v1/catalog` coinciden por construcción. El valor por defecto de instalación nueva es **Block List Basic + StevenBlack Unified Hosts**, a partir de sus banderas `defaultEnabled: true`. La verdadera puerta por tier es el presupuesto de reglas de filtro de 500K/2M, no un recuento de listas.
 
 ### 5.4 Modelo de distribución GPL source-url-only (Implementado)
 
@@ -221,9 +221,9 @@ Del lado del Worker, `syncOneBlocklist` obtiene cada fuente upstream y la normal
 | Presupuesto de reglas de filtro (Free 500K / Plus 2M) | Implementado |
 | Guardrail de dispositivo de ~3.26M reglas (objetivo 32 MB bajo el techo de NE de 50 MiB) | Implementado |
 | mmap sin copia del snapshot compacto | Implementado |
-| Catálogo source-url-only + obtención directa upstream + validación de hash | Implementado |
+| Catálogo source-url-only + obtención directa upstream por TLS + hashes orientativos | Implementado |
 | Filtro de dominios protegidos | Implementado |
-| Valor por defecto gratuito = Block List Basic | Implementado (catálogo generado + proyecciones iOS/backend coinciden) |
+| Valor por defecto gratuito = Block List Basic + StevenBlack Unified Hosts | Implementado (catálogo generado + proyecciones iOS/backend coinciden) |
 | Licencia del código propio de Lava | AGPL-3.0 (`LICENSE`); las listas de terceros siguen GPL-3.0 upstream |
 
 ---

@@ -180,7 +180,7 @@ DNS 전송 중에서는 **DoH**만이 용어집의 번역 금지 항목이다. `
 
 첫 실행이 흐름에서 설치하는 기본값: **Device DNS** 리졸버(`DNSResolverPreset.device`), **Device DNS 폴백 ON**, 로깅 켜짐(횟수 + 기록 + 활동), 그리고 "Continue without account."
 
-> **기본 차단 목록 진리원.** 출시된 코드 기본값은 **Block List Basic**이다(`AppConfiguration.lavaRecommendedDefaults`, lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift에 정의됨). 실제 티어 게이트는 목록 개수가 *아니라* **필터 규칙 예산(Free 500K / Plus 2M)**이다. 티어 모델과 권장 기본 구성에 대해서는 [기능 카탈로그](../product/features.md)를 참고하라.
+> **기본 차단 목록 진리원.** 출시된 코드 기본값은 **Block List Basic + StevenBlack Unified Hosts**이다(`AppConfiguration.lavaRecommendedDefaults`, lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift에 정의됨). 실제 티어 게이트는 목록 개수가 *아니라* **필터 규칙 예산(Free 500K / Plus 2M)**이다. 티어 모델과 권장 기본 구성에 대해서는 [기능 카탈로그](../product/features.md)를 참고하라.
 
 ---
 

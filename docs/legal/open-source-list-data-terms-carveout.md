@@ -1,6 +1,6 @@
 # Open-Source List Data Terms Carve-Out
 
-Last reviewed: 2026-06-21
+Last reviewed: 2026-07-05
 Status: Engineering self-review (not a formal legal opinion)
 
 ## Carve-Out Language
@@ -11,7 +11,7 @@ For curated blocklist sources, Lava provides source, license, attribution, warra
 
 ## Aggregated Sources
 
-Some curated sources are themselves aggregations that combine multiple upstream lists, each licensed by its own rights holder (for example, consolidated "hosts" distributions). For these sources, Lava links only to the aggregator's published source URL and never mirrors, re-hosts, or modifies the aggregated data. The aggregator's own license and attribution govern, in addition to the upstream licenses it incorporates. Such sources are not enabled by default; `counsel_status` in the canonical manifest tracks optional review separately from runtime behavior.
+Some curated sources are themselves aggregations that combine multiple upstream lists, each licensed by its own rights holder (for example, consolidated "hosts" distributions). For these sources, Lava links only to the aggregator's published source URL and never mirrors, re-hosts, or modifies the aggregated data. The aggregator's own license and attribution govern, in addition to the upstream licenses it incorporates. Aggregated sources are opt-in unless the canonical catalog records a source-specific default decision, such as the MIT-cleared, counsel-approved StevenBlack Unified Hosts default.
 
 ## Placement
 

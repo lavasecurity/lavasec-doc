@@ -150,7 +150,7 @@ Il lato Worker rispecchia questo: la sua sync admin/cron recupera ogni upstream,
 - **Guardrail del dispositivo (per tutti, mai un paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3.262.236 regole** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — un target di 32 MB sotto il tetto NE di ~50 MiB. Le configurazioni fuori budget vengono rifiutate in modo deterministico anziché lasciare che il tunnel finisca in jetsam.
 - **Tetto di tier (`FeatureLimits`):** **Free 500K regole / Plus 2M regole**, che vincola sotto il guardrail del dispositivo. Questo ha sostituito il vecchio cap sul **conteggio** delle liste abilitate (free 3 / paid 10) — i cap sul conteggio delle liste sono obsoleti.
 
-> **Fonte di verità sull'abilitazione di default:** il default gratuito spedito è **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). Viene derivato sul dispositivo dal flag `defaultEnabled` di ciascuna source curata (`BlocklistSource.recommendedDefaultSourceIDs`), che rispecchia la colonna `default_enabled` del catalogo backend generata dalla stessa specifica canonica del catalogo.
+> **Fonte di verità sull'abilitazione di default:** il default gratuito spedito è **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`). Viene derivato sul dispositivo dal flag `defaultEnabled` di ciascuna source curata (`BlocklistSource.recommendedDefaultSourceIDs`), che rispecchia la colonna `default_enabled` del catalogo backend generata dalla stessa specifica canonica del catalogo.
 
 ### C. Backup (zero-knowledge, opt-in) — Implementato
 

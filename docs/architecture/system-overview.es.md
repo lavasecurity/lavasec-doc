@@ -150,7 +150,7 @@ El lado del Worker refleja esto: su sincronización por admin/cron obtiene cada 
 - **Barrera de protección del dispositivo (para todos, nunca un muro de pago):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3.262.236 reglas** = `((32.0 − 4.0) MB × 1.048.576) / 9.0 B/rule` — un objetivo de 32 MB bajo el techo de ~50 MiB de NE. Las configuraciones que exceden el presupuesto se rechazan de forma determinista en lugar de dejar que el túnel sufra un jetsam.
 - **Tope por nivel (`FeatureLimits`):** **Free 500K reglas / Plus 2M reglas**, que queda por debajo de la barrera de protección del dispositivo. Esto reemplazó el antiguo tope de **recuento** de listas habilitadas (free 3 / paid 10); los topes de recuento de listas son obsoletos.
 
-> **Fuente de verdad de habilitado por defecto:** el valor por defecto gratuito que se distribuye es **Block List Basic** (`OnboardingDefaults.lavaRecommendedDefaults`). Se deriva en el dispositivo a partir del indicador `defaultEnabled` de cada fuente curada (`BlocklistSource.recommendedDefaultSourceIDs`), que refleja la columna `default_enabled` del catálogo del backend generada a partir de la misma especificación canónica del catálogo.
+> **Fuente de verdad de habilitado por defecto:** el valor por defecto gratuito que se distribuye es **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`). Se deriva en el dispositivo a partir del indicador `defaultEnabled` de cada fuente curada (`BlocklistSource.recommendedDefaultSourceIDs`), que refleja la columna `default_enabled` del catálogo del backend generada a partir de la misma especificación canónica del catálogo.
 
 ### C. Copia de seguridad (de conocimiento cero, opcional) — Implementado
 

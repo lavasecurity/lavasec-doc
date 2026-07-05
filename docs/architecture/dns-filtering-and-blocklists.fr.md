@@ -174,27 +174,27 @@ Le **catalogue de listes de blocage** est la liste publiée des sources disponib
 
 Sur l'appareil, `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`) :
 
-1. Récupère les octets de la liste directement depuis `source.sourceURL`, en appliquant un plafond de taille.
-2. Calcule le SHA-256 et n'accepte les octets que si la somme de contrôle figure dans les `accepted_source_hashes` du catalogue.
-3. En cas de non-correspondance, revient au dernier cache local valide, ou **se ferme par sécurité** (`checksumMismatch`) — sauf si la source autorise explicitement la rotation directe en amont.
+1. Récupère les octets de la liste via TLS directement depuis `source.sourceURL`, en appliquant un plafond de taille.
+2. Pour les sources communautaires, accepte les octets récupérés tels que servis après les plafonds de taille, format et nombre de règles ; les `accepted_source_hashes` du catalogue sont indicatifs (identité du cache + audit), pas une barrière dure.
+3. Pour les sources threat-guardrail de Lava, conserve la vérification par hachage épinglé et le comportement fail-closed.
 4. Analyse / normalise / dédup localement.
 5. Filtre chaque jeu de règles analysé à travers `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:262-276`) pour qu'une liste en amont ne puisse jamais bloquer les domaines de Lava / Apple / fournisseur d'identité.
 
-L'**ensemble des domaines protégés** (filtrés avant l'activation) : `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (tous en correspondance de suffixe). Le Worker applique un filtre `PROTECTED_SUFFIXES` équivalent au moment de calculer les métadonnées ; l'appareil revalide de toute façon.
+L'**ensemble des domaines protégés** (filtrés avant l'activation) : `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (tous en correspondance de suffixe). Le Worker applique un filtre `PROTECTED_SUFFIXES` équivalent au moment de calculer les métadonnées ; l'appareil applique à nouveau le filtre des domaines protégés avant l'activation.
 
 ### 5.2 Sources sélectionnées (Implémenté) {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` est généré à partir du [Catalogue de listes de blocage](../legal/blocklist-catalog.md) canonique, et compte actuellement **32** sources réparties sur sept catégories : Sécurité et renseignement sur les menaces, Multi-usage, Publicités et traceurs, Réseaux sociaux, Contenu pour adultes, Jeux d'argent, et Piratage et torrents. Les familles de sources comprennent The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard et 1Hosts.
+`DefaultCatalog.curatedSources` est généré depuis le [Blocklist Catalog](../legal/blocklist-catalog.md) canonique et contient actuellement **32** sources dans sept catégories : Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling et Piracy & Torrent. Les familles de sources incluent The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard et 1Hosts.
 
-`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD, AdGuard) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL autorisés (`hagezi-`, `oisd-`, `adguard-`).
+`guardrailSources` est vide. Les sources GPL (HaGeZi, OISD, AdGuard) sont visibles dans le catalogue mais **optionnelles / DÉSACTIVÉES par défaut** ; le Worker limite la synchro/publication au lancement à `source_url_only` plus les préfixes GPL validés (`hagezi-`, `oisd-`, `adguard-`).
 
 ### 5.3 Listes activées par défaut pour les utilisateurs gratuits (Implémenté) {#53-default-enabled-lists-for-free-users-implemented}
 
-La config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic** — une liste combinée large et permissivement licenciée (publicités + traçage + malware + phishing/scam) — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli chiffré sur le DNS de l'appareil **activé** (`usesEncryptedDeviceDNSFallback = true`), routant vers le **DoH de Mullvad** (`fallbackResolverPresetID = DNSResolverPreset.mullvadDoH.id`) : si le DNS propre à l'appareil se bloque, les résolutions autorisées sont transportées de façon transitoire via le DoH de Mullvad, puis reviennent automatiquement au DNS de l'appareil. (L'initialiseur nu `AppConfiguration()` met ce repli **désactivé** par défaut — il n'est activé qu'en acceptant les valeurs par défaut recommandées de l'onboarding.) Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture combinée de Basic les englobe, et les deux restent des listes optionnelles sélectionnables.
+La vraie config par défaut en gratuit est `OnboardingDefaults.lavaRecommendedDefaults`, qui active **Block List Basic + StevenBlack Unified Hosts** — des défauts source-url-only sous licence permissive — avec le préréglage de résolveur DNS de l'appareil (`resolverPresetID = DNSResolverPreset.device.id`) et le repli sur le DNS de l'appareil activé. Cela remplace l'ancien duo Block List Project Phishing + Scam : la couverture plus large du défaut les englobe, et les deux restent sélectionnables en option.
 
-Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectBasic` met `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` est dérivé de `curatedSources.filter(\.defaultEnabled)`. `defaultEnabled` est « la source de vérité unique pour le défaut à l'installation fraîche », ce qui reflète la colonne `default_enabled` du catalogue côté backend. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, c'est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
+Ce défaut gratuit est **produit par `defaultEnabled`**, il n'est pas codé en dur. `blockListProjectBasic` et `stevenBlackUnifiedHosts` mettent `defaultEnabled: true`, et `DefaultCatalog.recommendedDefaultSourceIDs` est dérivé de `curatedSources.filter(\.defaultEnabled)`. En passant par `recommendedDefaultSourceIDs` jusqu'à `OnboardingDefaults`, `defaultEnabled` est le mécanisme vivant — il suffit de basculer le flag sur une source pour changer le défaut.
 
-> **Source de vérité du défaut (une seule spec générée).** Le catalogue est généré à partir d'une seule spec canonique ([Catalogue de listes de blocage](../legal/blocklist-catalog.md)) qui produit à la fois le `DefaultCatalog` iOS et le seed du backend, donc l'appareil et les métadonnées servies par `/v1/catalog` concordent par construction. Le défaut à l'installation fraîche est **Block List Basic**, à partir de son flag `defaultEnabled: true`. La vraie barrière de niveau, c'est le quota des règles de filtrage de 500 K / 2 M, pas un nombre de listes.
+> **Source de vérité du défaut (une seule spécification générée).** Le catalogue est généré depuis une seule spécification canonique ([Blocklist Catalog](../legal/blocklist-catalog.md)) qui produit à la fois le `DefaultCatalog` iOS et le seed backend ; l'appareil et les métadonnées `/v1/catalog` servies correspondent donc par construction. Le défaut de nouvelle installation est **Block List Basic + StevenBlack Unified Hosts**, via leurs flags `defaultEnabled: true`. La vraie barrière est le quota de règles de filtrage 500 K / 2 M, pas un nombre de listes.
 
 ### 5.4 Modèle de distribution GPL basé uniquement sur l'URL source (Implémenté) {#54-source-url-only-gpl-distribution-model-implemented}
 
@@ -223,7 +223,7 @@ Côté Worker, `syncOneBlocklist` récupère chaque source en amont, la normalis
 | mmap sans copie du snapshot compact | Implémenté |
 | Catalogue source-url-only + récupération directe en amont + validation par hash | Implémenté |
 | Filtre des domaines protégés | Implémenté |
-| Défaut gratuit = Block List Basic | Implémenté (catalogue généré + projections iOS/backend concordantes) |
+| Défaut gratuit = Block List Basic + StevenBlack Unified Hosts | Implémenté (catalogue généré + projections iOS/backend alignés) |
 | Licence du code Lava de première partie | AGPL-3.0 (`LICENSE`) ; les listes tierces restent en GPL-3.0 en amont |
 
 ---

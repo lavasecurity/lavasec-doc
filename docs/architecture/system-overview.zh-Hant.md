@@ -139,7 +139,7 @@ Lava Security 是一款隱私優先的 iOS app，它**在裝置本機上**透過
 
 1. 裝置向 Worker 擷取目錄**中繼資料**：`GET https://api.lavasecurity.app/v1/catalog` → 直接從 R2 提供的 JSON（`catalog/latest.json`），拆分為 `sources[]` + `guardrails[]`，每一項都帶有 `source_url` + `accepted_source_hashes`。
 2. 對每個已啟用的來源，裝置**直接從 `source_url` 下載清單位元組**（即上游——HaGeZi、OISD、Block List Project 等），而**非**從 Lava Security。
-3. 裝置在大小／規則上限之下於本機解析所擷取的位元組。社群清單在以 TLS 提供時即被接受——目錄的 `accepted_source_hashes` 屬於建議性質（快取識別 + 稽核），而非硬性閘門——因此一份已輪替的清單絕不會因偏離已釘選的雜湊而被拒絕。Lava Security 的安全防護欄層級仍維持雜湊釘選。
+3. 裝置在大小／規則上限內於本機剖析擷取到的位元組。社群清單會以 TLS 傳回的內容為準接受——目錄中的 `accepted_source_hashes` 是建議性資料（快取識別 + 稽核），不是硬性閘門——因此輪換中的清單不會因偏離釘選雜湊而被拒絕。Lava 的 threat-guardrail 層仍維持雜湊釘選。
 4. **`BlocklistParser`** 在本機進行解析／正規化／去重（auto / plain / hosts / adblock / dnsmasq 格式），然後 **`DomainRuleSet.lavaSecProtectedDomains`** 剝除受保護網域（apple.com、icloud.com、lavasecurity.com/.app、google.com、accounts.google.com、…），如此上游清單就永遠無法封鎖 Lava Security／Apple／身分提供者的網域。
 5. **`FilterSnapshotPreparationService`** 合併去重後的聯集，並執行**權威的預算強制執行**（先裝置上限，再方案），然後將 `filter-snapshot.compact` 寫入 App Group。
 6. `AppViewModel` 送出一則 `reload-snapshot` provider 訊息；通道重新載入。
@@ -150,7 +150,7 @@ Worker 端鏡像了這個流程：它的 admin/cron 同步會擷取每個上游�
 - **裝置防護欄（人人適用，從不作為付費牆）：** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 條規則** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule`——在約 50 MiB NE 上限之下，以 32 MB 為目標。超出預算的設定會被確定性地拒絕，而不是任由通道被系統終止（jetsam）。
 - **方案上限（`FeatureLimits`）：** **免費 500K 條規則／Plus 2M 條規則**，其上限低於裝置防護欄。這取代了舊有以已啟用清單**數量**為準的上限（免費 3／付費 10）——清單數量上限已過時。
 
-> **預設啟用的真相來源：** 出貨的免費預設為 **Block List Basic**（`OnboardingDefaults.lavaRecommendedDefaults`）。它是在裝置上，依各精選來源的 `defaultEnabled` 旗標（`BlocklistSource.recommendedDefaultSourceIDs`）推導而來，那會鏡像後端目錄的 `default_enabled` 欄位，該欄位由同一份正規目錄規格產生。
+> **預設啟用注意事項（以程式碼為準）：** 出貨的免費預設為 **Block List Basic + StevenBlack Unified Hosts**（`OnboardingDefaults.lavaRecommendedDefaults`）。它們是在裝置上，依各精選來源的 `defaultEnabled` 旗標（`BlocklistSource.recommendedDefaultSourceIDs`）推導而來，那是裝置端的真相來源，並鏡像後端目錄的 `default_enabled` 欄位。
 
 ### C. 備份（零知識，選擇加入）— 已實作 {#c-backup-zero-knowledge-opt-in-implemented}
 
