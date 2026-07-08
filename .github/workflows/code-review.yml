@@ -1,9 +1,9 @@
 name: Code Review
 
 # Delegates to the org-wide reusable AI code-review workflow so the pipeline
-# (open-code-review over z.ai, public-only guard, rate-limit handling) lives in
-# one place rather than being copied into every repo. Requires the repo secret
-# OCR_LLM_AUTH_TOKEN (the z.ai API key).
+# (open-code-review over the OpenCode Go plan, public-only guard, rate-limit
+# handling) lives in one place rather than being copied into every repo. Requires
+# the repo secret OCR_LLM_AUTH_TOKEN (the OpenCode Go API key).
 on:
   pull_request:
     types: [opened, synchronize, reopened]
