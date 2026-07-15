@@ -58,6 +58,7 @@ Social-network domains and their trackers.
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Facebook | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/facebook.txt) |
 | Block List TikTok | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/tiktok.txt) |
+| HaGeZi Social Networks | HaGeZi | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/social-onlydomains.txt) |
 | StevenBlack Social | Steven Black | MIT | Medium |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social/hosts) |
 
 ## Adult Content
@@ -89,7 +90,8 @@ Piracy portals and torrent trackers.
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Piracy | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/piracy.txt) |
 | Block List Torrent | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/torrent.txt) |
+| HaGeZi Anti-Piracy | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/anti.piracy-onlydomains.txt) |
 
 ---
 
-_Catalog spec schema version 1 · 32 sources across 7 categories._
+_Catalog spec schema version 1 · 34 sources across 7 categories._

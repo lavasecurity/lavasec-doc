@@ -184,7 +184,7 @@ compact 快照通过 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel
 
 ### 5.2 精选来源（已实现） {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` 由规范的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成，目前有 **32** 个来源，分布在七个类别：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。来源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts。
+`DefaultCatalog.curatedSources` 由规范的 [Blocklist Catalog](../legal/blocklist-catalog.md) 生成，目前有 **34** 个来源，分布在七个类别：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。来源家族包括 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts。
 
 `guardrailSources` 是空的。GPL 来源（HaGeZi、OISD、AdGuard）在目录里可见，但**需要手动开启 / 默认是关的**；Worker 会把上线时的同步/发布限定在 `source_url_only` 加上已核准的 GPL 前缀（`hagezi-`、`oisd-`、`adguard-`）范围内。
 

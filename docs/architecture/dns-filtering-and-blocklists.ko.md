@@ -184,7 +184,7 @@ compact 스냅샷은 `Data(contentsOf:options:[.mappedIfSafe])`(`LavaSecTunnel/P
 
 ### 5.2 큐레이션된 소스 (구현됨)
 
-`DefaultCatalog.curatedSources`는 표준 [Blocklist Catalog](../legal/blocklist-catalog.md)에서 생성되며, 현재 일곱 개 카테고리에 걸쳐 **32**개 소스입니다: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling, Piracy & Torrent. 소스 패밀리에는 The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard, 1Hosts가 포함됩니다.
+`DefaultCatalog.curatedSources`는 표준 [Blocklist Catalog](../legal/blocklist-catalog.md)에서 생성되며, 현재 일곱 개 카테고리에 걸쳐 **34**개 소스입니다: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling, Piracy & Torrent. 소스 패밀리에는 The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard, 1Hosts가 포함됩니다.
 
 `guardrailSources`는 비어 있습니다. GPL 소스(HaGeZi, OISD, AdGuard)는 카탈로그에 보이지만 **opt-in / 기본 OFF**입니다. Worker는 출시 동기화/게시를 `source_url_only`와 정리된 GPL 접두사(`hagezi-`, `oisd-`, `adguard-`)로 게이트합니다.
 

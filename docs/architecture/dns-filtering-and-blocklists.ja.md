@@ -184,7 +184,7 @@ UI は **`DoH3`（スラッシュなし）** を注記します。たとえば�
 
 ### 5.2 用意されたソース（実装済み） {#52-curated-sources}
 
-`DefaultCatalog.curatedSources` は正規の [Blocklist Catalog](../legal/blocklist-catalog.md) から生成され、現在は **32** 個のソースを 7 つのカテゴリ（Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent）に分けて含んでいます。ソースファミリーには The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts が含まれます。
+`DefaultCatalog.curatedSources` は正規の [Blocklist Catalog](../legal/blocklist-catalog.md) から生成され、現在は **34** 個のソースを 7 つのカテゴリ（Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent）に分けて含んでいます。ソースファミリーには The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts が含まれます。
 
 `guardrailSources` は空です。GPL のソース（HaGeZi、OISD、AdGuard）はカタログには見えますが、**オプトイン／デフォルトは OFF** です。Worker は起動時の同期／公開を `source_url_only` と許可済み GPL プレフィックス（`hagezi-`、`oisd-`、`adguard-`）に限定します。
 
