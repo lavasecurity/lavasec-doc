@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # DNS Filtering & Blocklists
@@ -19,14 +19,14 @@ Lava is **local DNS/blocklist filtering**, not a guarantee that every malicious 
 
 The filter/resolve engine runs inside the **NE / packet tunnel** — the `NEPacketTunnelProvider` extension `LavaSecTunnel` (`com.lavasec.app.tunnel`), which intercepts DNS only. The tunnel addresses are `10.255.0.2` (tunnel) and `10.255.0.1` (DNS server). The app process never sees query traffic; it only writes compiled artifacts into the **App Group** (`group.com.lavasec`) and signals the tunnel via NETunnelProviderSession **provider messages** (not Darwin notifications).
 
-For each inbound DNS query the tunnel runs a fixed **query precedence** in `DNSQueryDispatcher` (`Sources/LavaSecCore/DNSQueryDispatcher.swift`):
+For each inbound DNS query the tunnel runs a fixed **query precedence** in `DNSQueryDispatcher` (`Sources/LavaSecDNS/DNSQueryDispatcher.swift`):
 
 ```
 resolver bootstrap  >  temporary pause  >  filter (block / allow)
 ```
 
 - **bootstrap-first is a hard invariant.** A query that resolves the configured resolver's *own* hostname (the DoH/DoT/DoQ endpoint) must never be blocked or paused, or the tunnel could not bring encrypted DNS up. The dispatcher takes lazy closures so each step is read only when reached, preserving short-circuit (no snapshot read when a bootstrap response exists; no pause read when bootstrapping).
-- **temporary pause** forwards upstream while a user-initiated pause TTL is active. These queries are recorded with the distinct `FilterDecisionReason.pausedAllow` ("Allowed on Pause" in Domain History) rather than `.defaultAllow`, so a domain let through only because protection was paused isn't shown or counted as a normal filter-cleared allow — `DiagnosticsStore` also excludes it from Top Domains ranking (`Sources/LavaSecCore/DiagnosticsStore.swift`).
+- **temporary pause** forwards upstream while a user-initiated pause TTL is active. These queries are recorded with the distinct `FilterDecisionReason.pausedAllow` ("Allowed on Pause" in Domain History) rather than `.defaultAllow`, so a domain let through only because protection was paused isn't shown or counted as a normal filter-cleared allow — `DiagnosticsStore` also excludes it from Top Domains ranking (`Sources/LavaSecKit/DiagnosticsStore.swift`).
 - **filter** evaluates the domain against the compiled snapshot and either forwards it or synthesizes a blocked response.
 
 A query that passes the filter (action `.allow`) is handed to the resolver path (§3). The tunnel **fails closed** on cold start without a reusable snapshot: it installs a fail-closed runtime snapshot that blocks all traffic rather than resolving unfiltered.
@@ -37,7 +37,7 @@ A query that passes the filter (action `.allow`) is handed to the resolver path 
 
 ### 2.1 Decision precedence
 
-`FilterSnapshot.decision(forNormalizedDomain:)` (`Sources/LavaSecCore/FilterSnapshot.swift:57-71`) applies the canonical safety precedence:
+`FilterSnapshot.decision(forNormalizedDomain:)` (`Sources/LavaSecKit/FilterSnapshot.swift:72-86`) applies the canonical safety precedence:
 
 ```
 threat guardrail  >  local allowlist (allowed exceptions)  >  blocklist  >  default-allow
@@ -52,11 +52,11 @@ threat guardrail  >  local allowlist (allowed exceptions)  >  blocklist  >  defa
 
 A domain that fails normalization is blocked with reason `.invalidDomain` (fail-safe). The same precedence is mirrored in the binary on-disk form (`CompactFilterSnapshot`). The threat guardrail sits above the local allowlist by design: **payment never bypasses the non-allowable threat guardrail**, and a user exception cannot un-block a guardrail domain.
 
-> Note: in the current working tree `nonAllowableThreatRules` / `guardrailSources` are empty (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:254`); the precedence slot is wired and enforced but ships with no guardrail entries yet.
+> Note: in the current working tree `nonAllowableThreatRules` / `guardrailSources` are empty (`DefaultCatalog.guardrailSources = []`, `BlocklistModels.swift:202`); the precedence slot is wired and enforced but ships with no guardrail entries yet.
 
 ### 2.2 Rule storage and the resident-memory unit
 
-`DomainRuleSet` (`Sources/LavaSecCore/DomainRuleSet.swift`) stores `exactDomains` + `suffixDomains` sets. Matching (`containsNormalized`) does an exact lookup plus a parent-suffix walk (`hasSuffix`-style) at query time — there is **no subdomain subsumption at compile time**. One valid wildcard line is **one rule** and one memory-table entry. This 1-line = 1-rule identity is what makes the rule count the honest resource metric (§4).
+`DomainRuleSet` (`Sources/LavaSecKit/DomainRuleSet.swift`) stores `exactDomains` + `suffixDomains` sets. Matching (`containsNormalized`) does an exact lookup plus a parent-suffix walk (`hasSuffix`-style) at query time — there is **no subdomain subsumption at compile time**. One valid wildcard line is **one rule** and one memory-table entry. This 1-line = 1-rule identity is what makes the rule count the honest resource metric (§4).
 
 ### 2.3 Compiled snapshot forms
 
@@ -71,7 +71,7 @@ The app writes both `filter-snapshot.json` and `filter-snapshot.compact` into th
 
 ### 3.1 Transport enum
 
-Unblocked queries are forwarded to the configured upstream resolver. `DNSResolverTransport` (`Sources/LavaSecCore/DNSResolverPreset.swift:6-11`) has **five** values:
+Unblocked queries are forwarded to the configured upstream resolver. `DNSResolverTransport` (`Sources/LavaSecKit/DNSResolverPreset.swift:6-11`) has **five** values:
 
 | Transport | Raw value | Annotation surfaced in UI |
 |---|---|---|
@@ -81,27 +81,27 @@ Unblocked queries are forwarded to the configured upstream resolver. `DNSResolve
 | DNS-over-TLS | `dns-over-tls` | `DoT` |
 | DNS-over-QUIC | `dns-over-quic` | `DoQ` |
 
-Built-in presets are Google, Cloudflare, Quad9, Mullvad (each in IP / DoH / DoT variants) plus Device DNS and Custom. Custom resolvers accept a plain IPv4/IPv6 server, a DoH URL, a DoT URL (`tls://` / `dot://`), a DoQ URL (`doq://` / `quic://`), or an `sdns://` DNS stamp; usernames/passwords and localhost are rejected. DoT/DoQ default to port `853`; DoH requires a path.
+Built-in presets are Google, Cloudflare, Quad9, Mullvad, and HaGeZi (each in IP / DoH / DoT variants) plus Device DNS and Custom. The HaGeZi resolver family (`hagezi` / `hageziDoH` / `hageziDoT`, IPv4 `188.34.161.210`, encrypted hostname `root.hagezi.org`) points at HaGeZi's public root resolver, which applies HaGeZi's own upstream ad/tracking/malware/phishing blocking (`Sources/LavaSecKit/DNSResolverPreset.swift:919-1069`). This resolver family is distinct from the HaGeZi *blocklist* source family in the catalog (§5.2). Custom resolvers accept a plain IPv4/IPv6 server, a DoH URL, a DoT URL (`tls://` / `dot://`), a DoQ URL (`doq://` / `quic://`), or an `sdns://` DNS stamp; usernames/passwords and localhost are rejected. DoT/DoQ default to port `853`; DoH requires a path.
 
 ### 3.2 DoH / DoH3
 
-`DoHTransport` (`Sources/LavaSecCore/DoHTransport.swift`) executes DoH over `URLSession`. Every request opts into HTTP/3 (`request.assumesHTTP3Capable = true`, `DNSOverHTTPSRequest.swift:29`); Apple's loader falls back to H2/H1 natively, so it never makes a reachable resolver unreachable. The negotiated protocol is read from `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
+`DoHTransport` (`Sources/LavaSecDNS/DoHTransport.swift`) executes DoH over `URLSession`. Every request opts into HTTP/3 (`request.assumesHTTP3Capable = true`, `Sources/LavaSecDNS/DNSOverHTTPSRequest.swift:30`); Apple's loader falls back to H2/H1 natively, so it never makes a reachable resolver unreachable. The negotiated protocol is read from `URLSessionTaskTransactionMetrics.networkProtocolName` (ALPN: `h3`, `h2`, `http/1.1`).
 
 The UI annotates **`DoH3` (no slash)** — e.g. "Quad9 (DoH3)" — **only when an h3 negotiation is actually observed** (`DoHHTTPVersion.dohAnnotation`); otherwise it shows `DoH`. DoH3 is preferred, never promised: the label is observational and resolver-scoped, never persisted ("confirmed DoH3" carry-over across restart was reverted). Requests POST `application/dns-message`; responses are content-type and length validated and the transaction ID is restored before write-back.
 
 ### 3.3 DoT
 
-`DoTTransport` (`Sources/LavaSecCore/DoTTransport.swift`) uses pooled `NWConnection`s, **up to 4 connections per endpoint** (`maxConnectionsPerEndpoint = 4`), round-robin, so parallel queries avoid head-of-line blocking. It carries **idle-staleness** handling: providers like Cloudflare close idle DoT connections server-side (~10s) without surfacing a state change, so a reused connection idle longer than **8 seconds** (`reusedConnectionMaxIdleInterval = 8`) is refreshed before send, and a timeout on a reused connection earns **exactly one fresh-connection retry**.
+`DoTTransport` (`Sources/LavaSecDNS/DoTTransport.swift`) uses pooled `NWConnection`s, **up to 4 connections per endpoint** (`maxConnectionsPerEndpoint = 4`), round-robin, so parallel queries avoid head-of-line blocking. It carries **idle-staleness** handling: providers like Cloudflare close idle DoT connections server-side (~10s) without surfacing a state change, so a reused connection idle longer than **8 seconds** (`reusedConnectionMaxIdleInterval = 8`) is refreshed before send, and a timeout on a reused connection earns **exactly one fresh-connection retry**.
 
 ### 3.4 DoQ — fresh connection per query
 
-`DoQTransport` (`Sources/LavaSecCore/DoQTransport.swift`) keeps a bounded pool of **4 lanes per endpoint**, but **each query opens a fresh QUIC connection** — a full handshake per query. The 4-lane pool provides **concurrency, not handshake reuse**.
+`DoQTransport` (`Sources/LavaSecDNS/DoQTransport.swift`) keeps a bounded pool of **4 lanes per endpoint**, but **each query opens a fresh QUIC connection** — a full handshake per query. The 4-lane pool provides **concurrency, not handshake reuse**.
 
 **DoQ connection reuse status (Dropped / deferred).** Reuse was reviewed and benchmarked on device (34 fresh handshakes across 35 queries ≈ no reuse), then implemented as an iOS-26-gated multi-stream `NWConnectionGroup` path, device-tested against AdGuard DoQ, and **reverted as net-negative** (stream failures and fallback errors against a real server). RFC 9250 maps each query to its own QUIC stream, so reuse requires `NWConnectionGroup`/`openStream`, which is **iOS 26.0+ only**; the current deployment floor is **iOS 17**. Reuse is deferred until the floor reaches iOS 26. Custom DoQ is rejected on devices that don't support it ("DNS over QUIC is not supported on this device").
 
 ### 3.5 Resolution policy
 
-`ResolverOrchestrator` (`Sources/LavaSecCore/ResolverOrchestrator.swift`) owns the upstream policy:
+`ResolverOrchestrator` (`Sources/LavaSecDNS/ResolverOrchestrator.swift`) owns the upstream policy:
 
 1. **Transport routing** by the configured transport.
 2. **Degradation to plain DNS** when an encrypted plan has no endpoints.
@@ -116,7 +116,7 @@ The shipped tier metric is the **filter-rules budget**: the total compiled domai
 
 ### 4.1 Tier limits (Implemented)
 
-`FeatureLimits` (`Sources/LavaSecCore/SubscriptionPolicy.swift:29-45`) is the source of truth:
+`FeatureLimits` (`Sources/LavaSecKit/SubscriptionPolicy.swift:47-68`) is the source of truth:
 
 | Tier | `maxFilterRules` | `maxAllowedDomains` | `maxBlockedDomains` | Custom blocklists / DNS |
 |---|---|---|---|---|
@@ -129,7 +129,7 @@ The tier limit is a monetization boundary, **never a paywall on the device guard
 
 The packet tunnel is subject to the iOS **~50 MiB per-extension memory ceiling** (an OS per-extension-type design limit for packet tunnels since iOS 15, not RAM-scaled; it lives in a per-device-model `com.apple.jetsamproperties.{Model}.plist` and can be lower on older devices). Exceeding it triggers jetsam. There is no API for the ceiling, so the budget keeps margin under the cliff.
 
-`FilterSnapshotMemoryBudget` (`Sources/LavaSecCore/FilterSnapshotMemoryBudget.swift:30-55`) does the math, denominated in filter rules (block + allow + guardrail):
+`FilterSnapshotMemoryBudget` (`Sources/LavaSecFilterPipeline/FilterSnapshotMemoryBudget.swift:31-51`) does the math, denominated in filter rules (block + allow + guardrail):
 
 | Constant | Value |
 |---|---|
@@ -142,16 +142,16 @@ This **~3.26M-rule device guardrail** is the hard safety floor for *every* user,
 
 ### 4.3 mmap strategy (Implemented)
 
-The compact snapshot is loaded with `Data(contentsOf:options:[.mappedIfSafe])` (`LavaSecTunnel/PacketTunnelProvider.swift:4431`, `:4665`), and `CompactBinaryReader` returns zero-copy slices. The multi-megabyte domain-text blob stays **file-backed/clean** and is excluded from the jetsam-counted `phys_footprint`; only the decoded `[Entry]` tables cost resident memory (~6 B/rule on disk, ~8.5 B dirty resident). This lifts the on-device domain ceiling: the resident cost is the entry tables, not the whole artifact.
+The compact snapshot is loaded with `Data(contentsOf:options:[.mappedIfSafe])` (`LavaSecTunnel/PacketTunnelProvider.swift:7592`, `:8155`), and `CompactBinaryReader` returns zero-copy slices. The multi-megabyte domain-text blob stays **file-backed/clean** and is excluded from the jetsam-counted `phys_footprint`; only the decoded `[Entry]` tables cost resident memory (~6 B/rule on disk, ~8.5 B dirty resident). This lifts the on-device domain ceiling: the resident cost is the entry tables, not the whole artifact.
 
 ### 4.4 Two-layer enforcement (Implemented)
 
-- **Authoritative (compile-time).** `FilterSnapshotPreparationService` (`Sources/LavaSecCore/FilterSnapshotPreparationService.swift:146-176`) enforces the budget on the **deduped union** of all enabled lists. The device guardrail is checked **first** (the hard floor); the tier limit binds below it. Over-budget configs are rejected deterministically — `exceedsDeviceMemoryBudget` or `exceedsTierFilterRuleLimit` — rather than letting the tunnel jetsam. The error names the two largest contributing lists so the fix is obvious.
-- **Advisory (selection-time UI).** `FilterRuleBudget` (`Sources/LavaSecCore/FilterRuleBudget.swift:8-26`) drives the selection meter using a per-list **sum** with a **1.10 soft-ceiling margin** that compensates for the ~7–10% cross-list over-count (the per-list sum over-estimates the deduped union).
+- **Authoritative (compile-time).** `FilterSnapshotPreparationService` (`Sources/LavaSecFilterPipeline/FilterSnapshotPreparationService.swift:191-221`) enforces the budget on the **deduped union** of all enabled lists. The device guardrail is checked **first** (the hard floor); the tier limit binds below it. Over-budget configs are rejected deterministically — `exceedsDeviceMemoryBudget` or `exceedsTierFilterRuleLimit` — rather than letting the tunnel jetsam. The error names the two largest contributing lists so the fix is obvious.
+- **Advisory (selection-time UI).** `FilterRuleBudget` (`Sources/LavaSecKit/FilterRuleBudget.swift:16-52`) drives the selection meter using a per-list **sum** with a **1.10 soft-ceiling margin** that compensates for the ~7–10% cross-list over-count (the per-list sum over-estimates the deduped union).
 
 ### 4.5 The parser (Implemented)
 
-`BlocklistParser` (`Sources/LavaSecCore/BlocklistParser.swift`) counts rules literally: it drops comments/blanks/invalid lines, normalizes, dedups exact strings within a list (via a `Set`), and caps at **`maxRules = 1,000,000`** per list (default), with a 4,096-char max line length. Supported formats: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto tries hosts → dnsmasq → adblock → plain). One valid line = one rule = the memory unit.
+`BlocklistParser` (`Sources/LavaSecFilterPipeline/BlocklistParser.swift`) counts rules literally: it drops comments/blanks/invalid lines, normalizes, dedups exact strings within a list (via a `Set`), and caps at **`maxRules = 1,000,000`** per list (default), with a 4,096-char max line length. Supported formats: `auto`, `plainDomains`, `hosts`, `adblock`, `dnsmasq` (auto tries hosts → dnsmasq → adblock → plain). One valid line = one rule = the memory unit.
 
 > **Multi-host `hosts` lines (parser rules version 2).** A `hosts` line that maps one IP to several hosts (`0.0.0.0 a.com b.com c.com`) now emits **every** host as its own rule, not just the first; `maxRules` is enforced **per rule** (not per line) so a multi-host line near the cap can't overshoot. Because the same upstream bytes can now yield more rules, the parser's rules version was bumped **1 → 2**, invalidating stale `RuleSetCache` entries parsed under the old first-host-only behavior.
 
@@ -170,7 +170,7 @@ The tunnel and catalog sync run inside the NE memory budget, so list ingestion i
 
 ### 5.1 Catalog model (Implemented)
 
-The **blocklist catalog** is the published list of available sources. The **lavasec-api Worker** serves JSON metadata from an R2 bucket at `GET /v1/catalog` (and `/v1/catalog/:version`); the device fetches the actual list **bytes** directly from each upstream `source_url`. The iOS catalog endpoints are `https://api.lavasecurity.app/v1/catalog` (`BlocklistCatalogSync.swift:4-15`).
+The **blocklist catalog** is the published list of available sources. The **lavasec-api Worker** serves JSON metadata from an R2 bucket at `GET /v1/catalog` (and `/v1/catalog/:version`); the device fetches the actual list **bytes** directly from each upstream `source_url`. The iOS catalog endpoints are `https://api.lavasecurity.app/v1/catalog` (`BlocklistCatalogSync.swift:9-16`).
 
 On device, `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`):
 
@@ -178,9 +178,11 @@ On device, `BlocklistCatalogSynchronizer` (`BlocklistCatalogSync.swift`):
 2. For community sources, accepts the fetched bytes as served after size/format/rule-count caps; the catalog's `accepted_source_hashes` are advisory (cache identity + audit), not a hard gate.
 3. For Lava threat-guardrail sources, keeps hash-pinned verification and fail-closed behavior.
 4. Parses/normalizes/dedups locally.
-5. Filters every parsed rule set through `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:262-276`) so an upstream list can never block Lava/Apple/identity-provider domains.
+5. Filters every parsed rule set through `DomainRuleSet.lavaSecProtectedDomains` (`AppConfiguration.swift:275-296`) so an upstream list can never block Lava/Apple/identity-provider domains.
 
 The **protected-domain set** (filtered out before activation): `apple.com`, `icloud.com`, `mzstatic.com`, `itunes.apple.com`, `apps.apple.com`, `lavasecurity.com`, `lavasecurity.app`, `api.lavasecurity.app`, `lavasec.app`, `lavasec.example`, `accounts.google.com`, `google.com` (all suffix-matched). The Worker applies an equivalent `PROTECTED_SUFFIXES` filter when computing metadata; the device applies the protected-domain filter again before activation.
+
+The catalog is also refreshed in the background: a `BGProcessingTaskRequest` (identifier `com.lavasec.catalog-refresh`, registered at launch) re-syncs catalog metadata on a headless app instance that installs no protection state (`LavaSecApp/LavaSecApp.swift:37-75`; `LavaSecApp/Info.plist` `BGTaskSchedulerPermittedIdentifiers`).
 
 ### 5.2 Curated sources (Implemented)
 

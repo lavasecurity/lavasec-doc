@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: product
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # Feature Catalog
@@ -21,7 +21,7 @@ The privacy promise behind every feature below:
 - **Plus** — unlocked by Lava Security Plus, the single optional paid tier. Plus unlocks **customization only**; it never gates baseline safety and never lets a paying user bypass the threat guardrail.
 - Every row is **Implemented** unless flagged inline. Status legend: **Implemented** = shipped and confirmed in code; **Planned** = designed, not built; **Dropped** = rejected or reverted. Planned/Dropped items are documented in the private roadmap, not here.
 
-Source-of-truth tier ceilings live in `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift` (`FeatureLimits.free` / `FeatureLimits.paid`, aliased as `.plus`). The Plus entitlement **gate** is a local flag (`isPaid`) — the source of truth. The backend **mirrors** App Store entitlements (`POST /v1/account/entitlements/app-store-sync` upserts an `entitlements` row), but that row is a mirror, not the gate; no backend sync drives gating yet.
+Source-of-truth tier ceilings live in `lavasec-ios: Sources/LavaSecKit/SubscriptionPolicy.swift` (`FeatureLimits.free` / `FeatureLimits.paid`, aliased as `.plus`). The Plus entitlement **gate** is a local flag (`isPaid`) — the source of truth. The backend **mirrors** App Store entitlements (`POST /v1/account/entitlements/app-store-sync` upserts an `entitlements` row), but that row is a mirror, not the gate; no backend sync drives gating yet.
 
 ---
 
@@ -39,11 +39,12 @@ The core product: a local DNS-only packet tunnel and the calm state model around
 | **Temporary pause (configurable 1–30 min, default 5) + resume** | Free | Pause/resume run through `LavaProtectionCommandService` under a flock file lock with revision dedup. |
 | **Authentication-required pause** | Free | Opt-in per-surface gate (`SecurityProtectedSurface.protectionPause`): pause requires local device auth; the command service denies an unauthenticated pause and the Live Activity hides the pause buttons. |
 | **Reconnect** | Free | Restarts the tunnel directly (bypasses the command-service pause pipeline). |
-| **Soft Shield Guardian state model** | Free | 7 expression states — `sleeping, waking, awake, paused, retrying, concerned, grateful` (`GuardianMascotAnimation.swift`, LavaSecCore). 6 connectivity severities collapse to 4 faces; rendered identically in-app, in onboarding, and in the Live Activity. |
-| **Connectivity assessment** | Free | 6 severities (`healthy, recovering, usingDeviceDNSFallback, dnsSlow, networkUnavailable, needsReconnect`) drive the guardian face and status copy. |
+| **Protection-resumed notification** | Free | When a temporary pause expires, the tunnel's own expiry timer posts a "protection resumed" notification — the tunnel is the process guaranteed alive when a pause ends, so the banner still fires if the app was closed during the pause (`LavaNotificationCategory.protectionResumed`, `Sources/LavaSecKit/LavaEventNotifications.swift`). |
+| **Soft Shield Guardian state model** | Free | 7 expression states — `sleeping, waking, awake, paused, retrying, concerned, grateful` (`GuardianMascotAnimation.swift`, LavaSecPresentation). The Guard tab collapses 7 connectivity severities to 4 faces; the Live Activity instead renders the mascot from its 3-state `ProtectionState` (`on`/`paused`/`restarting`), so it shows only `awake`/`paused`/`retrying` and deliberately never surfaces the connectivity-problem faces. |
+| **Connectivity assessment** | Free | 7 severities (`healthy, recovering, usingDeviceDNSFallback, usingEncryptedFallback, dnsSlow, networkUnavailable, needsReconnect`) drive the guardian face and status copy. |
 | **Performance hardening** | Free | Cache-first turn-on, in-flight query coalescing, bounded-parallel fetch, and flap coalescing (warm turn-on measured ~112 ms on iPhone 15 Pro per the modular speed-up work). |
 
-> **Device guardrail (everyone, never a paywall):** a hard `~3.26M-rule` ceiling (32 MB resident target under the iOS `~50 MiB` per-extension memory ceiling) is enforced for all users above any tier (`lavasec-ios: Sources/LavaSecCore/FilterSnapshotMemoryBudget.swift`, `maxFilterRuleCount`). Over-budget configs are rejected deterministically (`exceedsDeviceMemoryBudget`) instead of letting the tunnel jetsam.
+> **Device guardrail (everyone, never a paywall):** a hard `~3.26M-rule` ceiling (32 MB resident target under the iOS `~50 MiB` per-extension memory ceiling) is enforced for all users above any tier (`lavasec-ios: Sources/LavaSecFilterPipeline/FilterSnapshotMemoryBudget.swift`, `maxFilterRuleCount`). Over-budget configs are rejected deterministically (`exceedsDeviceMemoryBudget`) instead of letting the tunnel jetsam.
 
 ---
 
@@ -60,9 +61,12 @@ What gets blocked, how lists are chosen, and the tier boundary.
 | **Upstream integrity (TLS + curated URL)** | Free | Community list bytes are fetched over TLS directly from the curated upstream `source_url` and accepted subject to size + format + rule-count caps; the catalog's `accepted_source_hashes` are **advisory** (cache identity + audit), not a hard gate — a fast-rotating list is never rejected for drifting from a pinned hash. Lava's **threat-guardrail** tier (Lava-curated, can't-be-allowed) stays strictly hash-pinned. |
 | **Protected-domain filter** | Free | Every parsed source is stripped of protected Lava / Apple / identity-provider domains (apple.com, icloud.com, lavasecurity.app, google.com, accounts.google.com, …) so an upstream list can't break the app, tunnel, or sign-in. |
 | **Allowed Exceptions (allowlist)** | Free | User-managed allowlist permitting domains despite blocklists. Free cap: 25 allowed / 25 blocked domains (`FeatureLimits.free`). |
-| **Filter-rules budget (tier metric)** | Free / Plus | The shipped tier metric is total compiled domain **rules**: **Free 500K / Plus 2M** (`maxFilterRules` in `lavasec-ios: Sources/LavaSecCore/SubscriptionPolicy.swift`). Replaces the old list-count cap. Over-tier configs surface `exceedsTierFilterRuleLimit`. |
+| **Filter-rules budget (tier metric)** | Free / Plus | The shipped tier metric is total compiled domain **rules**: **Free 500K / Plus 2M** (`maxFilterRules` in `lavasec-ios: Sources/LavaSecKit/SubscriptionPolicy.swift`). Replaces the old list-count cap. Over-tier configs surface `exceedsTierFilterRuleLimit`. |
 | **Higher domain limits** | Plus | 1,000 allowed / 1,000 blocked domains (`FeatureLimits.plus`). |
 | **Custom blocklists** | Plus | `allowsCustomBlocklists`. Custom lists are fetched and parsed on the device, cached locally, never proxied to Lava servers. |
+| **Switch Filter (Shortcuts / Siri / Automations)** | Free | A discoverable "Switch Filter" App Intent changes the active saved filter on demand from Shortcuts, an Automation, or Siri. It runs headless (`openAppWhenRun == false`, never foregrounds the app) and the system-delivered result dialog is resolved to the app's own pinned language (`LavaSecApp/SwitchFilterShortcut.swift`). A separate hands-free Focus filter switch runs from the App Intents extension (`LavaSecIntents`). |
+| **Switched-filter notification** | Free | An opt-in notification ("Switched to `<Filter>`") fires when a Focus auto-switch **or** the Shortcuts "Switch Filter" action changes the active filter — one toggle covers both triggers (`LavaNotificationCategory.filterChanged`, `Sources/LavaSecKit/LavaEventNotifications.swift`). |
+| **Background catalog refresh** | Free | A registered background processing task (`BGProcessingTaskRequest`, task identifier `com.lavasec.catalog-refresh`, declared under `BGTaskSchedulerPermittedIdentifiers`) periodically re-syncs Lava's source catalog and warms the on-disk snapshot in the background, so blocklist metadata stays current without opening the app (`LavaSecApp/LavaSecApp.swift`). |
 | **Warm-startup artifact reuse** | Free | A manifest + identity fingerprint lets the tunnel reuse the on-disk compact snapshot without recompiling; reuse is rejected (with a privacy-safe field-name-only reason) when inputs change. |
 | **Smart Save (weakening-only confirm)** | Free | Edits to your filter that only *strengthen* or are neutral (add a blocklist or a blocked domain) apply directly; edits that *weaken* protection — removing a blocklist, removing a blocked domain, or adding an allowed exception — route through a review confirmation sheet first, with a "Be extra careful" panel when exceptions are added (`FiltersView.saveChanges()`, `weakensProtection`). |
 | **Budget meter (savable-selection)** | Free / Plus | The selection meter abbreviates counts (500K / 1.2M / 2M) and uses a 1.10 soft-ceiling margin (the per-list sum over-counts the deduped union by ~7–10%); a count still within tolerance is clamped to read e.g. "500K of 500K" until it passes the soft ceiling (`FilterRuleBudget`). |
@@ -81,7 +85,7 @@ Resolver transports and routing for unblocked queries.
 | **DoH / DoH3** | Free | URLSession-based DoH that prefers HTTP/3. The UI annotates **`DoH3` (no slash)**, e.g. "Quad9 (DoH3)", **only when an h3 negotiation is actually observed** — preferred, never promised (`DoHTransport`). |
 | **DoT** | Free | Pooled `NWConnection`s (up to 4/endpoint) with idle-staleness refresh and one fresh-connection retry. |
 | **DoQ** (custom only) | Plus | DNS-over-QUIC has **no built-in preset** — it's reachable only via a **custom `doq://` resolver**, and custom DNS is Plus. Opens a **fresh QUIC connection per query** (the 4-lane pool gives concurrency, not handshake reuse); connection reuse is deferred to an iOS-26 deployment floor. |
-| **Preset resolvers** | Free | Device DNS (default), Google Public DNS, Cloudflare 1.1.1.1, Quad9 Secure, Mullvad — in IP / DoH / DoT variants where offered (`DNSResolverPreset.allPresets`). |
+| **Preset resolvers** | Free | Device DNS (default), Google Public DNS, Cloudflare 1.1.1.1, Quad9 Secure, Mullvad, and HaGeZi (public "root" resolver `root.hagezi.org` / `188.34.161.210`, with its own upstream ad/tracker/malware/phishing filtering) — in IP / DoH / DoT variants where offered (`DNSResolverPreset.allPresets`; HaGeZi presets in `Sources/LavaSecKit/DNSResolverPreset.swift`). |
 | **Resolver routing & failover** | Free | `ResolverOrchestrator` routes by transport, degrades to plain DNS when an encrypted plan has no endpoints, does per-endpoint failover with a backoff gate, then device-DNS fallback. |
 | **Device-DNS fallback** | Free | Falls back to the current network's resolver when the selected resolver is unavailable; **on by default**. Surfaced as the `usingDeviceDNSFallback` severity. |
 | **Custom DNS** | Plus | `allowsCustomDNS` — user-supplied resolver (including DNS-stamp parsing for custom presets). |
@@ -111,8 +115,8 @@ Lock screen and Dynamic Island presence.
 | Feature | Tier | Notes |
 |---|---|---|
 | **Live Activity** | Free | `LavaSecWidget` (`com.lavasec.app.widget`): a single `Activity<LavaActivityAttributes>` on the lock screen and in the Dynamic Island (expanded center / compactLeading guardian / compactTrailing + minimal status glyph). |
-| **5-state protection display** | Free | `ProtectionState`: `on, paused, reconnecting, needsReconnect, networkUnavailable` — each maps to a guardian pose, SF Symbol, and title. |
-| **Live Activity action buttons** | Free | Pause for N min (configured length, default 5), Resume, Reconnect — `LiveActivityIntent`s that run in the app process via `LavaProtectionCommandService`. Authenticated pause variants require local device auth. |
+| **3-state protection display** | Free | `ProtectionState`: `on, paused, restarting` — each maps to a guardian pose (`awake`/`paused`/`retrying`), SF Symbol, and title. The Dynamic Island deliberately no longer models ambient connectivity (the removed `reconnecting`/`needsReconnect`/`networkUnavailable` states): those change while the app is suspended and can't be kept fresh on a push-only surface, and because Lava is fail-closed a reconnect wobble blocks traffic rather than exposing it. |
+| **Live Activity action buttons** | Free | Pause for N min (configured length, default 5), Resume, and Restart (the always-available recovery action — internally a `ReconnectLavaProtectionIntent`) — `LiveActivityIntent`s that run in the app process via `LavaProtectionCommandService`. Authenticated pause variants require local device auth. |
 | **Single deduped, revision-gated reconcile** | Free | `LavaLiveActivityController` keeps one Activity, updates only on real id/content change, and gates updates by `ProtectionPauseStore` revision so stale intent retries can't regress state. |
 | **Live Activities toggle** | Free | User-toggleable in Settings (`setUsesLiveActivities`), available on iPhone/iPad only. |
 
@@ -127,7 +131,7 @@ First-run flow that installs the local VPN config and sets sensible defaults.
 | **Multi-page first-run flow** | Free | `OnboardingFlowView` — 6 pages: `lava, guardIntro, features, vpn, notifications, done`. (Profile install and the notification prompt happen at the right step, not up front.) |
 | **Local VPN profile install** | Free | Installs the local VPN config during onboarding **without** enabling Connect-On-Demand, so protection is never silently auto-on at completion — the Guard surface stays authoritative. |
 | **Notification permission prompt** | Free | Requested in-flow at the notifications step. |
-| **Recommended defaults applied** | Free | Device DNS resolver, device-DNS fallback on, local logging on (counts + history + activity), Block List Basic + StevenBlack Unified Hosts enabled, continue without account (`lavasec-ios: Sources/LavaSecCore/AppConfiguration.swift`, `lavaRecommendedDefaults`). |
+| **Recommended defaults applied** | Free | Device DNS resolver, device-DNS fallback on, local logging on (counts + history + activity), Block List Basic + StevenBlack Unified Hosts enabled, continue without account (`lavasec-ios: Sources/LavaSecKit/OnboardingDefaults.swift`, `lavaRecommendedDefaults`). |
 
 ---
 
@@ -144,9 +148,12 @@ Configuration, security, diagnostics, and feedback surfaces.
 | **Appearance** | Free | Light/dark/system color scheme. |
 | **Local-only logging controls** | Free | Toggles for filtering counts, domain history (diagnostics), and network activity — all stored on-device. Fine-grained logs (domain history + network activity) are pruned to a **7-day** window (`LocalLogRetention.fineGrainedDays = 7`); counts and Lava Guard progress are kept longer. |
 | **Activity / Domain Logs (Guard detail)** | Free | Dynamic local-only diagnostics, reached from the Guard tab (`GuardDestination.activity`). The digest is a request **flow** — a "requests processed" total split into an Allowed/Blocked volume bar with "% protected locally" (honest rounding: a tiny share reads `<1%`, a near-total share reads `>99%`). A **Domain Logs** section holds **Top Domains** (most blocked & allowed, ranked by query count) and **Domain History** (recent lookups & decisions); domain rows appear only when history opt-in is on. |
+| **Domain History export** | Free | Domain History can be exported as a local snapshot archive carrying a provenance `manifest.json` (app version, build, source revision, OS version, catalog version); rows are drained in bounded pages and streamed into the archive off the main actor, so a large export avoids a foreground jetsam / main-thread hang — this runs in the **app** (`LavaSecAppServices`), not the NE extension (`Sources/LavaSecAppServices/LocalLogExportArchive.swift`). |
 | **Filter (Guard detail)** | Free | Single unified filter screen reached from the Guard tab. A "My filter" hub opens one consolidated **My filter** screen with two shelves — **"Lava blocks these"** (blocklists + individually blocked domains) and **"Lava lets these through"** (allowed exceptions) — under one Edit/Save draft flow. A "Phone → Lava → Internet" flow diagram leads the tab, and opening My filter auto-refreshes the catalog. |
 | **Network Activity (Settings → Advanced)** | Free | Bounded local-only event stream of network/runtime/user transitions, shared via App Group (`NetworkActivityLog`). Moved off the Activity surface into **Settings → Advanced** (after "Nerd Stats", `SettingsRoute.networkActivity`), behind the `.activityViewing` lock, with its own privacy panel ("Stays on this iPhone", kept 7 days). |
+| **Nerd Stats (tunnel & DNS diagnostics)** | Free | A read-only diagnostics screen under Settings (`SettingsRoute.versionNerdStats`, `LavaSecApp/SettingsView.swift`) surfacing tunnel-health and version details plus approximate DNS upstream-latency percentiles (p50 / p90 / p95) derived from a fixed-bucket, constant-memory session histogram (`DNSLatencyHistogram`, `Sources/LavaSecKit/DNSLatencyHistogram.swift`). Rendered as plain percentile text rows, never a chart. |
 | **Bug report** | Free | User-triggered wizard sending an anonymized bundle to `POST /v1/bug-reports`; no domain history in v1. The bundle now also carries build provenance (`appVersion`/`appBuild`/`sourceRevision`) and connectivity honesty counters. Also reachable via shake-to-report (`RageShakeDetector`). |
+| **App Store review prompt** | Free | At high-conviction "aha" moments — a user-initiated turn-on that connected, a foreground filter edit that *added* protection, or viewing a large blocked-query volume — the app makes a native App Store review request, rate-limited by a self-cooldown and a rolling 365-day ceiling and suppressed near a frustration signal such as a rage-shake (`ReviewAhaMoment` / `ReviewPromptState`, `Sources/LavaSecKit/ReviewPromptPolicy.swift`). |
 | **Subscription management** | Plus | For active subscribers the Upgrade screen shows Manage Subscription (auto-renewable plans, via `AppStore.showManageSubscriptions`), Restore Purchase, and the entitlement expiration date. |
 | **Legal Notices + Version** | Free | Settings surfaces third-party legal notices (see [Third-party notices](../legal/third-party-notices.md)) and a version/build page. |
 
@@ -154,11 +161,12 @@ Configuration, security, diagnostics, and feedback surfaces.
 
 ## App architecture (for orientation)
 
-Three bundles share one App Group `group.com.lavasec`, alongside a `lavasec-ios: Shared/` sources folder compiled into them:
+Four bundles share one App Group `group.com.lavasec`, alongside a `lavasec-ios: Shared/` sources folder compiled into them. The app, tunnel, widget, and App Intents extension consume a layered Swift package (`LavaSecKit`, `LavaSecNetworking`, `LavaSecDNS`, `LavaSecFilterPipeline`, `LavaSecPresentation`, `LavaSecAppServices`) re-exported through a `LavaSecCore` compatibility façade; production targets link only the narrow products they need (the tunnel does not link the presentation, app-services, or façade products):
 
 - **LavaSecApp** (`com.lavasec.app`) — SwiftUI app shell; in this build the root is a two-tab `TabView` (**Guard** + **Settings**), with Filter and Activity reached as detail screens under the Guard tab (Network Activity now lives under Settings → Advanced).
 - **LavaSecTunnel** (`.tunnel`) — the on-device DNS filter/resolve engine.
 - **LavaSecWidget** (`.widget`) — the WidgetKit Live Activity.
+- **LavaSecIntents** (`.intents`) — the App Intents extension that runs hands-free Focus filter switches while the app is closed.
 - **Shared/** — cross-target sources (not a bundle): App Group, command service, mascot, Live Activity attributes/intents.
 
 App ↔ extension control uses `NETunnelProviderSession` **provider messages** (`reload-snapshot` / `reload-protection-pause` / `reload-configuration` / `clear-*` / `flush-tunnel-health`), not Darwin notifications. Filter rules cross app → extension as App-Group snapshot files (`filter-snapshot.json` / `.compact`).

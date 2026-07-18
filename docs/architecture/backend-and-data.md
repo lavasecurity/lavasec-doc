@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # Backend & Data
@@ -44,7 +44,8 @@ Routing is a flat `route()` dispatcher. Everything is **Implemented** unless not
 | `GET /healthz` | inline | `{ ok: true, service: "lavasec-api" }` |
 | `GET /v1/catalog` | `getCatalog(env, null)` | Serves `catalog/latest.json` from R2 |
 | `GET /v1/catalog/:version` | `getCatalog(env, version)` | Serves `catalog/{version}.json` from R2; `Cache-Control: public, max-age=` `PUBLIC_CATALOG_CACHE_SECONDS` (default 300s) |
-| `POST /v1/bug-reports` | `createBugReport` | Anonymous, login-optional; allow-listed debug fields only |
+| `POST /v1/bug-reports` | `createBugReport` | Anonymous, login-optional; allow-listed debug fields only; best-effort App-Attested (see §2.3) |
+| `GET /v1/attest-challenge` | — | Issues a one-time App Attest challenge token consumed by the bug-report submit (see §2.3) |
 | `POST /v1/help-feedback` | `createHelpFeedback` | Anonymous article vote → **D1**, not Supabase |
 
 > Attachment upload (a former `PUT /v1/bug-reports/:id/attachment` route) has been **removed**; screenshots and extra detail are handled via a human-mediated support channel. The Worker only best-effort deletes any legacy attachment object during account deletion.
@@ -77,6 +78,18 @@ Routing is a flat `route()` dispatcher. Everything is **Implemented** unless not
 - **Cron (`scheduled`)** — the handler branches on the cron id:
   - **Every 6 hours** — syncs **one** source per run, round-robined via the R2 cursor (`nextScheduledSyncSourceID`, `SCHEDULED_SYNC_CURSOR_KEY`), then republishes the catalog. Spreading the load avoids contacting all upstreams at once.
   - **Every 2 minutes** — runs an internal bug-report triage path that promotes new anonymous reports into an internal issue-tracker queue, advancing its own watermark cursor. This is internal operations tooling; the issue-tracker/notification identifiers are configuration, not part of the public API.
+
+### 2.3 App Attest on bug reports
+
+Anonymous bug-report submits are hardened with **Apple App Attest** to raise the cost of forged or spammed reports while staying login-optional. It is a two-step, **best-effort** flow: the app first fetches a one-time challenge from `GET /v1/attest-challenge`, then POSTs the report to `/v1/bug-reports` with three headers — `X-Lava-Attest-Challenge`, `X-Lava-Attest-Key-Id` (base64 key identifier), and `X-Lava-Attest-Object` (base64 CBOR attestation object).
+
+- **Fresh key per submission.** The app generates a new hardware-backed (Secure Enclave) key and attests it each time, rather than registering a key and asserting against it, so nothing device-linked is stored server-side.
+- **Replay-hardened.** The attestation's `clientDataHash` binds **both** the one-time challenge and a SHA-256 of the exact request body — `clientDataHash = SHA256( utf8(challenge) ‖ SHA256(body) )` — so a captured attestation cannot be replayed against a different report body. The server recomputes the identical `clientDataHash`; the two must stay in lockstep.
+- **Fail-open during rollout.** On the Simulator, on hardware without App Attest support, or on any failure or challenge-fetch timeout (capped at ~3s), the app submits the report **unattested** rather than blocking the user. The server records the outcome (attested vs. soft-fail) and does not reject unattested reports during rollout.
+
+The client flow lives in `lavasec-ios: LavaSecApp/DiagnosticsController.swift:788-898`.
+
+Status: **Implemented** (client side; server verification is fail-open during rollout).
 
 ## 3. Catalog & source-url-only enforcement
 
@@ -147,7 +160,7 @@ The split matters: anonymous bug reports must be *insertable* by the Worker with
 
 ### 4.3 Auth & the encrypted backup envelope
 
-**Auth** is optional. Sign-in is **Apple + Google only** (email/password is **Dropped**). Both use the native `id_token` grant exchanged at Supabase Auth `auth/v1/token?grant_type=id_token` with a hashed nonce; the app stores only the resulting session device-locally in the Keychain. The client-side flow lives in the iOS app (`lavasec-ios: LavaSecApp/AccountAuthService.swift`, `lavasec-ios: Sources/LavaSecCore/SupabaseIDTokenAuth.swift`) — see [Accounts & Backup](./accounts-and-backup.md) for the full account/backup model.
+**Auth** is optional. Sign-in is **Apple + Google only** (email/password is **Dropped**). Both use the native `id_token` grant exchanged at Supabase Auth `auth/v1/token?grant_type=id_token` with a hashed nonce; the app stores only the resulting session device-locally in the Keychain. The client-side flow lives in the iOS app (`lavasec-ios: LavaSecApp/AccountAuthService.swift`, `lavasec-ios: Sources/LavaSecAppServices/SupabaseIDTokenAuth.swift`) — see [Accounts & Backup](./accounts-and-backup.md) for the full account/backup model.
 
 > **Zero-knowledge backup:** Client-side AES-256-GCM envelope; only ciphertext + non-secret metadata upload to Supabase `user_backups` (RLS per user). Server cannot decrypt without a user-held secret.
 
@@ -171,7 +184,7 @@ Passkey-assisted backup recovery is **zero-knowledge** and entirely client-side.
 
 The escrow tables that an earlier design used (`backup_passkey_recovery`, `backup_passkey_challenges`) were dropped before launch, and the Worker carries no `/v1/backup/*` routes and no WebAuthn/passkey code. (A `@simplewebauthn/server` entry remains in the Worker's `package.json` as an unused leftover dependency.)
 
-The client side lives in the iOS app: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` drives the PRF-capable passkey creation/assertion, and `lavasec-ios: Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift` derives the slot from the hmac-secret output. The PRF output is read only during assertion and never leaves the device. A non-PRF passkey provider cannot back a zero-knowledge slot, so setup fails early and the user falls back to a recovery phrase. Status: **Implemented**.
+The client side lives in the iOS app: `lavasec-ios: LavaSecApp/BackupPasskeyCoordinator.swift` drives the PRF-capable passkey creation/assertion, and `lavasec-ios: Sources/LavaSecAppServices/ZeroKnowledgeBackupEnvelope.swift` derives the slot from the hmac-secret output. The PRF output is read only during assertion and never leaves the device. A non-PRF passkey provider cannot back a zero-knowledge slot, so setup fails early and the user falls back to a recovery phrase. Status: **Implemented**.
 
 ## 6. lavasec-email Worker
 

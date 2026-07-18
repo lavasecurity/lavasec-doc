@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # System Overview
@@ -23,13 +23,14 @@ Everything below keeps that sentence true. The architecture is deliberately smal
 
 ## 3. Components
 
-### iOS client (three executable targets + shared code, one App Group `group.com.lavasec`)
+### iOS client (four executable targets + shared code, one App Group `group.com.lavasec`)
 
 | Component | Bundle / location | Role | Status |
 |---|---|---|---|
 | **LavaSecApp** | `com.lavasec.app` | SwiftUI app shell; entry point, two-tab Guard + Settings nav (Filter/Activity are Guard detail screens; Network Activity moved under Settings → Advanced). | Implemented |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`; the on-device DNS filter/resolve engine. Subject to the iOS **~50 MiB per-extension memory ceiling**. | Implemented |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit Live Activity (lock screen + Dynamic Island). | Implemented |
+| **LavaSecIntents** | `com.lavasec.app.intents` | ExtensionKit App Intents extension; hosts the Focus Filter that switches the active filter hands-free while the app is **closed** (`perform()` runs in the background extension and commits the switch to shared on-disk state — no `AppViewModel`; the always-on tunnel then adopts it by polling the on-disk generation, since `sendProviderMessage` is app-only). | Implemented |
 | **Shared/** | `Shared/` | Cross-target sources: App Group, command service, mascot, Live Activity attributes/intents. | Implemented |
 
 **App-side controllers (in LavaSecApp):**
@@ -40,18 +41,18 @@ Everything below keeps that sentence true. The architecture is deliberately smal
 - **LavaLiveActivityController** — single-Activity reconciler, deduped and revision-gated.
 - **OnboardingFlowView** — multi-page first-run flow (6 pages: `lava → guardIntro → features → vpn → notifications → done`).
 
-**LavaSecCore (platform-agnostic SwiftPM package, `Sources/LavaSecCore/`):**
+**Platform-agnostic SwiftPM package (six layers + a compatibility façade):** the package is split into `LavaSecKit`, `LavaSecNetworking`, `LavaSecDNS`, `LavaSecFilterPipeline`, `LavaSecPresentation`, and `LavaSecAppServices`; `LavaSecCore` (`Sources/LavaSecCore/LavaSecCoreExports.swift`) is now only the façade that re-exports all six. Production process targets link only their approved narrow products — the tunnel does **not** link Presentation, AppServices, or the façade. Key types, with their home layer:
 
-- **FilterSnapshot / CompactFilterSnapshot** — compiled filter + decision precedence; the compact form is the mmap-friendly on-disk artifact the tunnel reads.
-- **DNSQueryDispatcher** — query precedence: bootstrap > pause > filter.
-- **ResolverOrchestrator** — transport routing, plain-DNS degradation, per-endpoint failover, device-DNS fallback.
-- **DoHTransport / DoTTransport / DoQTransport** — encrypted transport executors.
-- **FeatureLimits** (in `SubscriptionPolicy.swift`) — tier ceilings (source of truth), via the static `.free` / `.paid` members.
-- **FilterSnapshotMemoryBudget / FilterSnapshotPreparationService** — device-guardrail math + authoritative post-union budget enforcement.
-- **BlocklistCatalogSync / BlocklistParser** — catalog fetch, direct upstream download, local parse/normalize/dedup, protected-domain filter.
-- **GuardianMascotAnimation** — 7-state mascot state graph (rendered by `Shared/SoftShieldGuardian`).
-- **ZeroKnowledgeBackupEnvelope / BackupConfigurationPayload / BackupRecoveryPhrase** — backup crypto + payload.
-- **SupabaseIDTokenAuth** — raw-URLRequest `id_token` auth (no SDK).
+- **FilterSnapshot** (LavaSecKit) **/ CompactFilterSnapshot** (LavaSecFilterPipeline) — compiled filter + decision precedence; the compact form is the mmap-friendly on-disk artifact the tunnel reads.
+- **DNSQueryDispatcher** (LavaSecDNS) — query precedence: bootstrap > pause > filter.
+- **ResolverOrchestrator** (LavaSecDNS) — transport routing, plain-DNS degradation, per-endpoint failover, device-DNS fallback.
+- **DoHTransport / DoTTransport / DoQTransport** (LavaSecDNS) — encrypted transport executors.
+- **FeatureLimits** (`LavaSecKit/SubscriptionPolicy.swift`) — tier ceilings (source of truth), via the static `.free` / `.paid` members.
+- **FilterSnapshotMemoryBudget / FilterSnapshotPreparationService** (LavaSecFilterPipeline) — device-guardrail math + authoritative post-union budget enforcement.
+- **BlocklistCatalogSync / BlocklistParser** (LavaSecFilterPipeline) — catalog fetch, direct upstream download, local parse/normalize/dedup, protected-domain filter.
+- **GuardianMascotAnimation** (LavaSecPresentation) — 7-state mascot state graph (rendered by `Shared/SoftShieldGuardian`).
+- **ZeroKnowledgeBackupEnvelope / BackupConfigurationPayload / BackupRecoveryPhrase** (LavaSecAppServices) — backup crypto + payload.
+- **SupabaseIDTokenAuth** (LavaSecAppServices) — raw-URLRequest `id_token` auth (no SDK).
 
 ### Backend
 
@@ -101,7 +102,7 @@ The single most important property: **the encrypted DNS resolver path (right sid
  ┌──────────────┐   ┌──────────────────────┐    ┌───────────────────────────────┐
  │ lavasec-api  │   │  Upstream blocklists  │   │  Public DNS resolver           │
  │ Worker       │   │  (HaGeZi, OISD,       │   │  (Quad9 / Cloudflare / Google  │
- │ GET /v1/     │   │   Block List Project) │   │   / Mullvad; user-chosen)       │
+ │ GET /v1/     │   │   Block List Project) │   │   / Mullvad / HaGeZi; chosen)  │
  │  catalog     │   └──────────────────────┘    └───────────────────────────────┘
  └──────┬───────┘
         │ reads/writes (metadata only)
@@ -150,7 +151,7 @@ The Worker side mirrors this: its admin/cron sync fetches each upstream, hashes/
 - **Device guardrail (everyone, never a paywall):** `FilterSnapshotMemoryBudget.maxFilterRuleCount` ≈ **3,262,236 rules** = `((32.0 − 4.0) MB × 1,048,576) / 9.0 B/rule` — a 32 MB target under the ~50 MiB NE ceiling. Over-budget configs are rejected deterministically rather than letting the tunnel jetsam.
 - **Tier ceiling (`FeatureLimits`):** **Free 500K rules / Plus 2M rules**, which binds below the device guardrail. This replaced the old enabled-list **count** cap (free 3 / paid 10) — list-count caps are obsolete.
 
-> **Default-enabled source of truth:** the shipped free default is **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`). It is derived on-device from each curated source's `defaultEnabled` flag (`BlocklistSource.recommendedDefaultSourceIDs`), which mirrors the backend catalog `default_enabled` column generated from the same canonical catalog spec.
+> **Default-enabled source of truth:** the shipped free default is **Block List Basic + StevenBlack Unified Hosts** (`OnboardingDefaults.lavaRecommendedDefaults`). It is derived on-device from each curated source's `defaultEnabled` flag (`DefaultCatalog.recommendedDefaultSourceIDs`), which mirrors the backend catalog `default_enabled` column generated from the same canonical catalog spec.
 
 ### C. Backup (zero-knowledge, opt-in) — Implemented
 
