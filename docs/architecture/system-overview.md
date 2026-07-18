@@ -30,7 +30,7 @@ Everything below keeps that sentence true. The architecture is deliberately smal
 | **LavaSecApp** | `com.lavasec.app` | SwiftUI app shell; entry point, two-tab Guard + Settings nav (Filter/Activity are Guard detail screens; Network Activity moved under Settings → Advanced). | Implemented |
 | **LavaSecTunnel** | `com.lavasec.app.tunnel` | `NEPacketTunnelProvider`; the on-device DNS filter/resolve engine. Subject to the iOS **~50 MiB per-extension memory ceiling**. | Implemented |
 | **LavaSecWidget** | `com.lavasec.app.widget` | WidgetKit Live Activity (lock screen + Dynamic Island). | Implemented |
-| **LavaSecIntents** | `com.lavasec.app.intents` | ExtensionKit App Intents extension; hosts the Focus Filter that switches the active filter hands-free while the app is **closed** (`perform()` runs in the background extension, then signals the tunnel to reload). | Implemented |
+| **LavaSecIntents** | `com.lavasec.app.intents` | ExtensionKit App Intents extension; hosts the Focus Filter that switches the active filter hands-free while the app is **closed** (`perform()` runs in the background extension and commits the switch to shared on-disk state — no `AppViewModel`; the always-on tunnel then adopts it by polling the on-disk generation, since `sendProviderMessage` is app-only). | Implemented |
 | **Shared/** | `Shared/` | Cross-target sources: App Group, command service, mascot, Live Activity attributes/intents. | Implemented |
 
 **App-side controllers (in LavaSecApp):**
