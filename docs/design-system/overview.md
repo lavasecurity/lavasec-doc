@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # Design System
@@ -26,16 +26,16 @@ This **"calm core, earned depth"** model resolves into three product depths:
 
 Two cross-cutting palette/tone rules support the calm posture:
 
-- **red = danger only.** Red is reserved exclusively for danger and error; the calm palette is green/orange. This keeps red trustworthy as a genuine alarm signal. Danger-red is tokenized as `LavaStyle.dangerRed`, with `LavaStyle.errorText` aliased to it (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:81/86) and consumed by error text in the views. The protection tint is resolved through the semantic `ProtectionTintRole` role table (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7) rather than raw `.green`/`.orange`. A few raw `.red` call sites genuinely persist (e.g. lavasec-ios: LavaSecApp/SettingsView.swift:697, LavaSecApp/SecurityController.swift:600, LavaSecApp/FiltersView.swift) — migrating those to `LavaStyle.dangerRed` is the remaining cleanup.
+- **red = danger only.** Red is reserved exclusively for danger and error; the calm palette is green/orange. This keeps red trustworthy as a genuine alarm signal. Danger-red is tokenized as `LavaStyle.dangerRed`, with `LavaStyle.errorText` aliased to it (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:96/101) and consumed by error text in the views. The protection tint is resolved through the semantic `ProtectionTintRole` role table (lavasec-ios: Sources/LavaSecKit/ProtectionPresentation.swift:7) rather than raw `.green`/`.orange`. A few raw `.red` call sites genuinely persist (e.g. lavasec-ios: LavaSecApp/PrivacySecuritySettingsView.swift:88, LavaSecApp/SecurityController.swift:631, LavaSecApp/AccountBackupSettingsView.swift:197) — migrating those to `LavaStyle.dangerRed` is the remaining cleanup.
 - **No fear-heavy security language.** Copy is plain, calm, and practical. See [§4 Copy & naming](#4-copy-naming).
 
 ### The tokenized layer that exists today **(Implemented)**
 
 The design system is a real, tokenized SwiftUI layer, alongside the `LavaTier` depth vocabulary (§2):
 
-- **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:5) — the adaptive color source of truth: ~18 semantic colors (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), each produced by a single `adaptiveColor(light:dark:)` factory so light/dark are defined together. Danger-red is tokenized here as `dangerRed`/`errorText` (lines 81/86).
-- **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:101) — card/panel/selection surface roles and corner radii: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
-- **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:183) — the spacing scale: `xs`/`sm`/`md`/`lg`/`xl` plus `screenHorizontal`/`screenTop`/`screenBottom`.
+- **`LavaStyle`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:4) — the adaptive color source of truth: ~18 semantic colors (`safeGreen`, `safeControlGreen`, `softGreen`, `lavaOrange`, `cream`, `ink`, `cardBackground`, `panelBackground`, `guardianSleepGray`, …), each produced by a single `adaptiveColor(light:dark:)` factory so light/dark are defined together. Danger-red is tokenized here as `dangerRed`/`errorText` (lines 96/101).
+- **`LavaSurface`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:116) — card/panel/selection surface roles and corner radii: `cardCornerRadius` 20, `compactCornerRadius` 16, `selectionCornerRadius` 12.
+- **`LavaSpacing`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:198) — the spacing scale: `xs`/`sm`/`md`/`lg`/`xl` plus `screenHorizontal`/`screenTop`/`screenBottom`.
 - **`LavaActionRole`** (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaScaffold.swift, v1.0) — a semantic action-role enum (`.cancel`, `.close`, `.confirm`, `.destructive`) mapped to the system `ButtonRole`. `NativeToolbarIconButton` gained a `role:` parameter and is used pervasively, so toolbar glyphs pick up native role styling across nearly every sheet/toolbar.
 
 The remaining residual gap is the handful of raw `.red` call sites not yet migrated to `LavaStyle.dangerRed` (see §1).
@@ -46,7 +46,7 @@ The remaining residual gap is the handful of raw `.red` call sites not yet migra
 
 ## 2. LavaTier — Floor / Window / Workshop **(Implemented)**
 
-`LavaTier` is the lightweight depth vocabulary that encodes "calm core, earned depth" directly in the token layer. It is a vocabulary plus a few token defaults — not a full re-theme — and ships as an enum at lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:227, wired into representative surfaces rather than every view.
+`LavaTier` is the lightweight depth vocabulary that encodes "calm core, earned depth" directly in the token layer. It is a vocabulary plus a few token defaults — not a full re-theme — and ships as an enum at lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:271, wired into representative surfaces rather than every view.
 
 | Tier | Depth | Meaning |
 |---|---|---|
@@ -60,9 +60,9 @@ The remaining residual gap is the handful of raw `.red` call sites not yet migra
 - `allowsDelightMotion` — true only for celebratory / Window,
 - `usesMonospacedMetadata` — true only for technical / Workshop,
 
-exposed via an `EnvironmentKey` plus a `.lavaTier(_:)` modifier and a `.lavaTierMetadata()` modifier (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:258/263). It is wired into representative surfaces — e.g. `.lavaTier(.technical)` and `.lavaTier(.celebratory)` in lavasec-ios: LavaSecApp/SettingsView.swift — rather than every view. The deliberate scoping keeps the three product depths legible in code and portable to a future Android consumer without re-deriving intent.
+exposed via an `EnvironmentKey` plus a `.lavaTier(_:)` modifier and a `.lavaTierMetadata()` modifier (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:302/307). It is wired into representative surfaces — e.g. `.lavaTier(.technical)` and `.lavaTier(.celebratory)` in lavasec-ios: LavaSecApp/SettingsView.swift — rather than every view. The deliberate scoping keeps the three product depths legible in code and portable to a future Android consumer without re-deriving intent.
 
-> **Caveat (accent tokenization Planned, Phase 3):** `LavaColorRole` is not yet created, so `LavaTier.accent` still resolves to raw `LavaStyle` colors (LavaTokens.swift:~230). Treat the accent-color tokenization as an open loop, not a finished surface.
+> **Caveat (accent tokenization Planned, Phase 3):** `LavaColorRole` is not yet created, so `LavaTier.accent` still resolves to raw `LavaStyle` colors (LavaTokens.swift:~275). Treat the accent-color tokenization as an open loop, not a finished surface.
 
 ---
 
@@ -70,7 +70,7 @@ exposed via an `EnvironmentKey` plus a `.lavaTier(_:)` modifier and a `.lavaTier
 
 The **Soft Shield Guardian** is Lava's mascot — a rounded shield with a simple, morphing face — that visually expresses protection state on the Guard tab, the Live Activity, the Dynamic Island, and onboarding. It is the most-visible carrier of the calm tone.
 
-The state graph is platform-agnostic, living in `LavaSecCore` (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift); the SwiftUI renderer is lavasec-ios: Shared/SoftShieldGuardian.swift.
+The state graph is platform-agnostic: the `GuardianMascotState` enum and its allowed-transition table live in `LavaSecKit` (lavasec-ios: Sources/LavaSecKit/GuardianMascotState.swift:3), and the frame/animation model in `LavaSecPresentation` (lavasec-ios: Sources/LavaSecPresentation/GuardianMascotAnimation.swift); the SwiftUI renderer is lavasec-ios: Shared/SoftShieldGuardian.swift.
 
 ### 3.1 The 7 expression states
 
@@ -83,28 +83,28 @@ sleeping, waking, awake, paused, retrying, concerned, grateful
 Graph constraints worth knowing: `sleeping`'s only exit is `waking`, and `grateful` only returns to `awake`. The `awake ↔ grateful` transitions have bespoke interpolation frames — this is the system's one bit of **delight motion** (Window-tier).
 
 > **`retrying` vs `concerned` — the most important tone distinction.** Both signal "not perfectly healthy," but they read very differently and must not be conflated:
-> - **`retrying`** is the *unworried, self-healing* face: relaxed (~0.80) lids, level eyes, a flat mouth, and **no concern tilt**. The motion is carried by the **status badge, not the face** — transient self-recovery should never alarm. (lavasec-ios: Sources/LavaSecCore/GuardianMascotAnimation.swift:249)
-> - **`concerned`** is *gentle, help-seeking* worry: raised inner brows (`concernAmount` 1, `mouthCurve` -0.22) reading as "I could use a hand," **never a stern glare**. Genuine problems should invite help, not scold. (lavasec-ios: Shared/SoftShieldGuardian.swift:297)
+> - **`retrying`** is the *unworried, self-healing* face: relaxed (~0.80) lids, level eyes, a flat mouth, and **no concern tilt**. The motion is carried by the **status badge, not the face** — transient self-recovery should never alarm. (lavasec-ios: Sources/LavaSecPresentation/GuardianMascotAnimation.swift:240)
+> - **`concerned`** is *gentle, help-seeking* worry: raised inner brows (`concernAmount` 1, `mouthCurve` -0.22) reading as "I could use a hand," **never a stern glare**. Genuine problems should invite help, not scold. (lavasec-ios: Sources/LavaSecPresentation/GuardianMascotAnimation.swift:252)
 
-### 3.2 Connectivity → expression mapping (6 → 4)
+### 3.2 Connectivity → expression mapping (7 → 4)
 
-Protection health is assessed in `LavaSecCore` as **6 connectivity severities** + 2 actions (lavasec-ios: Sources/LavaSecCore/ProtectionConnectivityPolicy.swift):
+Protection health is assessed in `LavaSecKit` as **7 connectivity severities** + 2 actions (lavasec-ios: Sources/LavaSecKit/ProtectionConnectivityPolicy.swift):
 
-- **Severities:** `healthy`, `recovering`, `usingDeviceDNSFallback`, `dnsSlow`, `networkUnavailable`, `needsReconnect`
+- **Severities:** `healthy`, `recovering`, `usingDeviceDNSFallback`, `usingEncryptedFallback`, `dnsSlow`, `networkUnavailable`, `needsReconnect`
 - **Actions:** `turnOff`, `reconnect`
 
-The Guard tab collapses those 6 severities onto **4 faces** (`guardianState` in lavasec-ios: LavaSecApp/GuardView.swift:122). The face is intentionally a *coarser, calmer* signal than the status badge — the badge carries the detail, the face stays simple:
+The Guard tab collapses those 7 severities onto **4 faces** (`guardianState` in lavasec-ios: LavaSecApp/GuardView.swift:328). The face is intentionally a *coarser, calmer* signal than the status badge — the badge carries the detail, the face stays simple:
 
 | Condition | Mascot state |
 |---|---|
 | Temporarily paused | `paused` |
-| connected + `healthy` / `usingDeviceDNSFallback` | `awake` |
+| connected + `healthy` / `usingDeviceDNSFallback` / `usingEncryptedFallback` | `awake` |
 | connected + `recovering` / `networkUnavailable` | `retrying` |
 | connected + `dnsSlow` / `needsReconnect` | `concerned` |
 | `connecting` / `reasserting` | `waking` |
 | otherwise | `sleeping` |
 
-> **Tint reconciliation.** The protection tint color granularity stays reconciled with this expression split so tint and face never disagree. The expression mapping and the semantic `ProtectionTintRole` role table both ship today (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7, consumed by `AppViewModel.protectionTintRole`). Only the `LavaColorRole` color-role tokenization that would map roles to fully tokenized colors remains **Planned** (Phase 3 of the DS plan).
+> **Tint reconciliation.** The protection tint color granularity stays reconciled with this expression split so tint and face never disagree. The expression mapping and the semantic `ProtectionTintRole` role table both ship today (lavasec-ios: Sources/LavaSecKit/ProtectionPresentation.swift:7, consumed by `AppViewModel.protectionTintRole`). Only the `LavaColorRole` color-role tokenization that would map roles to fully tokenized colors remains **Planned** (Phase 3 of the DS plan).
 
 ### 3.3 Skins (looks) **(Implemented)**
 
@@ -114,9 +114,11 @@ The mascot ships in **7 selectable shield "looks"**, persisted as `GuardianShiel
 
 The two legacy raw values are intentional — do not "fix" them; they would break persisted user selections.
 
+> **Selecting a look — the long-press picker & haptic gradient (Implemented).** The shield look is changed by a long-press on the Guard mascot, which opens the auth-gated `LavaGuardLookPickerSheet` — the same bottom sheet the Customization page presents (lavasec-ios: LavaSecApp/GuardView.swift:191). The ~1.2 s hold (`GuardianLongPressHaptics.holdDuration`, lavasec-ios: Sources/LavaSecKit/GuardianLongPressHaptics.swift:200) plays a haptic **crescendo** that opens on the same light impact as an awake tap. On Core Haptics hardware this is one continuous intensity/sharpness swell along `continuousRamp` — a single smooth gradient into the reveal, replacing the earlier choppy discrete-impact feel; devices without Core Haptics fall back to discrete escalating pulses. It is the picker-side counterpart to the mascot's `awake ↔ grateful` delight motion.
+
 ### 3.4 Privacy redaction **(Implemented)**
 
-The Guardian honors privacy redaction: the expression can be masked when the surface is privacy-redacted while the **shield itself stays visible** (`maskExpressionWhenPrivacyRedacted` / `keepsShieldVisibleWhenRedacted`, lavasec-ios: Shared/SoftShieldGuardian.swift:11). Protection presence is reassuring; the specific emotional state is the part that hides.
+The Guardian honors privacy redaction: the expression can be masked when the surface is privacy-redacted while the **shield itself stays visible** (`maskExpressionWhenPrivacyRedacted` / `keepsShieldVisibleWhenRedacted`, lavasec-ios: Shared/SoftShieldGuardian.swift:12). Protection presence is reassuring; the specific emotional state is the part that hides.
 
 ### 3.5 Not in this tree **(Planned)**
 
@@ -132,7 +134,7 @@ Plain, calm, practical. Avoid fear-heavy security language. Be honest about scop
 
 ### 4.2 DNS transport labels
 
-Transport annotations follow a strict compact convention (lavasec-ios: Sources/LavaSecCore/DoHTransport.swift:16 and lavasec-ios: Sources/LavaSecCore/DNSResolverPreset.swift:270, locked by `DNSResolverPresetTests.swift`):
+Transport annotations follow a strict compact convention (the `DoH`/`DoH3` distinction in lavasec-ios: Sources/LavaSecKit/DoHHTTPVersion.swift:19; the `DoT`/`DoQ`/`IP` annotations in lavasec-ios: Sources/LavaSecKit/DNSResolverPreset.swift:287; the DoH client itself is lavasec-ios: Sources/LavaSecDNS/DoHTransport.swift; locked by `DNSResolverPresetTests.swift`):
 
 | Transport | Label | Notes |
 |---|---|---|
@@ -180,7 +182,7 @@ Design decisions baked into the flow:
 
 The first-run defaults the flow installs: **Device DNS** resolver (`DNSResolverPreset.device`), **Device DNS fallback ON**, logging on (counts + history + activity), and "Continue without account."
 
-> **Default-blocklist source of truth.** The shipped code default is **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecCore/OnboardingDefaults.swift). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
+> **Default-blocklist source of truth.** The shipped code default is **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, defined in lavasec-ios: Sources/LavaSecKit/OnboardingDefaults.swift:96). The real tier gate is the **filter-rules budget (Free 500K / Plus 2M)**, *not* a list count. For the tier model and the recommended-default config, see [the feature catalog](../product/features.md).
 
 ---
 
@@ -196,7 +198,7 @@ Lava localizes into **6 locales**: **en** (source) + **ja, zh-Hant, zh-Hans, de,
 
 Foundations are in place but full human translation review is still pending before release, so the overall status is **In progress**.
 
-> **Presentation-boundary cleanup (Planned, Phase 4).** `LavaSecCore`/`Shared` should carry *semantics* (severity/action enums, icon roles), not English strings. The severity tint presentation has already been lifted into the semantic `ProtectionTintRole`. The remaining residual is that resolver `displayName`s are still hardcoded English strings ("Google", "Cloudflare", "Quad9", "Device DNS") in lavasec-ios: Sources/LavaSecCore/DNSResolverPreset.swift. Phase 4 lifts these into a per-OS app-side presentation map — correct for both i18n and Android portability.
+> **Presentation-boundary cleanup (Planned, Phase 4).** `LavaSecCore`/`Shared` should carry *semantics* (severity/action enums, icon roles), not English strings. The severity tint presentation has already been lifted into the semantic `ProtectionTintRole`. The remaining residual is that resolver `displayName`s are still hardcoded English strings ("Google", "Cloudflare", "Quad9", "Device DNS") in lavasec-ios: Sources/LavaSecKit/DNSResolverPreset.swift. Phase 4 lifts these into a per-OS app-side presentation map — correct for both i18n and Android portability.
 
 The i18n mechanics (the localization glossary, the localization-file schema, and the translation-review checklist) live in the internal i18n docs, not this public set.
 

@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: engineering
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # Key Design Decisions
@@ -50,7 +50,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 ## 3. Encrypted resolver transports (DoH / DoH3 / DoT / DoQ)
 
-**Decision.** Ship four encrypted upstream transports alongside plain DNS and a device-DNS fallback, extracted into LavaSecCore: **DoH** (URLSession), **DoH3** (DoH preferring HTTP/3), **DoT** (pooled `NWConnection`s, up to 4/endpoint, with idle-staleness refresh and one fresh-connection retry), and **DoQ** (DNS-over-QUIC). Routing, plain-DNS degradation, per-endpoint failover with a backoff gate, and device-DNS fallback live in `ResolverOrchestrator`.
+**Decision.** Ship four encrypted upstream transports alongside plain DNS and a device-DNS fallback, in the package's **LavaSecDNS** layer: **DoH** (URLSession), **DoH3** (DoH preferring HTTP/3), **DoT** (pooled `NWConnection`s, up to 4/endpoint, with idle-staleness refresh and one fresh-connection retry), and **DoQ** (DNS-over-QUIC). Routing, plain-DNS degradation, per-endpoint failover with a backoff gate, and device-DNS fallback live in `ResolverOrchestrator`.
 
 **Context.** Forwarding unblocked queries in cleartext to a resolver leaks the very domain stream the on-device model is meant to protect. The transports were built incrementally (DoH → DoH3 → DoT → DoQ).
 
@@ -90,7 +90,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Context.** Optional account login (Apple + Google only) enables cross-device settings restore. The server must never be able to read a user's blocklists, allowlists, resolver choice, or other settings.
 
-**Rationale.** Plaintext and decrypting secrets exist only on the device; the server holds one opaque envelope per user. Assisted recovery is deliberately two-factor — `SHA256("LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase)` (NUL-delimited input) requires **both** the server-held share and the user's 8-word recovery phrase (~105 bits), so neither half alone decrypts. Unlock material is stored device-local (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **not** in synchronizable iCloud Keychain — a privacy hardening that reversed the original plan's synchronizable design. The **passkey slot is also genuinely zero-knowledge**: it is wrapped with a WebAuthn **PRF / `hmac-secret`** authenticator output (HKDF-SHA256 derived) that never leaves the client, so no server-held value can unwrap it. There is no service-role passkey table and no Worker WebAuthn-assertion gate — the earlier server-gated passkey design was dropped, removing all server-side passkey state (`Sources/LavaSecCore/ZeroKnowledgeBackupEnvelope.swift`).
+**Rationale.** Plaintext and decrypting secrets exist only on the device; the server holds one opaque envelope per user. Assisted recovery is deliberately two-factor — `SHA256("LavaSec assisted recovery v1\0" + serverRecoveryShare + "\0" + normalizedPhrase)` (NUL-delimited input) requires **both** the server-held share and the user's 8-word recovery phrase (~105 bits), so neither half alone decrypts. Unlock material is stored device-local (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), **not** in synchronizable iCloud Keychain — a privacy hardening that reversed the original plan's synchronizable design. The **passkey slot is also genuinely zero-knowledge**: it is wrapped with a WebAuthn **PRF / `hmac-secret`** authenticator output (HKDF-SHA256 derived) that never leaves the client, so no server-held value can unwrap it. There is no service-role passkey table and no Worker WebAuthn-assertion gate — the earlier server-gated passkey design was dropped, removing all server-side passkey state (`Sources/LavaSecAppServices/ZeroKnowledgeBackupEnvelope.swift`).
 
 **Status.** **Adopted** (passwordless model, assisted recovery, and a zero-knowledge PRF-derived passkey slot, all in code). Making the passkey a fully production-ready recoverable factor on physical devices (Associated Domains / AASA hosting for the PRF model) is **Proposed** (backlog).
 
@@ -153,6 +153,42 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 **Rationale.** Copyleft forces derivatives to stay open, preventing a closed fork of the client — a "public client, private backend/ops" posture, with backend, legal, and ops kept private. AGPL-3.0 (rather than plain GPL-3.0) was chosen to close the network-use gap. The known GPL-vs-App-Store distribution tension is handled by Lava itself being the distributor of the App Store binary under its own copyright.
 
 **Status.** **Adopted.** The repo split is **complete**: each component lives in its own repository — the public `lavasec-ios` client at tag v0.4.0, plus separate repositories for Android, the marketing site, backend/infrastructure, docs, and the CI/release pipeline — and `lavasec-ios`'s `README.md` "Repository layout" section lists only that repo's per-component contents (`LavaSecApp/`, `LavaSecTunnel/`, `LavaSecWidget/`, `Shared/`, `Sources/`, `Tests/`) with infrastructure noted as living in separate private repositories. The client is open-sourced under **AGPL-3.0**: the `lavasec-ios` `LICENSE` is the GNU Affero General Public License v3 and `README.md` carries the AGPL-3.0 badge.
+
+---
+
+## 12. Six-layer module split with narrow production linkage
+
+**Decision.** Split the former `Sources/LavaSecCore/` monolith into six SPM layers — **LavaSecKit**, **LavaSecNetworking**, **LavaSecDNS**, **LavaSecFilterPipeline**, **LavaSecPresentation**, **LavaSecAppServices** — and keep `LavaSecCore` only as a compatibility **façade** that `@_exported import`s all six. Production process targets link only their approved narrow products; in particular the packet tunnel does **not** link LavaSecPresentation, LavaSecAppServices, or the façade.
+
+**Context.** The single `LavaSecCore` target compiled every layer into every consumer, including the memory-constrained tunnel extension, and let any file reach any other with no enforced layer boundary.
+
+**Rationale.** Narrow linkage keeps Presentation/AppServices code out of the ~50 MiB NetworkExtension process (reinforcing the memory ceiling from decision 1 / `INV-MEM-1`) and turns the layer boundaries into ones the compiler checks. The façade preserves source compatibility for callers outside the production targets (tests and the app), so the split did not require a mass import rewrite.
+
+**Status.** **Adopted** (`Sources/LavaSecCore/LavaSecCoreExports.swift` façade; per-layer products and targets in `Package.swift`; delivered across the Phase B split, tunnel-extraction / hub-peel, and modularization changes).
+
+---
+
+## 13. App Attest on bug-report submissions
+
+**Decision.** Attach an Apple **App Attest** attestation to each bug-report submission: a **fresh hardware-backed key per submission**, attested over a **one-time server challenge**, with `clientDataHash = SHA256(challenge ‖ SHA256(body))` binding the attestation to both the challenge and the exact request body. When App Attest is unsupported the submit **degrades gracefully** (proceeds unattested) rather than blocking the user.
+
+**Context.** Anonymous bug-report intake is abusable — a captured attestation could be replayed, and fake clients could flood the endpoint.
+
+**Rationale.** Per-submission attestation proves a genuine build on real hardware; binding `clientDataHash` to both the one-time challenge and the body hash means a captured attestation cannot be replayed against a different body (the client and server must derive an identical `clientDataHash`). Graceful degradation keeps users on unsupported hardware able to file reports. The attestation travels as `X-Lava-Attest-Challenge` / `-Key-Id` / `-Object` headers on the bug-report request to `api.lavasecurity.app`.
+
+**Status.** **Adopted** (`LavaSecApp/DiagnosticsController.swift`).
+
+---
+
+## 14. DNS status honesty floor
+
+**Decision.** The connectivity UI reports the `.recovering` ("Reconnecting") state **only when there is real failure evidence**. A zero-evidence settle wait right after a network handoff or resume reads `.healthy`, matching cold start under the same zero evidence.
+
+**Context.** A post-handoff / post-resume window previously surfaced "Reconnecting" for up to ~10 s while merely waiting for the first post-reset success — mis-reading a passive evidence wait as connection difficulty, even though cold start already read `.healthy` under identical zero evidence.
+
+**Rationale.** Status must be backed by evidence, not by a timer — the same honesty principle already governs the observational `DoH3` label in decision 3 (annotated only when an h3 negotiation is actually observed). Reserving `.recovering` for durable failure evidence removes a false alarm without hiding real trouble.
+
+**Status.** **Adopted** (`Sources/LavaSecKit/ProtectionConnectivityPolicy.swift`; pinned by `ProtectionConnectivityPolicyTests`).
 
 ---
 

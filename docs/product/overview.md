@@ -1,8 +1,8 @@
 ---
-last_reviewed: 2026-06-20
+last_reviewed: 2026-07-18
 owner: product
 source_repos: [lavasec-ios]
-grounded_at: {lavasec-ios: "e1e4fe9"}
+grounded_at: {lavasec-ios: "c8f2100"}
 ---
 
 # Product Overview
@@ -39,7 +39,7 @@ The voice throughout is plain, calm, and practical — danger is framed as a met
 
 - **Local DNS filtering** — the packet-tunnel engine that parses DNS, evaluates each domain against the compiled snapshot, and forwards allowed queries upstream with device-DNS fallback. See [the iOS client](../architecture/ios-client.md) and [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md).
 - **Curated blocklists, source-url-only** — Lava publishes only upstream list URLs (plus advisory hashes for cache identity and audit); the device fetches each list over TLS and parses it locally under size/rule caps, and Lava never mirrors or serves third-party blocklist bytes. Community lists are not hash-pinned — TLS + the curated URL is the integrity boundary — while Lava's threat-guardrail tier stays hash-enforced. The shipped default enables **Block List Basic + StevenBlack Unified Hosts** (`AppConfiguration.lavaRecommendedDefaults`, defined in `OnboardingDefaults.swift`); copyleft sources such as HaGeZi, OISD, AdGuard, and 1Hosts are opt-in. See [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md).
-- **Encrypted DNS transports** — DoH (with observational DoH3 annotation), DoT (pooled connections, reused and refreshed), and DoQ (fresh connection per query). All three are implemented; Device DNS (the network's own resolver) is the shipped default, and encrypted presets are opt-in (`AppConfiguration.lavaRecommendedDefaults`, defined in `Sources/LavaSecCore/OnboardingDefaults.swift`). The built-in resolver presets (Google / Cloudflare / Quad9 DoH and DoT variants) are free; only a fully custom resolver is a paid unlock. See [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md).
+- **Encrypted DNS transports** — DoH (with observational DoH3 annotation), DoT (pooled connections, reused and refreshed), and DoQ (fresh connection per query). All three are implemented; Device DNS (the network's own resolver) is the shipped default, and encrypted presets are opt-in (`AppConfiguration.lavaRecommendedDefaults`, defined in `Sources/LavaSecKit/OnboardingDefaults.swift`). The built-in resolver presets — Google, Cloudflare, Quad9, Mullvad, and HaGeZi, each in plain, DoH, and DoT variants — are free; only a fully custom resolver is a paid unlock. See [DNS filtering and blocklists](../architecture/dns-filtering-and-blocklists.md).
 - **Allowed exceptions (allowlist)** — manually add domains to permit despite a blocklist; the threat guardrail still wins. See [the product features overview](features.md).
 - **The Soft Shield Guardian** — a mascot on the Guard tab, Live Activity, and Dynamic Island that expresses protection state across 7 expression states. See [the design system](../design-system/overview.md).
 - **Tiered customization (Lava Security Plus)** — one optional paid tier that unlocks customization (a larger filter-rules budget — Free 500K / Plus 2M compiled rules under a shared device safety guardrail — more allowed/blocked domains, custom blocklists, and custom DNS resolvers). Plus never bypasses the always-on guardrails — the tunnel ignores `isPaid`.
@@ -48,7 +48,7 @@ The voice throughout is plain, calm, and practical — danger is framed as a met
 
 ## Platforms
 
-- **iOS — shipped.** Lava is an iOS app today: three bundles share one App Group (`group.com.lavasec`) — the app (`com.lavasec.app`), the packet-tunnel extension (`.tunnel`), and the widget (`.widget`) — plus shared sources, over a common `LavaSecCore` package.
+- **iOS — shipped.** Lava is an iOS app today: four bundles share one App Group (`group.com.lavasec`) — the app (`com.lavasec.app`), the packet-tunnel extension (`.tunnel`), the widget (`.widget`), and the App Intents extension (`.intents`) — plus shared sources, over a shared, layered Swift package (the `LavaSecCore` façade re-exports its underlying modules).
 - **Android — Planned.** A native Kotlin / Jetpack Compose port over Android's `VpnService` is planned, carrying the same privacy promise and a parity-tested core filtering behavior. No Android app code ships yet.
 
 See [Platform Parity](platform-parity.md) for the stable feature ids and the iOS/Android contract.
