@@ -162,7 +162,7 @@ Related reading: catalog distribution model in [`../legal/gpl-source-url-only-co
 
 **Context.** The single `LavaSecCore` target compiled every layer into every consumer, including the memory-constrained tunnel extension, and let any file reach any other with no enforced layer boundary.
 
-**Rationale.** Narrow linkage keeps Presentation/AppServices code out of the ~50 MiB NetworkExtension process (reinforcing the memory ceiling from decision 1 / `INV-MEM-1`) and turns the layer boundaries into ones the compiler checks. The façade preserves source compatibility for callers outside the production targets (tests and the app), so the split did not require a mass import rewrite.
+**Rationale.** Narrow linkage keeps Presentation/AppServices code out of the ~50 MiB NetworkExtension process (reinforcing the memory ceiling from decision 1 / `INV-MEM-1`) and turns the layer boundaries into ones the compiler checks. The façade preserves source compatibility for the **test suite** (which still imports `LavaSecCore`), so the split did not force a mass import rewrite there. The production targets instead link the narrow layer products directly — `LavaSecApp` imports the individual layers, not the façade (only the UI-test target links `LavaSecCore`).
 
 **Status.** **Adopted** (`Sources/LavaSecCore/LavaSecCoreExports.swift` façade; per-layer products and targets in `Package.swift`; delivered across the Phase B split, tunnel-extraction / hub-peel, and modularization changes).
 

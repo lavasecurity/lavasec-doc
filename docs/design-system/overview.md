@@ -188,11 +188,11 @@ The first-run defaults the flow installs: **Device DNS** resolver (`DNSResolverP
 
 ## 6. Internationalization **(In progress)**
 
-Lava localizes into **6 locales**: **en** (source) + **ja, zh-Hant, zh-Hans, de, fr**, via Xcode string catalogs.
+Lava localizes into **10 locales**: **en** (source) + **de, es, fr, it, ja, ko, pt-BR, zh-Hans, zh-Hant**, via Xcode string catalogs.
 
 - **The localization seam is `.lavaLocalized`** (`String.lavaLocalized` / `.lavaLocalizedFormat`, backed by `LavaStrings.localized` → `NSLocalizedString` with an English fallback; lavasec-ios: LavaSecApp/LavaStrings.swift). **All component copy** must go through it — no bare string literals in views.
 - **zh-Hant** uses Taiwan-friendly wording on the first pass.
-- App Store metadata exists for all 6 locales.
+- App Store metadata exists for all 10 locales.
 - Priority order for translation: ja, zh-Hant, zh-Hans, de, fr.
 - The v1.0 release folded in a five-locale string-catalog review (≈56 fixes), and the product noun changed from plural **"Filters"** to singular **"Filter"** across all locales — keep translations consistent with the singular "my filter" model.
 
