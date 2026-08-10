@@ -16,11 +16,10 @@ Phishing, scam, malware, ransomware, and live threat-intelligence feeds.
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Basic | The Block List Project | Unlicense | Medium | ✓ | [link](https://blocklistproject.github.io/Lists/basic.txt) |
-| Block List Malware | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/malware.txt) |
 | Block List Phishing | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/phishing.txt) |
 | Block List Ransomware | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/ransomware.txt) |
 | Block List Scam | The Block List Project | Unlicense | Medium |  | [link](https://blocklistproject.github.io/Lists/scam.txt) |
-| HaGeZi Threat Intelligence Feed Mini | HaGeZi | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini-onlydomains.txt) |
+| HaGeZi Threat Intelligence Feed Mini | HaGeZi | GPL-3.0 | Small |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/tif.mini-onlydomains.txt) |
 | Phishing.Database Active Domains | Phishing.Database | MIT | Large |  | [link](https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt) |
 
 ## Multi-purpose
@@ -31,12 +30,12 @@ All-in-one lists that block ads, trackers, malware, phishing, and more from a si
 | --- | --- | --- | :---: | :---: | --- |
 | 1Hosts Lite | 1Hosts | MPL-2.0 | Medium |  | [link](https://raw.githubusercontent.com/badmojr/1Hosts/master/Lite/adblock.txt) |
 | AdGuard DNS Filter | AdGuard | GPL-3.0 | Medium |  | [link](https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt) |
-| HaGeZi Multi Light | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt) |
-| HaGeZi Multi Normal | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/multi-onlydomains.txt) |
-| HaGeZi Multi PRO | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt) |
-| HaGeZi Multi PRO mini | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.mini-onlydomains.txt) |
-| HaGeZi Multi PRO++ mini | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus.mini-onlydomains.txt) |
-| HaGeZi Multi Ultimate mini | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/ultimate.mini-onlydomains.txt) |
+| HaGeZi Multi Light | HaGeZi | GPL-3.0 | Medium |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/light-onlydomains.txt) |
+| HaGeZi Multi Normal | HaGeZi | GPL-3.0 | Large |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/multi-onlydomains.txt) |
+| HaGeZi Multi PRO | HaGeZi | GPL-3.0 | Large |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/pro-onlydomains.txt) |
+| HaGeZi Multi PRO mini | HaGeZi | GPL-3.0 | Medium |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/pro.mini-onlydomains.txt) |
+| HaGeZi Multi PRO++ mini | HaGeZi | GPL-3.0 | Medium |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/pro.plus.mini-onlydomains.txt) |
+| HaGeZi Multi Ultimate mini | HaGeZi | GPL-3.0 | Large |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/ultimate.mini-onlydomains.txt) |
 | OISD Big | OISD | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_big.txt) |
 | OISD Small | OISD | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_small.txt) |
 | StevenBlack Unified Hosts | Steven Black | MIT | Medium | ✓ | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) |
@@ -58,7 +57,7 @@ Social-network domains and their trackers.
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Facebook | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/facebook.txt) |
 | Block List TikTok | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/tiktok.txt) |
-| HaGeZi Social Networks | HaGeZi | GPL-3.0 | Small |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/social-onlydomains.txt) |
+| HaGeZi Social Networks | HaGeZi | GPL-3.0 | Small |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/social-onlydomains.txt) |
 | StevenBlack Social | Steven Black | MIT | Medium |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/social/hosts) |
 
 ## Adult Content
@@ -67,7 +66,7 @@ Pornography and other adult-content domains.
 
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
-| HaGeZi NSFW | HaGeZi | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/nsfw-onlydomains.txt) |
+| HaGeZi NSFW | HaGeZi | GPL-3.0 | Large |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/nsfw-onlydomains.txt) |
 | OISD NSFW | OISD | GPL-3.0 | Large |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_nsfw.txt) |
 | OISD NSFW Small | OISD | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/sjhgvr/oisd/main/oisd_nsfw_small.txt) |
 | StevenBlack Adult | Steven Black | MIT | Large |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts) |
@@ -79,7 +78,7 @@ Online gambling, betting, and casino domains.
 | List | Provider | License | Size | Default | Source |
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Gambling | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/gambling.txt) |
-| HaGeZi Gambling | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/gambling-onlydomains.txt) |
+| HaGeZi Gambling | HaGeZi | GPL-3.0 | Medium |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/gambling-onlydomains.txt) |
 | StevenBlack Gambling | Steven Black | MIT | Medium |  | [link](https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/gambling/hosts) |
 
 ## Piracy & Torrent
@@ -90,8 +89,8 @@ Piracy portals and torrent trackers.
 | --- | --- | --- | :---: | :---: | --- |
 | Block List Piracy | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/piracy.txt) |
 | Block List Torrent | The Block List Project | Unlicense | Small |  | [link](https://blocklistproject.github.io/Lists/torrent.txt) |
-| HaGeZi Anti-Piracy | HaGeZi | GPL-3.0 | Medium |  | [link](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/anti.piracy-onlydomains.txt) |
+| HaGeZi Anti-Piracy | HaGeZi | GPL-3.0 | Medium |  | [link](https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/wildcard/anti.piracy-onlydomains.txt) |
 
 ---
 
-_Catalog spec schema version 1 · 34 sources across 7 categories._
+_Catalog spec schema version 1 · 33 sources across 7 categories._
