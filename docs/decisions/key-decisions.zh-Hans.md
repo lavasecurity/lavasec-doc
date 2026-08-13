@@ -48,7 +48,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 | 日期 | 列表 | 从 → 到 | 第一方证据 |
 | --- | --- | --- | --- |
-| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest` | jsDelivr 的 `/gh/<owner>/<repo>` 路径会精确解析到那个 GitHub 仓库，因此发布方由 **URL 本身**锁定，任何第三方都无法在该路径下被分发 —— 这是架在原始来源前面的 CDN，而不是另一个源。GitHub 封锁了 `hagezi` 账号，raw 主机因此返回 404，而 jsDelivr 仍在分发同一仓库的缓存副本（内容停在 2026-08-09；账号恢复后会自动继续更新）。AdGuard 的 HostlistsRegistry 已于 2026-08-10 对所有 HaGeZi 列表做了同样的替换。同名命名空间下的 GitLab 镜像经评估后被**否决**：用户名相同、仓库创建时间、提交元数据和照抄的文件头，全都可以由无关第三方复制出来，且没有任何签名或第一方交叉链接能证明其身份。 |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `cdn.jsdelivr.net/gh/hagezi/dns-blocklists@37522026.221.30748` | jsDelivr 的 `/gh/<owner>/<repo>` 路径会精确解析到那个 GitHub 仓库，因此发布方由 **URL 本身**锁定，任何第三方都无法在该路径下被分发 —— 这是架在原始来源前面的 CDN，而不是另一个源。GitHub 封锁了 `hagezi` 账号，raw 主机因此返回 404，而 jsDelivr 仍在分发同一仓库的缓存副本并固定到**不可变**版本 `37522026.221.30748`（内容为 2026-08-09 那一版）。不用 `@latest`：jsDelivr 通过 GitHub API 解析该别名，而这个仓库已经返回 404，所以它只靠缓存下来的解析结果撑着，一旦失效就会无声无息地把这次修复退回去。固定版本会被永久缓存，也不会在我们不知情时被替换 —— 因此内容是冻结的，将来切回活跃源是一次有意为之的目录变更。AdGuard 的 HostlistsRegistry 已于 2026-08-10 对所有 HaGeZi 列表做了同样的替换。同名命名空间下的 GitLab 镜像经评估后被**否决**：用户名相同、仓库创建时间、提交元数据和照抄的文件头，全都可以由无关第三方复制出来，且没有任何签名或第一方交叉链接能证明其身份。 |
 
 **状态。** **已采纳**，并且它**替代**了那个被放弃的 R2 原始镜像计划（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，标题写着"已被 source-url-only 实现替代"）。见 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 
