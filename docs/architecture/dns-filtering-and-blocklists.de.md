@@ -184,7 +184,7 @@ Das **Set geschützter Domains** (vor der Aktivierung herausgefiltert): `apple.c
 
 ### 5.2 Kuratierte Quellen (Umgesetzt) {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` wird aus dem kanonischen [Blocklist Catalog](../legal/blocklist-catalog.md) erzeugt und enthält derzeit **34** Quellen in sieben Kategorien: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling und Piracy & Torrent. Die Quellfamilien umfassen The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard und 1Hosts.
+`DefaultCatalog.curatedSources` wird aus dem kanonischen [Blocklist Catalog](../legal/blocklist-catalog.md) erzeugt und enthält derzeit **33** Quellen in sieben Kategorien: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling und Piracy & Torrent. Die Quellfamilien umfassen The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard und 1Hosts.
 
 `guardrailSources` ist leer. GPL-Quellen (HaGeZi, OISD, AdGuard) sind im Katalog sichtbar, aber **opt-in / standardmäßig AUS**; der Worker beschränkt Launch-Sync/-Publish auf `source_url_only` plus die freigegebenen GPL-Präfixe (`hagezi-`, `oisd-`, `adguard-`).
 

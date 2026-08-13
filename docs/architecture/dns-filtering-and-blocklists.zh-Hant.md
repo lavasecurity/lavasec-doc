@@ -184,7 +184,7 @@ compact 快照以 `Data(contentsOf:options:[.mappedIfSafe])`（`LavaSecTunnel/Pa
 
 ### 5.2 精選來源（Implemented） {#52-curated-sources-implemented}
 
-`DefaultCatalog.curatedSources` 由規範的 [Blocklist Catalog](../legal/blocklist-catalog.md) 產生，目前有 **34** 個來源，分布在七個類別：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。來源家族包含 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts。
+`DefaultCatalog.curatedSources` 由規範的 [Blocklist Catalog](../legal/blocklist-catalog.md) 產生，目前有 **33** 個來源，分布在七個類別：Security & Threat Intel、Multi-purpose、Ads & Trackers、Social Media、Adult Content、Gambling、Piracy & Torrent。來源家族包含 The Block List Project、Phishing.Database、HaGeZi、OISD、StevenBlack、AdGuard、1Hosts。
 
 `guardrailSources` 為空。GPL 來源（HaGeZi、OISD、AdGuard）在目錄中可見，但**選擇加入／預設關閉**；Worker 將上線時的同步／發佈限制為 `source_url_only` 加上已核准的 GPL 前綴（`hagezi-`、`oisd-`、`adguard-`）。
 

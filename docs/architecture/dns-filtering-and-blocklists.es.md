@@ -184,7 +184,7 @@ El **conjunto de dominios protegidos** (filtrados antes de la activación): `app
 
 ### 5.2 Fuentes curadas (Implementado)
 
-`DefaultCatalog.curatedSources` se genera a partir del [Catálogo de listas de bloqueo](../legal/blocklist-catalog.md) canónico, actualmente **34** fuentes en siete categorías: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling y Piracy & Torrent. Las familias de fuentes incluyen The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard y 1Hosts.
+`DefaultCatalog.curatedSources` se genera a partir del [Catálogo de listas de bloqueo](../legal/blocklist-catalog.md) canónico, actualmente **33** fuentes en siete categorías: Security & Threat Intel, Multi-purpose, Ads & Trackers, Social Media, Adult Content, Gambling y Piracy & Torrent. Las familias de fuentes incluyen The Block List Project, Phishing.Database, HaGeZi, OISD, StevenBlack, AdGuard y 1Hosts.
 
 `guardrailSources` está vacío. Las fuentes GPL (HaGeZi, OISD, AdGuard) son visibles en el catálogo pero **opt-in / OFF por defecto**; el Worker restringe la sincronización/publicación de lanzamiento a `source_url_only` más los prefijos GPL autorizados (`hagezi-`, `oisd-`, `adguard-`).
 
