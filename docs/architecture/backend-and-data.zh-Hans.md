@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 归一化护栏（只算元数据） {#33-normalization-guardrails-metadata-only}
 
-Worker 端的归一化（`normalizeBlocklist`）会过滤掉受保护的域名、强制各项上限，并去重 + 排序。这纯粹是为了算出可信的元数据；对**社区列表**来说，设备**不会**把哈希当成下载闸门——它会通过 TLS 从精选 `source_url` 抓取，并在上限内解析（目录里的 accepted hashes 是提示性数据），所以 Worker 端归一化本身并不是一道安全边界。（Lava 的 threat-guardrail 层在设备上仍保持哈希钉死，且 `source_url` 来源在发布时强制校验——URL 变更必须使用新的 `list_id`。）几个关键常量：
+Worker 端的归一化（`normalizeBlocklist`）会过滤掉受保护的域名、强制各项上限，并去重 + 排序。这纯粹是为了算出可信的元数据；对**社区列表**来说，设备**不会**把哈希当成下载闸门——它会通过 TLS 从精选 `source_url` 抓取，并在上限内解析（目录里的 accepted hashes 是提示性数据），所以 Worker 端归一化本身并不是一道安全边界。（Lava 的 threat-guardrail 层在设备上仍保持哈希钉死，且 `source_url` 来源在发布时强制校验——把**另一个发布方**放到条目背后的 URL 变更必须使用新的 `list_id`；而在同一发布方自己的命名空间内更换主机则保留原有 `list_id`，并记录在[关键决策 2](../decisions/key-decisions.md)中。）几个关键常量：
 
 - `PROTECTED_SUFFIXES` —— 把任何命中 Apple/iCloud/`mzstatic`/Lava Security 域名/Supabase/Cloudflare/Google/GitHub 的规则都剥掉，这样就算上游被投毒，也没法拦掉 Lava 自家的基础设施或登录服务商。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。

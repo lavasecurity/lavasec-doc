@@ -42,7 +42,13 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **脈絡。** 較早的設計把原始封鎖清單位元組鏡像到 R2，好讓法務審查散布行為。許多上游清單（HaGeZi、OISD）採 GPL-3.0，因此託管其位元組會讓 Lava Security 成為 GPL 資料的再散布者。
 
-**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會直接透過 TLS 從精選 `source_url` 擷取每份清單，並在嚴格的大小／規則上限內於本機剖析；社群清單以收到的內容為準接受（目錄中的 `accepted_source_hashes` 是建議性資料，不是硬性閘門——單一釘選雜湊無法追蹤快速輪換的上游，只會造成誤拒），而 Lava 的 threat-guardrail 層仍維持雜湊釘選。來源在目錄層強制執行（`source_url` 變更必須使用新的 `list_id`），而不是由用戶端雜湊閘門執行。每一組解析後的規則集也會通過受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
+**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會直接透過 TLS 從精選 `source_url` 擷取每份清單，並在嚴格的大小／規則上限內於本機剖析；社群清單以收到的內容為準接受（目錄中的 `accepted_source_hashes` 是建議性資料，不是硬性閘門——單一釘選雜湊無法追蹤快速輪換的上游，只會造成誤拒），而 Lava 的 threat-guardrail 層仍維持雜湊釘選。來源在目錄層強制執行，而不是由用戶端雜湊閘門執行：如果 `source_url` 變更把**另一個發布方**放到原有條目背後，就必須使用新的 `list_id`，這樣裝置才不會在使用者已同意的身分之下，悄悄開始抓取另一方的位元組。而**在同一發布方自己的命名空間內更換主機**則保留原有 `list_id` —— 策展者、檔案名稱與內容都沒變，變的只是前面那層 CDN；若把這種遷移當成新條目，反而會讓已啟用該清單的裝置被收回它（被收回的 ID 會進入隔離，使用者於是悄無聲息地失去自己選擇的清單）。同一發布方內部的遷移記錄於此，並附上確認第一方歸屬的證據，而不是重新標識。每一組解析後的規則集也會通過受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
+
+**已記錄的同一發布方遷移。**
+
+| 日期 | 清單 | 從 → 到 | 第一方證據 |
+| --- | --- | --- | --- |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `cdn.jsdelivr.net/gh/hagezi/dns-blocklists@37522026.221.30748` | jsDelivr 的 `/gh/<owner>/<repo>` 路徑會精確解析到那個 GitHub 儲存庫，因此發布方由 **URL 本身**鎖定，任何第三方都無法在該路徑下被散布 —— 這是架在原始來源前面的 CDN，而不是另一個來源。GitHub 封鎖了 `hagezi` 帳號，raw 主機因此回傳 404，而 jsDelivr 仍在散布同一儲存庫的快取副本並固定到**不可變**版本 `37522026.221.30748`（內容為 2026-08-09 那一版）。不用 `@latest`：jsDelivr 透過 GitHub API 解析該別名，而這個儲存庫已經回傳 404，所以它只靠快取下來的解析結果撐著，一旦失效就會無聲無息地把這次修復退回去。固定版本會被永久快取，也不會在我們不知情時被替換 —— 因此內容是凍結的，將來切回活躍來源是一次刻意為之的目錄變更。AdGuard 的 HostlistsRegistry 已於 2026-08-10 對所有 HaGeZi 清單做了同樣的替換。同名命名空間下的 GitLab 鏡像經評估後遭到**否決**：使用者名稱相同、儲存庫建立時間、提交中繼資料與照抄的檔案標頭，全都可以由無關第三方複製出來，且沒有任何簽章或第一方交叉連結能證明其身分。 |
 
 **狀態。** **採用**，並且**取代**了被放棄的 R2 原始鏡像計畫（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，標頭為「Superseded by the source-url-only implementation」）。見 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 
