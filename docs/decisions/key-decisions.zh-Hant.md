@@ -48,7 +48,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 | 日期 | 清單 | 從 → 到 | 第一方證據 |
 | --- | --- | --- | --- |
-| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists` | GitHub 封鎖了 `hagezi` 帳號，導致每個清單都變成硬 404。GitLab 的 `hagezi` 是**使用者**命名空間，擁有者為「Gerd」（HaGeZi 的維護者）；該專案建立於 2026-04-08，比封鎖早了幾個月，並有署名 `hagezi` 的每日提交（最近一次為 2026-08-12）。11 個檔案全部保留原有路徑與檔案名稱，並照常回傳其原始的 `# Title: HaGeZi's …` 標頭。 |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest` | jsDelivr 的 `/gh/<owner>/<repo>` 路徑會精確解析到那個 GitHub 儲存庫，因此發布方由 **URL 本身**鎖定，任何第三方都無法在該路徑下被散布 —— 這是架在原始來源前面的 CDN，而不是另一個來源。GitHub 封鎖了 `hagezi` 帳號，raw 主機因此回傳 404，而 jsDelivr 仍在散布同一儲存庫的快取副本（內容停在 2026-08-09；帳號恢復後會自動繼續更新）。AdGuard 的 HostlistsRegistry 已於 2026-08-10 對所有 HaGeZi 清單做了同樣的替換。同名命名空間下的 GitLab 鏡像經評估後遭到**否決**：使用者名稱相同、儲存庫建立時間、提交中繼資料與照抄的檔案標頭，全都可以由無關第三方複製出來，且沒有任何簽章或第一方交叉連結能證明其身分。 |
 
 **狀態。** **採用**，並且**取代**了被放棄的 R2 原始鏡像計畫（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，標頭為「Superseded by the source-url-only implementation」）。見 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 

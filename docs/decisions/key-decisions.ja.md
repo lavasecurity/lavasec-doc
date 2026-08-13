@@ -48,7 +48,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 | 日付 | リスト | 移動元 → 移動先 | 一次提供元の根拠 |
 | --- | --- | --- | --- |
-| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists` | GitHub が `hagezi` アカウントを凍結し、すべてのリストが 404 になりました。GitLab の `hagezi` は**ユーザー**名前空間で、所有者は「Gerd」（HaGeZi のメンテナー）です。プロジェクトの作成は 2026-04-08 で凍結の数か月前、`hagezi` 名義の日次コミットがあり、直近は 2026-08-12 です。11 ファイルすべてがパスとファイル名を保ち、元の `# Title: HaGeZi's …` ヘッダーを返しています。 |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest` | jsDelivr の `/gh/<owner>/<repo>` はまさにその GitHub リポジトリに解決されるため、発行者は **URL 自体によって** 固定され、第三者がその下で配信されることはありません。別のオリジンではなく、元のソースの前段に置かれた CDN です。GitHub が `hagezi` アカウントを凍結したため raw ホストは 404 になりましたが、jsDelivr は同一リポジトリのキャッシュを引き続き配信しています（2026-08-09 で凍結。アカウントが復旧すれば更新も再開します）。AdGuard の HostlistsRegistry も 2026-08-10 にすべての HaGeZi リストで同じ差し替えを行いました。同名の名前空間にある GitLab ミラーは検討のうえ **見送り** ました。ユーザー名の一致、リポジトリの作成時期、コミットのメタデータ、コピーされたヘッダーはいずれも無関係な第三者でも再現でき、署名も一次提供元からの相互リンクも存在しないためです。 |
 
 **ステータス。** **採用**。そして、これは見送られた R2 生ミラー案(`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`、見出し「Superseded by the source-url-only implementation」)を **置き換え** ました。[`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md) を参照。
 
