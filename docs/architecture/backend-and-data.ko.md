@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 정규화 가드레일(메타데이터 전용)
 
-Worker 측 정규화(`normalizeBlocklist`)는 보호된 도메인을 필터링하고, 상한선을 강제하며, 중복 제거+정렬을 수행합니다. 이것은 신뢰할 수 있는 메타데이터를 계산하기 위한 것일 뿐입니다; **커뮤니티 목록**의 경우 기기는 다운로드를 해시-게이트하지 **않습니다** — 큐레이션된 `source_url`에서 TLS로 가져와 상한선 하에서 파싱합니다(카탈로그의 허용된 해시는 권고 사항). 따라서 이 Worker 측 정규화는 그 자체로 보안 경계가 아닙니다. (Lava의 위협-가드레일 티어는 기기에서 해시-고정된 상태로 유지되며, `source_url` 출처는 게시 시점에 강제됩니다 — URL 변경은 반드시 새로운 `list_id`를 사용해야 합니다.) 주요 상수:
+Worker 측 정규화(`normalizeBlocklist`)는 보호된 도메인을 필터링하고, 상한선을 강제하며, 중복 제거+정렬을 수행합니다. 이것은 신뢰할 수 있는 메타데이터를 계산하기 위한 것일 뿐입니다; **커뮤니티 목록**의 경우 기기는 다운로드를 해시-게이트하지 **않습니다** — 큐레이션된 `source_url`에서 TLS로 가져와 상한선 하에서 파싱합니다(카탈로그의 허용된 해시는 권고 사항). 따라서 이 Worker 측 정규화는 그 자체로 보안 경계가 아닙니다. (Lava의 위협-가드레일 티어는 기기에서 해시-고정된 상태로 유지되며, `source_url` 출처는 게시 시점에 강제됩니다 — 항목 뒤에 **다른 배포자**를 두는 URL 변경은 반드시 새로운 `list_id`를 사용해야 하지만, 같은 배포자 자신의 네임스페이스 안에서의 호스트 이동은 `list_id`를 유지하며 [핵심 결정 2](../decisions/key-decisions.md)에 기록됩니다.) 주요 상수:
 
 - `PROTECTED_SUFFIXES` — Apple/iCloud/`mzstatic`/Lava Security 도메인/Supabase/Cloudflare/Google/GitHub와 일치하는 모든 규칙을 제거하여, 오염된 업스트림이 Lava 자체 인프라나 로그인 제공자를 차단할 수 없도록 합니다.
 - `MAX_BLOCKLIST_BYTES = 25 MiB`, `MAX_BLOCKLIST_LINE_LENGTH = 2048`, `MAX_NORMALIZED_DOMAINS = 500_000`.

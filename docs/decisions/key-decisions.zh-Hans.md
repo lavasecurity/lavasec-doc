@@ -42,7 +42,13 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **背景。** 早先的设计会把拦截列表的原始字节镜像进 R2，以便法务审查分发情况。很多上游列表（HaGeZi、OISD）是 GPL-3.0 的，所以托管它们的字节就会让 Lava 成为 GPL 数据的再分发方。
 
-**理由。** 把 Lava 当作一个本地过滤引擎 / 用户代理——而不是拦截列表分发方——能把 GPLv3 再分发和 App 审核的风险降到最低。设备会直接通过 TLS 从精选 `source_url` 抓取每份列表，并在严格的大小 / 规则上限内本地解析；社区列表按收到的内容接受（目录里的 `accepted_source_hashes` 是提示性数据，不是硬门槛——单个钉死的哈希跟不上快速轮换的上游，只会造成误拒），而 Lava 的 threat-guardrail 层仍保持哈希钉死。来源在目录层强制执行（`source_url` 变更必须使用新的 `list_id`），而不是靠客户端哈希闸门。每一组解析出来的规则集还会再过一道受保护域名过滤器，这样上游列表就没法拦掉 Lava/Apple/身份提供方的域名。这套模式由 CI 中的 `check-gpl-blocklist-distribution.sh` 强制执行（不许有镜像代码、不许有 Lava 托管的产物 URL、不许默认启用 GPL 来源、不许往 R2 写字节）。
+**理由。** 把 Lava 当作一个本地过滤引擎 / 用户代理——而不是拦截列表分发方——能把 GPLv3 再分发和 App 审核的风险降到最低。设备会直接通过 TLS 从精选 `source_url` 抓取每份列表，并在严格的大小 / 规则上限内本地解析；社区列表按收到的内容接受（目录里的 `accepted_source_hashes` 是提示性数据，不是硬门槛——单个钉死的哈希跟不上快速轮换的上游，只会造成误拒），而 Lava 的 threat-guardrail 层仍保持哈希钉死。来源在目录层强制执行，而不是靠客户端哈希闸门：如果 `source_url` 变更把**另一个发布方**放到了原有条目背后，就必须使用新的 `list_id`，这样设备才不会在用户已经同意的身份之下，悄悄开始抓取另一方的字节。而**在同一发布方自己的命名空间内更换主机**则保留原有 `list_id` —— 策展人、文件名和内容都没变，变的只是前面那层 CDN；若把这种迁移当成新条目，反而会让已经启用该列表的设备被收回它（被收回的 ID 会进入隔离，用户于是悄无声息地失去自己选择的列表）。同一发布方内部的迁移记录在此处，并附上确认第一方归属的证据，而不是重新标识。每一组解析出来的规则集还会再过一道受保护域名过滤器，这样上游列表就没法拦掉 Lava/Apple/身份提供方的域名。这套模式由 CI 中的 `check-gpl-blocklist-distribution.sh` 强制执行（不许有镜像代码、不许有 Lava 托管的产物 URL、不许默认启用 GPL 来源、不许往 R2 写字节）。
+
+**已记录的同一发布方迁移。**
+
+| 日期 | 列表 | 从 → 到 | 第一方证据 |
+| --- | --- | --- | --- |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists` | GitHub 封锁了 `hagezi` 账号，导致每个列表都变成硬 404。GitLab 的 `hagezi` 是**用户**命名空间，所有者为「Gerd」（HaGeZi 的维护者）；该项目创建于 2026-04-08，比封锁早了几个月，并有署名 `hagezi` 的每日提交（最近一次为 2026-08-12）。11 个文件全部保留原有路径与文件名，并照常返回其原始的 `# Title: HaGeZi's …` 头部。 |
 
 **状态。** **已采纳**，并且它**替代**了那个被放弃的 R2 原始镜像计划（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，标题写着"已被 source-url-only 实现替代"）。见 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 

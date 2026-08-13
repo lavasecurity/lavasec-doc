@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 正規化防護欄（僅中繼資料） {#33-normalization-guardrails-metadata-only}
 
-Worker 端的正規化（`normalizeBlocklist`）會過濾受保護網域、強制上限，並去重＋排序。這純粹是為了計算可信的中繼資料；對**社群清單**而言，裝置**不會**用雜湊作為下載閘門——它會透過 TLS 從精選 `source_url` 擷取，並在上限內剖析（目錄的 accepted hashes 是建議性資料），因此 Worker 端正規化本身不是安全邊界。（Lava 的 threat-guardrail 層在裝置上仍維持雜湊釘選，且 `source_url` 來源在發布時強制檢查——URL 變更必須使用新的 `list_id`。）關鍵常數：
+Worker 端的正規化（`normalizeBlocklist`）會過濾受保護網域、強制上限，並去重＋排序。這純粹是為了計算可信的中繼資料；對**社群清單**而言，裝置**不會**用雜湊作為下載閘門——它會透過 TLS 從精選 `source_url` 擷取，並在上限內剖析（目錄的 accepted hashes 是建議性資料），因此 Worker 端正規化本身不是安全邊界。（Lava 的 threat-guardrail 層在裝置上仍維持雜湊釘選，且 `source_url` 來源在發布時強制檢查——把**另一個發布方**放到條目背後的 URL 變更必須使用新的 `list_id`；而在同一發布方自己的命名空間內更換主機則保留原有 `list_id`，並記錄在[關鍵決策 2](../decisions/key-decisions.md)中。）關鍵常數：
 
 - `PROTECTED_SUFFIXES` — 移除任何符合 Apple／iCloud／`mzstatic`／Lava Security 網域／Supabase／Cloudflare／Google／GitHub 的規則，因此遭污染的上游無法封鎖 Lava Security 自身的基礎設施或登入提供者。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。

@@ -42,7 +42,13 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 **脈絡。** 較早的設計把原始封鎖清單位元組鏡像到 R2，好讓法務審查散布行為。許多上游清單（HaGeZi、OISD）採 GPL-3.0，因此託管其位元組會讓 Lava Security 成為 GPL 資料的再散布者。
 
-**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會直接透過 TLS 從精選 `source_url` 擷取每份清單，並在嚴格的大小／規則上限內於本機剖析；社群清單以收到的內容為準接受（目錄中的 `accepted_source_hashes` 是建議性資料，不是硬性閘門——單一釘選雜湊無法追蹤快速輪換的上游，只會造成誤拒），而 Lava 的 threat-guardrail 層仍維持雜湊釘選。來源在目錄層強制執行（`source_url` 變更必須使用新的 `list_id`），而不是由用戶端雜湊閘門執行。每一組解析後的規則集也會通過受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
+**理由。** 把 Lava Security 視為本機篩選引擎／使用者代理程式——而非封鎖清單散布者——可將 GPLv3 再散布與 App Review 暴露降到最低。裝置會直接透過 TLS 從精選 `source_url` 擷取每份清單，並在嚴格的大小／規則上限內於本機剖析；社群清單以收到的內容為準接受（目錄中的 `accepted_source_hashes` 是建議性資料，不是硬性閘門——單一釘選雜湊無法追蹤快速輪換的上游，只會造成誤拒），而 Lava 的 threat-guardrail 層仍維持雜湊釘選。來源在目錄層強制執行，而不是由用戶端雜湊閘門執行：如果 `source_url` 變更把**另一個發布方**放到原有條目背後，就必須使用新的 `list_id`，這樣裝置才不會在使用者已同意的身分之下，悄悄開始抓取另一方的位元組。而**在同一發布方自己的命名空間內更換主機**則保留原有 `list_id` —— 策展者、檔案名稱與內容都沒變，變的只是前面那層 CDN；若把這種遷移當成新條目，反而會讓已啟用該清單的裝置被收回它（被收回的 ID 會進入隔離，使用者於是悄無聲息地失去自己選擇的清單）。同一發布方內部的遷移記錄於此，並附上確認第一方歸屬的證據，而不是重新標識。每一組解析後的規則集也會通過受保護網域篩選器，使上游清單無法封鎖 Lava Security／Apple／身分提供者的網域。此模型在 CI 中由 `check-gpl-blocklist-distribution.sh` 強制執行（無鏡像程式碼、無 Lava Security 託管的成品 URL、無預設啟用的 GPL 來源、無 R2 位元組寫入）。
+
+**已記錄的同一發布方遷移。**
+
+| 日期 | 清單 | 從 → 到 | 第一方證據 |
+| --- | --- | --- | --- |
+| 2026-08-13 | 11 `hagezi-*` | `raw.githubusercontent.com/hagezi/dns-blocklists` → `gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists` | GitHub 封鎖了 `hagezi` 帳號，導致每個清單都變成硬 404。GitLab 的 `hagezi` 是**使用者**命名空間，擁有者為「Gerd」（HaGeZi 的維護者）；該專案建立於 2026-04-08，比封鎖早了幾個月，並有署名 `hagezi` 的每日提交（最近一次為 2026-08-12）。11 個檔案全部保留原有路徑與檔案名稱，並照常回傳其原始的 `# Title: HaGeZi's …` 標頭。 |
 
 **狀態。** **採用**，並且**取代**了被放棄的 R2 原始鏡像計畫（`plans/implemented/2026-05-25-gpl-raw-r2-blocklist-compliance-plan.md`，標頭為「Superseded by the source-url-only implementation」）。見 [`../legal/gpl-source-url-only-compliance-decision.md`](../legal/gpl-source-url-only-compliance-decision.md)。
 

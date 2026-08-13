@@ -103,7 +103,7 @@ normalized_r2_key: null,
 
 ### 3.3 正規化のガードレール（メタデータのみ） {#33-normalization-guardrails-metadata-only}
 
-Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。**コミュニティリスト**について、端末はダウンロードをハッシュでゲート**しません**。用意された `source_url` から TLS で取得し、上限のもとで解析します（カタログの accepted hashes は参考情報です）。そのため、この Worker 側の正規化だけがセキュリティ境界になるわけではありません。（Lava の threat-guardrail 層は端末上で引き続きハッシュピン留めされ、`source_url` の由来は公開時に強制されます。URL を変える場合は新しい `list_id` が必要です。）主要な定数:
+Worker 側の正規化（`normalizeBlocklist`）は、保護対象ドメインをフィルタし、上限を強制し、重複排除＋ソートを行います。これは信頼できるメタデータを計算するためだけのものです。**コミュニティリスト**について、端末はダウンロードをハッシュでゲート**しません**。用意された `source_url` から TLS で取得し、上限のもとで解析します（カタログの accepted hashes は参考情報です）。そのため、この Worker 側の正規化だけがセキュリティ境界になるわけではありません。（Lava の threat-guardrail 層は端末上で引き続きハッシュピン留めされ、`source_url` の由来は公開時に強制されます。発行者が別の相手に変わる URL 変更には新しい `list_id` が必要ですが、同じ発行者自身の名前空間内でのホスト移動は `list_id` を維持し、[主要な決定 2](../decisions/key-decisions.md) に記録されます。）主要な定数:
 
 - `PROTECTED_SUFFIXES` — Apple/iCloud/`mzstatic`/Lava Security のドメイン/Supabase/Cloudflare/Google/GitHub にマッチするルールをすべて取り除きます。これにより、毒入りの上流が Lava 自身のインフラやサインインプロバイダをブロックできないようにします。
 - `MAX_BLOCKLIST_BYTES = 25 MiB`、`MAX_BLOCKLIST_LINE_LENGTH = 2048`、`MAX_NORMALIZED_DOMAINS = 500_000`。
