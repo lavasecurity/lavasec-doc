@@ -27,7 +27,7 @@ Esse modelo de **"núcleo calmo, profundidade conquistada"** se resolve em três
 Duas regras transversais de paleta/tom apoiam a postura calma:
 
 - **vermelho = somente perigo.** O vermelho é reservado exclusivamente para perigo e erro; a paleta calma é verde/laranja. Isso mantém o vermelho confiável como um sinal de alarme genuíno. O vermelho-de-perigo é tokenizado como `LavaStyle.dangerRed`, com `LavaStyle.errorText` definido como alias dele (lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:81/86) e consumido pelo texto de erro nas views. A cor de destaque da proteção é resolvida através da tabela de papéis semântica `ProtectionTintRole` (lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7) em vez de `.green`/`.orange` puros. Alguns poucos pontos de chamada `.red` puro genuinamente persistem (por exemplo, lavasec-ios: LavaSecApp/SettingsView.swift:697, LavaSecApp/SecurityController.swift:600, LavaSecApp/FiltersView.swift) — migrar esses para `LavaStyle.dangerRed` é a limpeza restante.
-- **Sem linguagem de segurança carregada de medo.** O texto é simples, calmo e prático. Veja [§4 Texto e nomenclatura](#4-copy-naming).
+- **Sem linguagem de segurança carregada de medo.** O texto é simples, calmo e prático. Veja [§4 Texto e nomenclatura](#4-texto-e-nomenclatura).
 
 ### A camada tokenizada que existe hoje **(Implementado)**
 

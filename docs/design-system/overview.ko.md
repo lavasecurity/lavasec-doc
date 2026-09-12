@@ -27,7 +27,7 @@ Lava의 대상 사용자는 부모, 고령자 같은 비기술적인 일상 사�
 차분한 자세를 뒷받침하는 두 가지 교차적 팔레트/톤 규칙이 있다:
 
 - **빨강 = 위험 전용.** 빨강은 오직 위험과 오류에만 예약되며, 차분한 팔레트는 초록/주황이다. 이로써 빨강은 진짜 경보 신호로서 신뢰성을 유지한다. 위험 빨강은 `LavaStyle.dangerRed`로 토큰화되어 있으며, `LavaStyle.errorText`가 이를 별칭으로 가리킨다(lavasec-ios: LavaSecApp/LavaDesignSystem/LavaTokens.swift:81/86). 뷰의 오류 텍스트가 이를 소비한다. 보호 틴트는 원시 `.green`/`.orange`가 아니라 의미론적 `ProtectionTintRole` 역할 테이블(lavasec-ios: Sources/LavaSecCore/ProtectionPresentation.swift:7)을 통해 해석된다. 원시 `.red` 호출 지점이 몇 군데 실제로 남아 있으며(예: lavasec-ios: LavaSecApp/SettingsView.swift:697, LavaSecApp/SecurityController.swift:600, LavaSecApp/FiltersView.swift), 이를 `LavaStyle.dangerRed`로 이전하는 것이 남은 정리 작업이다.
-- **공포를 자극하는 보안 언어 금지.** 카피는 평이하고, 차분하며, 실용적이다. [§4 카피 및 명명](#4-카피-및-명명)을 참고하라.
+- **공포를 자극하는 보안 언어 금지.** 카피는 평이하고, 차분하며, 실용적이다. [§4 카피 및 명명](#4)을 참고하라.
 
 ### 오늘 존재하는 토큰화된 레이어 **(구현됨)**
 

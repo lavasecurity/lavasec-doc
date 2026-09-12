@@ -165,7 +165,7 @@ O target do widget renderiza apenas a Live Activity e a Dynamic Island. O `LavaS
 
 `LavaActivityAttributes.ContentState` carrega `protectionState`, uma `resumeDate` (para contagens regressivas de pausa), `pauseRequiresAuthentication` e a `shieldStyle` escolhida. A decodificação é tolerante — um `shieldStyle` ausente recai para `.original` — de modo que payloads de Live Activity mais antigos continuam funcionando.
 
-No lado do app, o `LavaLiveActivityController` (`LavaSecApp/LavaLiveActivityController.swift`) detém a `Activity<LavaActivityAttributes>` ativa: ele observa mudanças de autorização do ActivityKit, só oferece Live Activities em idiomas de phone/pad, e `reconcile(...)` inicia/atualiza/encerra a activity para corresponder ao estado de proteção solicitado. O `AppViewModel.reconcileLiveActivity()` (`AppViewModel.swift:3069`) é o único funil que recomputa o estado desejado e chama o controller. Os botões da Dynamic Island despacham `LiveActivityIntent`s, que chamam `LavaProtectionCommandService` conforme descrito em [§2](#2-ipc-entre-app--extensão).
+No lado do app, o `LavaLiveActivityController` (`LavaSecApp/LavaLiveActivityController.swift`) detém a `Activity<LavaActivityAttributes>` ativa: ele observa mudanças de autorização do ActivityKit, só oferece Live Activities em idiomas de phone/pad, e `reconcile(...)` inicia/atualiza/encerra a activity para corresponder ao estado de proteção solicitado. O `AppViewModel.reconcileLiveActivity()` (`AppViewModel.swift:3069`) é o único funil que recomputa o estado desejado e chama o controller. Os botões da Dynamic Island despacham `LiveActivityIntent`s, que chamam `LavaProtectionCommandService` conforme descrito em [§2](#2-ipc-entre-app-extensao).
 
 ---
 
@@ -189,7 +189,7 @@ O `AppViewModel` (`@MainActor final class AppViewModel: ObservableObject`, `AppV
 - **Conta e backup** — `accountAuthState`, `encryptedBackupState`, `isAutomaticBackupEnabled`, e o estado de ofertas/entitlement do **Lava Security Plus**.
 - **Personalização e apresentação** — `appearancePreference`, `lavaGuardLook` (`GuardianShieldStyle`), `lavaGuardProgress`, e `usesLiveActivities`.
 
-Ele delega a serialização do ciclo de vida a um `protectionActionOrchestrator` (para que uma restauração em segundo plano não se intercale com um ligar acionado pelo usuário), mantém o `tunnelManager` em cache e comanda todas as mudanças de snapshot/config/pausa à extensão via os helpers de provider-message em [§2](#2-ipc-entre-app--extensão).
+Ele delega a serialização do ciclo de vida a um `protectionActionOrchestrator` (para que uma restauração em segundo plano não se intercale com um ligar acionado pelo usuário), mantém o `tunnelManager` em cache e comanda todas as mudanças de snapshot/config/pausa à extensão via os helpers de provider-message em [§2](#2-ipc-entre-app-extensao).
 
 > **Enquadramento de privacidade.** A filtragem de DNS acontece localmente neste dispositivo. As superfícies de diagnóstico e atividade de rede que o `AppViewModel` publica são armazenadas apenas localmente — a Lava nunca recebe suas consultas DNS de rotina, histórico de navegação ou telemetria por domínio. Qualquer backup de conta opcional é **zero-knowledge** (criptografado no dispositivo; a Lava só pode armazenar texto cifrado), incluindo a recuperação baseada em passkey — sua chave é derivada por PRF no dispositivo, sem segredo mantido no servidor. Veja [Visão Geral do Sistema](./system-overview.md) para a fronteira do servidor.
 
