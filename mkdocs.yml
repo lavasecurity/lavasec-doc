@@ -41,9 +41,9 @@ theme:
 
 plugins:
   - search
-  # i18n-ready: English is the default today. To add a language, drop in
-  # `<page>.<locale>.md` siblings (e.g. overview.fr.md) and add a `languages`
-  # entry below — a language switcher appears automatically. See README.
+  # Ten languages are enabled below; English is the source and fallback.
+  # Translations use `<page>.<locale>.md` siblings. Keep new locale entries and
+  # scripts/check-translations.sh aligned; see README for the update workflow.
   - i18n:
       docs_structure: suffix
       fallback_to_default: true

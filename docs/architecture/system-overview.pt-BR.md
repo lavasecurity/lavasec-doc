@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > **Público-alvo:** engenheiros. Esta é a totalidade do Lava Security em uma única página — quais são as partes, como os dados se movem entre elas e onde ficam os limites de confiança. Os documentos por componente vão mais a fundo; este existe para que você consiga manter o sistema na cabeça antes de lê-los.
 >
-> **Autoridade:** onde este documento e um plano divergem, **o código vence**. O status reflete a realidade confirmada pelo código, não a aspiração do plano. Veja a [Legenda de status](#8-status-legend) no final.
+> **Autoridade:** onde este documento e um plano divergem, **o código vence**. O status reflete a realidade confirmada pelo código, não a aspiração do plano. Veja a [Legenda de status](#8-legenda-de-status) no final.
 
 ## 1. Resumo do produto em uma linha
 

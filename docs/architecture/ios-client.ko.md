@@ -165,7 +165,7 @@ Live Activity의 `LavaActivityAttributes.ProtectionState`(`Shared/LavaActivityAt
 
 `LavaActivityAttributes.ContentState`는 `protectionState`, `resumeDate`(일시중지 카운트다운용), `pauseRequiresAuthentication`, 선택된 `shieldStyle`를 담습니다. 디코딩은 관대하여 — `shieldStyle`이 없으면 `.original`로 폴백 — 오래된 Live Activity 페이로드도 계속 작동합니다.
 
-앱 측에서 `LavaLiveActivityController`(`LavaSecApp/LavaLiveActivityController.swift`)는 라이브 `Activity<LavaActivityAttributes>`를 소유합니다. ActivityKit 권한 변경을 관찰하고, phone/pad idiom에서만 Live Activity를 제공하며, `reconcile(...)`은 요청된 보호 상태에 맞추어 액티비티를 시작/업데이트/종료합니다. `AppViewModel.reconcileLiveActivity()`(`AppViewModel.swift:3069`)는 원하는 상태를 재계산하고 컨트롤러를 호출하는 단일 깔때기입니다. Dynamic Island 버튼은 `LiveActivityIntent`들을 디스패치하며, 이들은 [§2](#2-app-extension-ipc)에서 설명한 대로 `LavaProtectionCommandService`를 호출합니다.
+앱 측에서 `LavaLiveActivityController`(`LavaSecApp/LavaLiveActivityController.swift`)는 라이브 `Activity<LavaActivityAttributes>`를 소유합니다. ActivityKit 권한 변경을 관찰하고, phone/pad idiom에서만 Live Activity를 제공하며, `reconcile(...)`은 요청된 보호 상태에 맞추어 액티비티를 시작/업데이트/종료합니다. `AppViewModel.reconcileLiveActivity()`(`AppViewModel.swift:3069`)는 원하는 상태를 재계산하고 컨트롤러를 호출하는 단일 깔때기입니다. Dynamic Island 버튼은 `LiveActivityIntent`들을 디스패치하며, 이들은 [§2](#2-app-ipc)에서 설명한 대로 `LavaProtectionCommandService`를 호출합니다.
 
 ---
 
@@ -175,7 +175,7 @@ Live Activity의 `LavaActivityAttributes.ProtectionState`(`Shared/LavaActivityAt
 
 배포되는 시작 설정은 `OnboardingDefaults`(`Sources/LavaSecCore/OnboardingDefaults.swift`)에서 옵니다. `AppConfiguration.lavaRecommendedDefaults`는 관대한 권장 소스(Block List Basic + StevenBlack Unified Hosts)를 활성화하고, 리졸버로 **Device DNS**를 선택하며 — `DNSResolverPreset.device`(id `device-dns`), 네트워크 자체의 DNS이며, Google DoH 같은 암호화 프리셋은 옵트인이고 기본값으로 승격되지 않음 — device-DNS fallback을 활성화하고, 로컬 로깅을 켠 상태로 유지합니다 — `protectionEnabled: false`로, 보호는 사용자가 선택할 때만 켜집니다. `OnboardingDefaultsSummary`는 이 선택들을 표시용으로 포맷합니다("Continue without account"가 계정 기본값입니다).
 
-마지막에 `hasSeenLavaOnboarding = true`를 설정하는 것이 `hasCompletedOnboarding`을 뒤집으며, 이는 다시 [§3](#3-vpn-lifecycle-control)에서 설명한 시작 재조정 경로를 무장시킵니다. 그때까지는 온보딩 도중 무력화 경로가 상속된 fail-closed 터널이 트래픽을 차단하지 못하도록 유지합니다.
+마지막에 `hasSeenLavaOnboarding = true`를 설정하는 것이 `hasCompletedOnboarding`을 뒤집으며, 이는 다시 [§3](#3-vpn)에서 설명한 시작 재조정 경로를 무장시킵니다. 그때까지는 온보딩 도중 무력화 경로가 상속된 fail-closed 터널이 트래픽을 차단하지 못하도록 유지합니다.
 
 ---
 
@@ -189,7 +189,7 @@ Live Activity의 `LavaActivityAttributes.ProtectionState`(`Shared/LavaActivityAt
 - **계정 및 백업** — `accountAuthState`, `encryptedBackupState`, `isAutomaticBackupEnabled`, 그리고 **Lava Security Plus** 오퍼/엔타이틀먼트 상태.
 - **커스터마이징 및 표현** — `appearancePreference`, `lavaGuardLook`(`GuardianShieldStyle`), `lavaGuardProgress`, 그리고 `usesLiveActivities`.
 
-라이프사이클 직렬화를 `protectionActionOrchestrator`에 위임하고(백그라운드 복원이 사용자 켜기와 끼어들지 않도록), 캐시된 `tunnelManager`를 보유하며, 모든 스냅샷/설정/일시중지 변경을 [§2](#2-app-extension-ipc)의 프로바이더 메시지 헬퍼를 통해 익스텐션으로 구동합니다.
+라이프사이클 직렬화를 `protectionActionOrchestrator`에 위임하고(백그라운드 복원이 사용자 켜기와 끼어들지 않도록), 캐시된 `tunnelManager`를 보유하며, 모든 스냅샷/설정/일시중지 변경을 [§2](#2-app-ipc)의 프로바이더 메시지 헬퍼를 통해 익스텐션으로 구동합니다.
 
 > **프라이버시 프레이밍.** DNS 필터링은 이 기기에서 로컬로 일어납니다. `AppViewModel`이 게시하는 진단 및 네트워크 활동 표면은 로컬에만 저장됩니다 — Lava는 사용자의 일상적인 DNS 질의, 브라우징 기록, 또는 도메인별 텔레메트리를 결코 수신하지 않습니다. 선택적 계정 백업은 모두 **제로 지식**(기기에서 암호화되며, Lava는 오직 암호문만 저장 가능)이며, 패스키 기반 복구를 포함합니다 — 그 키는 서버 보유 시크릿 없이 기기에서 PRF로 파생됩니다. 서버 경계는 [시스템 개요](./system-overview.md)를 참고하세요.
 

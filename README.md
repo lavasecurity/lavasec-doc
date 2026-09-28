@@ -9,7 +9,7 @@
 The public documentation site for **Lava Security** — the "manual" for how the
 product works: architecture, behavior, design system, and the decisions behind
 it. Built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/)
-and deployed to Cloudflare Pages at **https://docs.lavasecurity.app**.
+and configured for Cloudflare Workers static assets at **https://docs.lavasecurity.app**.
 
 > **Scope.** This repo holds only the *public* manual (architecture, product
 > overview, design system, ADRs, compliance notices). Internal material —
@@ -27,7 +27,8 @@ mkdocs serve            # live preview at http://127.0.0.1:8000
 mkdocs build --strict   # production build into ./site (CI gate)
 ```
 
-`--strict` fails the build on broken internal links, so keep cross-links valid.
+`--strict` treats build warnings as errors. Review link diagnostics as well:
+missing section anchors may be informational and do not necessarily fail the build.
 
 ## Feature tracking and platform parity
 
@@ -60,31 +61,54 @@ docs/
   legal/                        # third-party notices, source-url-only/GPL compliance
 mkdocs.yml                      # site config + nav + theme
 requirements.txt                # mkdocs-material, mkdocs-static-i18n
-.github/workflows/deploy.yml    # build + deploy to Cloudflare Pages
+.github/workflows/ci.yml        # build and content quality checks
+wrangler.toml                   # Cloudflare Workers static assets configuration
 ```
 
 ## Internationalization
 
 The site uses [`mkdocs-static-i18n`](https://github.com/ultrabug/mkdocs-static-i18n)
-with the **suffix** structure: untranslated pages are English (the default), and
-a translation is a sibling file named `<page>.<locale>.md` — e.g.
-`product/overview.fr.md`. To enable a language:
+with the **suffix** structure. English is the source/default language; translations
+are siblings named `<page>.<locale>.md`, such as `product/overview.fr.md`.
+[`mkdocs.yml`](mkdocs.yml) enables ten languages: `en`, `zh-Hant`, `zh-Hans`, `de`,
+`fr`, `ja`, `es`, `ko`, `pt-BR` and `it`. The language switcher is already enabled.
 
-1. Add it under `plugins.i18n.languages` in `mkdocs.yml` (e.g. `fr` / Français).
-2. Add the translated `*.fr.md` files. Untranslated pages fall back to English.
+The plugin falls back to English when a translation is absent. The repository's
+[`check-translations.sh`](scripts/check-translations.sh) gate requires translated
+siblings for its covered English pages; legal and contributor guidance remains
+English-authoritative. Fallback is not a substitute for updating affected
+translations. The check reads its locale list from `mkdocs.yml`.
 
-A language switcher appears automatically once more than one language is built.
-This mirrors the app's localization targets (de, fr, ja, zh-Hans, zh-Hant).
+## Regenerating the docs
+
+Update the canonical English page from verified public implementation or release
+evidence, then update its translated siblings, navigation and related links. Keep
+proposals and unreleased work separate from descriptions of available features.
+
+The blocklist catalog pages are generated from [`data/`](data/) by
+[`scripts/build-catalog.py`](scripts/build-catalog.py); edit their source data and
+run that generator instead of changing generated tables directly. Other manual
+pages are maintained in `docs/`.
+
+Run the same content checks as CI before submitting changes:
+
+```sh
+bash scripts/check-translations.sh
+python3 scripts/build-catalog.py --check
+mkdocs build --strict
+```
 
 ## Deploy
 
-Deployed to **Cloudflare Workers (static assets)** via Cloudflare's git-connected
-**Workers Builds** — Cloudflare builds and deploys on every push to `main`, and
-**no GitHub Actions secrets are needed** (Cloudflare authenticates the deploy).
+[`wrangler.toml`](wrangler.toml) configures an assets-only **Cloudflare Worker**
+serving `./site`. GitHub Actions performs quality checks and contains no deploy job.
+The git-connected **Workers Builds** trigger and custom domain are dashboard
+settings; the deployment owner must verify them in Cloudflare when changing the
+release setup.
 
-In the Cloudflare dashboard, the `lavasec-doc` project's build settings are:
+The documented Workers Builds setup is:
 
-- **Build command:** `pip install -r requirements.txt && mkdocs build`
+- **Build command:** `pip install -r requirements.txt && mkdocs build --strict`
 - **Deploy command:** `npx wrangler deploy`  (reads [`wrangler.toml`](wrangler.toml), which serves `./site` as an assets-only Worker with a custom 404)
 - If the build can't find Python, add a build variable `PYTHON_VERSION=3.12`.
 

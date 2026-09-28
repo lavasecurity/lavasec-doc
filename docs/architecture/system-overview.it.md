@@ -9,7 +9,7 @@ grounded_at: {lavasec-ios: "e1e4fe9"}
 
 > **Destinatari:** ingegneri. Questa è l'intera Lava Security in una sola pagina: quali sono le parti, come i dati si muovono tra di esse e dove si collocano i confini di fiducia. La documentazione per singolo componente entra più nel dettaglio; questa esiste perché tu possa tenere a mente il sistema nel suo insieme prima di leggerle.
 >
-> **Autorità:** quando questo documento e un piano sono in disaccordo, **vince il codice**. Lo stato riflette la realtà confermata dal codice, non l'aspirazione del piano. Vedi la [Legenda degli stati](#8-status-legend) in fondo.
+> **Autorità:** quando questo documento e un piano sono in disaccordo, **vince il codice**. Lo stato riflette la realtà confermata dal codice, non l'aspirazione del piano. Vedi la [Legenda degli stati](#8-legenda-degli-stati) in fondo.
 
 ## 1. Il prodotto in una riga
 
