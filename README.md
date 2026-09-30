@@ -8,6 +8,8 @@ instructions, and contributions, start with our public repositories:
 
 - [Lava for iOS](https://github.com/lavasecurity/lavasec-ios) — the public app
   source, including its filtering engine and tests.
+- [Lava for Android](https://github.com/lavasecurity/lavasec-android) — the Android
+  codebase.
 - [Lava Security on GitHub](https://github.com/orgs/lavasecurity/repositories?type=public)
   — all currently public repositories.
 
